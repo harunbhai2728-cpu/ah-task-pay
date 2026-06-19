@@ -278,6 +278,7 @@ export function AdminPanel() {
     }
   };
 
+  const [savingConfig, setSavingConfig] = useState(false);
   const [config, setConfig] = useState<any>({
     notice: '',
     minDeposit: 100,
@@ -373,12 +374,23 @@ export function AdminPanel() {
 
   const handleUpdateConfig = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSavingConfig(true);
+    const loadingToast = toast.loading('Saving settings...');
     try {
-      await adminDb.from('system_config').upsert({ id: 'config', ...config });
+      const { error } = await adminDb.from('system_config').upsert({ id: 'config', ...config });
+      if (error) {
+        console.error("Supabase Error detail:", error);
+        throw error;
+      }
       if (refreshConfig) await refreshConfig();
-      alert('Settings updated');
+      // Instantly fetch newest administrative configurations to refresh local states in the admin UI
+      await fetchAdminData(true, true);
+      toast.success('Settings updated successfully!', { id: loadingToast });
     } catch (err: any) {
-      alert(err.message);
+      console.error("Failed to save/update system config. Exact error details:", err);
+      toast.error(err.message || 'Failed to update settings', { id: loadingToast });
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -412,8 +424,14 @@ export function AdminPanel() {
       }).eq('id', tx.id);
       
       toast.success("Transaction Approved", { id: loadingToast });
-      // Silent background refresh
-      fetchAdminData(true, true);
+      // Update local states directly without full network refetch
+      setTransactions(prev => prev.map(t => t.id === tx.id ? { ...t, status: 'completed' } : t));
+      setUsers(prev => prev.map(u => (u.id === tx.userId || u.uid === tx.userId) ? {
+        ...u,
+        depositBalance: tx.type === 'deposit' ? (u.depositBalance || 0) + tx.amount : u.depositBalance,
+        pendingDepositBalance: tx.type === 'deposit' ? Math.max(0, (u.pendingDepositBalance || 0) - tx.amount) : u.pendingDepositBalance,
+        pendingEarningBalance: tx.type === 'withdrawal' ? Math.max(0, (u.pendingEarningBalance || 0) - tx.amount) : u.pendingEarningBalance
+      } : u));
     } catch (err: any) {
       console.error("Transaction Approve Error:", err);
       setTransactions(previousTransactions);
@@ -452,8 +470,14 @@ export function AdminPanel() {
       }).eq('id', tx.id);
 
       toast.success("Transaction Rejected", { id: loadingToast });
-      // Silent background refresh
-      fetchAdminData(true, true);
+      // Update local states directly without full network refetch
+      setTransactions(prev => prev.map(t => t.id === tx.id ? { ...t, status: 'rejected' } : t));
+      setUsers(prev => prev.map(u => (u.id === tx.userId || u.uid === tx.userId) ? {
+        ...u,
+        earningBalance: tx.type === 'withdrawal' ? (u.earningBalance || 0) + tx.amount : u.earningBalance,
+        pendingEarningBalance: tx.type === 'withdrawal' ? Math.max(0, (u.pendingEarningBalance || 0) - tx.amount) : u.pendingEarningBalance,
+        pendingDepositBalance: tx.type === 'deposit' ? Math.max(0, (u.pendingDepositBalance || 0) - tx.amount) : u.pendingDepositBalance
+      } : u));
     } catch (err: any) {
       setTransactions(previousTransactions);
       setUsers(previousUsers);
@@ -2548,14 +2572,8 @@ export function AdminPanel() {
                </div>
 
                <div className="md:col-span-2 pt-4 space-y-4">
-                  <button type="submit" className="w-full py-4 bg-gray-900 dark:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl dark:shadow-none shadow-gray-200 hover:bg-gray-800 dark:hover:bg-slate-600 transition-all">
-                     Save System Settings
-                  </button>
-                  <button type="button" onClick={handleAssignMissingSerials} className="w-full py-4 bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl font-black uppercase tracking-widest hover:bg-orange-200 dark:hover:bg-orange-900/40 transition-all">
-                     Fix Missing Serial Numbers (System Tool)
-                  </button>
-                  <button type="button" onClick={handleRecalculateBalances} className="w-full py-4 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl font-black uppercase tracking-widest hover:bg-red-200 dark:hover:bg-red-900/40 transition-all">
-                     Recalculate Pending Balances (System Tool)
+                  <button disabled={savingConfig} type="submit" className="w-full py-4 bg-gray-900 dark:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl dark:shadow-none shadow-gray-200 hover:bg-gray-800 dark:hover:bg-slate-600 transition-all disabled:opacity-50">
+                     {savingConfig ? 'Saving...' : 'Save System Settings'}
                   </button>
                </div>
             </form>

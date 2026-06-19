@@ -241,17 +241,6 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
                       className="w-full pl-12 pr-4 py-4 bg-gray-50/50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl focus:ring-4 focus:ring-primary-50 dark:focus:ring-primary-900/20 focus:bg-white dark:focus:bg-slate-800 dark:text-white outline-none transition-all font-bold placeholder:text-gray-400"
                     />
                   </div>
-                  <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
-                    <input 
-                      type="text"
-                      placeholder="Referred By (Optional)"
-                      name="referred_by"
-                      value={refCode}
-                      onChange={(e) => setRefCode(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-gray-50/50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl focus:ring-4 focus:ring-primary-50 dark:focus:ring-primary-900/20 focus:bg-white dark:focus:bg-slate-800 dark:text-white outline-none transition-all font-bold placeholder:text-gray-400"
-                    />
-                  </div>
                 </>
               )}
 
@@ -292,6 +281,20 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
                   </div>
                 )}
               </div>
+
+              {!isLogin && (
+                <div className="relative opacity-70">
+                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400/80 dark:text-slate-500/80" />
+                  <input 
+                    type="text"
+                    placeholder="Referred By (Optional)"
+                    name="referred_by"
+                    value={refCode}
+                    onChange={(e) => setRefCode(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-gray-50/50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 rounded-2xl focus:ring-4 focus:ring-primary-50 dark:focus:ring-primary-900/20 focus:bg-white dark:focus:bg-slate-800 dark:text-white outline-none transition-all font-bold placeholder:text-gray-400 text-gray-500 dark:text-slate-300"
+                  />
+                </div>
+              )}
 
               <motion.button
                 whileHover={{ scale: 1.02 }}

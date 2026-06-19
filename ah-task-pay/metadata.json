@@ -1,6 +1,0 @@
-{
-  "name": "AH task pay",
-  "description": "A microjobs platform for posting and completing small tasks with automated BKash/Nagad payments.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
