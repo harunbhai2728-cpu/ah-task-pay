@@ -136,7 +136,19 @@ function KeepAlive() {
 export default function App() {
   return (
     <ThemeProvider>
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-left" 
+        toastOptions={{
+          style: {
+            padding: '16px 24px',
+            fontSize: '16.5px',
+            fontWeight: '600',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+          }
+        }}
+      />
       <KeepAlive />
       <AuthProvider>
         <Router>

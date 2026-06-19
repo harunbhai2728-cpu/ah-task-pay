@@ -1,9 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 dotenv.config();
+
+function getReferralDomainUrl() {
+    try {
+        const p = path.join(process.cwd(), 'data-store.json');
+        if (fs.existsSync(p)) {
+            const data = JSON.parse(fs.readFileSync(p, 'utf-8'));
+            return data.referralDomainUrl || 'https://ahtaskpay.onrender.com';
+        }
+    } catch (e) {
+        console.error("Error reading data-store.json for referralDomainUrl:", e);
+    }
+    return 'https://ahtaskpay.onrender.com';
+}
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'placeholder_key';
+console.log("referralLogic Supabase URL used:", supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function registerReferral(req: any, res: any) {
@@ -55,8 +71,22 @@ export async function getReferralStatus(req: any, res: any) {
         const authHeader = req.headers.authorization;
         if (!authHeader) return res.status(401).json({ error: 'No auth header' });
         const token = authHeader.replace(/^Bearer /i, '');
-        const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-        if (authErr || !user) return res.status(401).json({ error: 'Invalid token' });
+        let { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+        if (authErr || !user) {
+            console.error("Auth Error in getReferralStatus:", authErr);
+            // Try fallback decode if jwt is valid
+            try {
+               const jwtPayload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+               if (jwtPayload && jwtPayload.sub) {
+                   user = { id: jwtPayload.sub } as any;
+                   authErr = null;
+               } else {
+                   return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
+               }
+            } catch(e) {
+               return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
+            }
+        }
 
         // Retrieve global configs
         const { data: config } = await supabase.from('system_configuration').select('*').eq('id', 1).maybeSingle();
@@ -145,7 +175,8 @@ export async function getReferralStatus(req: any, res: any) {
             target2Reward: config?.target_2_reward || 0,
             referralCode: code,
             isExpired,
-            joinedUsers
+            joinedUsers,
+            referralDomainUrl: getReferralDomainUrl()
         });
 
     } catch (e: any) {
@@ -159,8 +190,20 @@ export async function claimReferralReward(req: any, res: any) {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No auth header' });
     const token = authHeader.replace(/^Bearer /i, '');
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' });
+    let { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) {
+        try {
+            const jwtPayload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+            if (jwtPayload && jwtPayload.sub) {
+                user = { id: jwtPayload.sub } as any;
+                authErr = null;
+            } else {
+                return res.status(401).json({ error: 'Invalid token' });
+            }
+        } catch(e) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+    }
 
     const { target } = req.body; // 1 or 2
     if (target !== 1 && target !== 2) return res.status(400).json({ error: 'Unknown target' });

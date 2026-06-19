@@ -183,6 +183,8 @@ async function startServer() {
               const { data, error } = await supabase.from('system_configuration').select('*').eq('id', 1).maybeSingle();
               if (error) return res.status(400).json({ error: error.message });
               if (data) {
+                  const store = getDataStore();
+                  const savedDomain = store.referralDomainUrl || 'https://ahtaskpay.onrender.com';
                   return res.json({ data: {
                       id: 'config',
                       notice: data.global_notice || '',
@@ -205,12 +207,19 @@ async function startServer() {
                       target1Reward: data.target_1_reward || 0,
                       target2Referrals: data.target_2_referrals || 0,
                       target2Reward: data.target_2_reward || 0,
-                      referralDomainUrl: data.referral_domain_url || 'https://ahtaskpay.onrender.com'
+                      referralDomainUrl: savedDomain
                   } });
               }
               return res.json({ data: null });
           } else if (method === 'upsert' || method === 'update') {
               const input = args[0];
+              
+              if (input.referralDomainUrl !== undefined) {
+                  const store = getDataStore();
+                  store.referralDomainUrl = input.referralDomainUrl;
+                  saveDataStore(store);
+              }
+
               const mappedUpdate: any = {};
               if (input.notice !== undefined) mappedUpdate.global_notice = input.notice;
               if (input.minDeposit !== undefined) mappedUpdate.min_deposit = input.minDeposit;
@@ -232,10 +241,9 @@ async function startServer() {
               if (input.target1Reward !== undefined) mappedUpdate.target_1_reward = input.target1Reward;
               if (input.target2Referrals !== undefined) mappedUpdate.target_2_referrals = input.target2Referrals;
               if (input.target2Reward !== undefined) mappedUpdate.target_2_reward = input.target2Reward;
-              if (input.referralDomainUrl !== undefined) mappedUpdate.referral_domain_url = input.referralDomainUrl;
-
+ 
               mappedUpdate.updated_at = new Date().toISOString();
-
+ 
               const { data, error } = await supabase.from('system_configuration').update(mappedUpdate).eq('id', 1).select().maybeSingle();
               if (error) return res.status(400).json({ error: error.message });
               
@@ -1593,7 +1601,7 @@ async function startServer() {
             target1Reward: configSnap.target_1_reward || 0,
             target2Referrals: configSnap.target_2_referrals || 0,
             target2Reward: configSnap.target_2_reward || 0,
-            referralDomainUrl: configSnap.referral_domain_url || 'https://ahtaskpay.com'
+            referralDomainUrl: store.referralDomainUrl || 'https://ahtaskpay.onrender.com'
         } : null;
         const safeUsers = usersSnap.error ? [] : (usersSnap.data || []).map(u => ({ ...u, uid: u.id }));
         
