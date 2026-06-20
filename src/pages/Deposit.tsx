@@ -193,8 +193,12 @@ export function Deposit() {
                    </div>
                  </div>
                  <div className="flex gap-4 pt-2">
-                    <div className="px-4 py-2 bg-pink-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-pink-400">bKash</div>
-                    <div className="px-4 py-2 bg-orange-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-orange-400">Nagad</div>
+                    {systemConfig?.is_bkash_enabled !== false && (
+                       <div className="px-4 py-2 bg-pink-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-pink-400">bKash</div>
+                    )}
+                    {systemConfig?.is_nagad_enabled !== false && (
+                       <div className="px-4 py-2 bg-orange-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-orange-400">Nagad</div>
+                    )}
                  </div>
               </div>
 
@@ -207,8 +211,11 @@ export function Deposit() {
                          value={formData.method}
                          onChange={e => setFormData({...formData, method: e.target.value as any})}
                        >
-                          <option value="bKash" className="dark:bg-slate-800">bKash</option>
-                          <option value="Nagad" className="dark:bg-slate-800">Nagad</option>
+                          {systemConfig?.is_bkash_enabled !== false && <option value="bKash" className="dark:bg-slate-800">bKash</option>}
+                          {systemConfig?.is_nagad_enabled !== false && <option value="Nagad" className="dark:bg-slate-800">Nagad</option>}
+                          {(systemConfig?.is_bkash_enabled === false && systemConfig?.is_nagad_enabled === false) && (
+                            <option value="" disabled className="dark:bg-slate-800">No payment methods</option>
+                          )}
                        </select>
                     </div>
                     <div className="space-y-2">

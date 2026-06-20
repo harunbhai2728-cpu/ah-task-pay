@@ -50,6 +50,14 @@ export function Dashboard() {
   const [convertAmount, setConvertAmount] = useState('');
   const [converting, setConverting] = useState(false);
   const [convertError, setConvertError] = useState<string|null>(null);
+
+  const earningToDepositFeePercent = systemConfig?.transferEarningToDepositFee !== undefined ? systemConfig.transferEarningToDepositFee : 20;
+  const depositToEarningFeePercent = systemConfig?.transferDepositToEarningFee !== undefined ? systemConfig.transferDepositToEarningFee : 30;
+  const currentFeePercent = convertType === 'EarningToDeposit' ? earningToDepositFeePercent : depositToEarningFeePercent;
+  const parsedConvertAmount = parseFloat(convertAmount);
+  const isValidConvertAmount = !isNaN(parsedConvertAmount) && parsedConvertAmount > 0;
+  const calculatedConvertFee = isValidConvertAmount ? parsedConvertAmount * (currentFeePercent / 100) : 0;
+  const receivableConvertAmount = isValidConvertAmount ? parsedConvertAmount - calculatedConvertFee : 0;
   
   const [pendingTasks, setPendingTasks] = useState<Submission[]>([]);
   const [activeAds, setActiveAds] = useState<any[]>([]);
@@ -680,13 +688,28 @@ export function Dashboard() {
                       onChange={e => setConvertAmount(e.target.value)}
                       className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-xl font-black outline-none focus:ring-2 focus:ring-indigo-500"
                    />
-                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mt-2 px-1">
-                      <span className="text-gray-400">Available:</span>
-                      <span className="text-indigo-600">
-                         {formatCurrency(convertType === 'EarningToDeposit' ? (profile?.earningBalance || 0) : (profile?.depositBalance || 0))}
-                      </span>
-                   </div>
-                 </div>
+                                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mt-2 px-1">
+                       <span className="text-gray-400">Available:</span>
+                       <span className="text-indigo-600">
+                          {formatCurrency(convertType === 'EarningToDeposit' ? (profile?.earningBalance || 0) : (profile?.depositBalance || 0))}
+                       </span>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-gray-150 dark:border-slate-700/50 space-y-2 mt-3 text-left">
+                      <div className="flex justify-between text-xs font-black text-gray-500 dark:text-slate-400 uppercase tracking-widest">
+                        <span>Fee Deducted:</span>
+                        <span className="text-rose-500 font-extrabold">
+                          {isValidConvertAmount ? calculatedConvertFee.toFixed(2) + ' BDT' : '0.00 BDT'} ({currentFeePercent}%)
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm font-black text-gray-900 dark:text-slate-100 uppercase tracking-widest border-t border-gray-150/45 dark:border-slate-700/45 pt-2">
+                        <span>Amount to Receive:</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">
+                          {isValidConvertAmount ? receivableConvertAmount.toFixed(2) + ' BDT' : '0.00 BDT'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
                  <button 
                    disabled={converting}

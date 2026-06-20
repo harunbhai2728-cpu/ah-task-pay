@@ -196,6 +196,8 @@ async function startServer() {
                       bkashMethod: data.bkash_method || 'Personal',
                       nagadNumber: data.official_nagad || '',
                       nagadMethod: data.nagad_method || 'Personal',
+                      is_bkash_enabled: data.is_bkash_enabled !== false,
+                      is_nagad_enabled: data.is_nagad_enabled !== false,
                       transferEarningToDepositFee: data.transfer_earning_deposit_fee || 0,
                       transferDepositToEarningFee: data.transfer_deposit_earning_fee || 10,
                       loginTitle: data.login_title || 'Welcome to TaskPay',
@@ -241,6 +243,8 @@ async function startServer() {
               if (input.target1Reward !== undefined) mappedUpdate.target_1_reward = input.target1Reward;
               if (input.target2Referrals !== undefined) mappedUpdate.target_2_referrals = input.target2Referrals;
               if (input.target2Reward !== undefined) mappedUpdate.target_2_reward = input.target2Reward;
+              if (input.is_bkash_enabled !== undefined) mappedUpdate.is_bkash_enabled = input.is_bkash_enabled;
+              if (input.is_nagad_enabled !== undefined) mappedUpdate.is_nagad_enabled = input.is_nagad_enabled;
  
               mappedUpdate.updated_at = new Date().toISOString();
  
@@ -1590,6 +1594,8 @@ async function startServer() {
             bkashMethod: configSnap.bkash_method || 'Personal',
             nagadNumber: configSnap.official_nagad || '',
             nagadMethod: configSnap.nagad_method || 'Personal',
+            is_bkash_enabled: configSnap.is_bkash_enabled !== false,
+            is_nagad_enabled: configSnap.is_nagad_enabled !== false,
             transferEarningToDepositFee: configSnap.transfer_earning_deposit_fee || 0,
             transferDepositToEarningFee: configSnap.transfer_deposit_earning_fee || 10,
             loginTitle: configSnap.login_title || 'Welcome to TaskPay',

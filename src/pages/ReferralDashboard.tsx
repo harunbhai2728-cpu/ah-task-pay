@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { CheckCircle, Clock, Copy, Gift, Share2, Target, Users, Zap, Terminal, AlertCircle } from 'lucide-react';
 
 export function ReferralDashboard() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [claimLoading, setClaimLoading] = useState(false);
@@ -104,6 +104,7 @@ export function ReferralDashboard() {
       } else {
         alert(`Success! You earned ${json.reward} BDT!`);
         fetchData(); // refresh data
+        if (refreshProfile) refreshProfile(); // Refresh global balance
       }
     } catch (e: any) {
       console.error("Error claiming referral reward:", e);
@@ -135,6 +136,7 @@ export function ReferralDashboard() {
   const sqlQuery = `-- Referral System Schema Setup
 -- 1. Add referral_code to existing profiles if not exists
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referral_code TEXT UNIQUE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS referred_by TEXT;
 
 -- 2. Create referrals table to track who referred whom
 CREATE TABLE IF NOT EXISTS public.referrals (

@@ -9,6 +9,7 @@ import {
   XCircle,
   Search,
   Filter,
+  Copy,
   ArrowUpRight,
   ArrowDownLeft,
   Briefcase,
@@ -85,9 +86,11 @@ export function AdminPanel() {
   const [ads, setAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminActionLoading, setAdminActionLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [jobsSearchTerm, setJobsSearchTerm] = useState('');
   const [txSearchTerm, setTxSearchTerm] = useState('');
+  const [txTypeFilter, setTxTypeFilter] = useState('All');
   const [subSearchTerm, setSubSearchTerm] = useState('');
   const [ticketSearchTerm, setTicketSearchTerm] = useState('');
   const [adsSearchTerm, setAdsSearchTerm] = useState('');
@@ -303,6 +306,7 @@ export function AdminPanel() {
   const fetchAdminData = async (silent = false, background = false) => {
     if (!isSystemAdmin) return;
     if (!silent && !background) setLoading(true);
+    if (silent) setIsRefreshing(true);
     try {
       const sessionRes = await supabase.auth.getSession();
       const session = sessionRes.data?.session;
@@ -355,11 +359,13 @@ export function AdminPanel() {
       }
       
       if (!background) setLoading(false);
+      setIsRefreshing(false);
     } catch (err: any) {
       console.error("Admin Panel Initialization Failed:", err);
       // Instead of just logging, we should probably show this to the user in a less fatal way if possible, 
       // but the requirement is to fix the "Failed to fetch" which was likely a generic network error or crash.
       if (!background) setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -489,9 +495,44 @@ export function AdminPanel() {
     if (sub.status !== 'pending') return;
     
     const previousSubmissions = [...submissions];
+    const previousUsers = [...users];
+    const previousJobs = [...jobs];
+    const reward = sub.reward || 0;
     
-    // Optimistic Update
+    // Optimistic Update of submission status
     setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, status: 'approved' } : s));
+
+    // Optimistic Update of User balances
+    setUsers(prev => prev.map(u => {
+      const isWorker = (u.id === sub.workerId || u.uid === sub.workerId);
+      const isPoster = (u.id === sub.posterId || u.uid === sub.posterId);
+      let updatedUser = { ...u };
+      if (isWorker) {
+        updatedUser.earningBalance = (u.earningBalance || 0) + reward;
+        updatedUser.pendingEarningBalance = Math.max(0, (u.pendingEarningBalance || 0) - reward);
+      }
+      if (isPoster) {
+        updatedUser.heldBalance = Math.max(0, (u.heldBalance || 0) - reward);
+      }
+      return updatedUser;
+    }));
+
+    // Optimistic Update of Jobs table statistics
+    setJobs(prev => prev.map(j => {
+      if (j.id === sub.jobId) {
+        const newApprovedCount = (j.approvedCount || 0) + 1;
+        const newPendingCount = Math.max(0, (j.pendingCount || 0) - 1);
+        return {
+          ...j,
+          approvedCount: newApprovedCount,
+          pendingCount: newPendingCount,
+          completedCount: newApprovedCount + newPendingCount,
+          slots_filled: newApprovedCount
+        };
+      }
+      return j;
+    }));
+
     const loadingToast = toast.loading('Approving proof...');
 
     try {
@@ -501,10 +542,10 @@ export function AdminPanel() {
       }).eq('id', sub.id);
 
       toast.success('Submission Approved', { id: loadingToast });
-      // Silent background refresh to catch any side effects (like updated job counts)
-      fetchAdminData(true, true);
     } catch (err: any) {
       setSubmissions(previousSubmissions);
+      setUsers(previousUsers);
+      setJobs(previousJobs);
       toast.error(err.message || 'Error approving submission', { id: loadingToast });
     }
   };
@@ -524,14 +565,45 @@ export function AdminPanel() {
     }
 
     const previousSubmissions = [...submissions];
+    const previousUsers = [...users];
+    const previousJobs = [...jobs];
     const subId = rejectingSub.id;
+    const sub = rejectingSub;
+    const reward = sub.reward || 0;
     
     // Close modal immediately for snappy UI
     setRejectingSub(null);
     setRejectReason('');
     
-    // Optimistic Update
+    // Optimistic Update of submission status
     setSubmissions(prev => prev.map(s => s.id === subId ? { ...s, status: 'rejected' } : s));
+
+    // Optimistic Update of Worker balance (reducing pending balance)
+    setUsers(prev => prev.map(u => {
+      const isWorker = (u.id === sub.workerId || u.uid === sub.workerId);
+      if (isWorker) {
+        return {
+          ...u,
+          pendingEarningBalance: Math.max(0, (u.pendingEarningBalance || 0) - reward)
+        };
+      }
+      return u;
+    }));
+
+    // Optimistic Update of Job statistics (decreasing pending counts)
+    setJobs(prev => prev.map(j => {
+      if (j.id === sub.jobId) {
+        const newPendingCount = Math.max(0, (j.pendingCount || 0) - 1);
+        const currentApproved = j.approvedCount || 0;
+        return {
+          ...j,
+          pendingCount: newPendingCount,
+          completedCount: currentApproved + newPendingCount,
+        };
+      }
+      return j;
+    }));
+    
     const loadingToast = toast.loading('Rejecting proof...');
 
     try {
@@ -547,14 +619,11 @@ export function AdminPanel() {
       }
 
       toast.success('Submission Rejected', { id: loadingToast });
-      // Remove from pending list (if still showing pending) or update status
-      setSubmissions(prev => prev.map(s => s.id === subId ? { ...s, status: 'rejected' } : s));
-      
-      // Silent background refresh
-      fetchAdminData(true, true);
     } catch (err: any) {
       console.error(err);
       setSubmissions(previousSubmissions);
+      setUsers(previousUsers);
+      setJobs(previousJobs);
       toast.error(err.message || 'Error rejecting submission', { id: loadingToast });
     }
   };
@@ -1230,6 +1299,9 @@ export function AdminPanel() {
 
   const sortedTransactions = React.useMemo(() => {
     let filtered = [...transactions];
+    if (txTypeFilter !== 'All') {
+      filtered = filtered.filter(t => t.type?.toLowerCase() === txTypeFilter.toLowerCase());
+    }
     if (txSearchTerm.trim()) {
       const term = txSearchTerm.toLowerCase().trim();
       filtered = filtered.filter(t => 
@@ -1245,7 +1317,7 @@ export function AdminPanel() {
       const bTime = getMs(b.createdAt || b.created_at);
       return bTime - aTime;
     });
-  }, [transactions, txSearchTerm]);
+  }, [transactions, txSearchTerm, txTypeFilter]);
 
   const sortedSubmissions = React.useMemo(() => {
     let filtered = [...submissions];
@@ -1367,11 +1439,12 @@ export function AdminPanel() {
         </div>
         <div className="flex gap-4 relative z-10">
            <button 
-             onClick={fetchAdminData}
-             className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl shadow-lg dark:shadow-none flex items-center gap-3 transition-colors font-bold text-sm"
+             onClick={() => fetchAdminData(true)}
+             disabled={isRefreshing}
+             className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl shadow-lg dark:shadow-none flex items-center gap-3 transition-colors font-bold text-sm disabled:opacity-50"
            >
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-             Refresh Data
+             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-refresh-cw ${isRefreshing ? 'animate-spin' : ''}`}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+             {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
            </button>
            <div className="bg-gray-900 dark:bg-slate-950 text-white px-6 py-3 rounded-2xl shadow-lg dark:shadow-none flex items-center gap-3 transition-colors">
               <Users className="w-5 h-5 text-gray-400" />
@@ -1517,15 +1590,28 @@ export function AdminPanel() {
         {activeTab === 'transactions' && (
           <div className="space-y-4">
             <div className="p-6 pb-2 relative border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input 
-                  type="text"
-                  placeholder="Filter transactions by User UID, Name, or Serial..."
-                  value={txSearchTerm}
-                  onChange={(e) => setTxSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-500 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20"
-                />
+              <div className="relative flex-1 flex gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input 
+                    type="text"
+                    placeholder="Filter transactions by User UID, Name, or Serial..."
+                    value={txSearchTerm}
+                    onChange={(e) => setTxSearchTerm(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-500 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20"
+                  />
+                </div>
+                <select
+                  value={txTypeFilter}
+                  onChange={(e) => setTxTypeFilter(e.target.value)}
+                  className="w-40 px-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20 cursor-pointer"
+                >
+                  <option value="All">All Types</option>
+                  <option value="deposit">Deposit</option>
+                  <option value="withdrawal">Withdrawal</option>
+                  <option value="bonus">Bonus</option>
+                  <option value="payment">Payment</option>
+                </select>
               </div>
               {txSearchTerm && (
                 <button
@@ -1591,7 +1677,22 @@ export function AdminPanel() {
                       </span>
                     </td>
                     <td className="p-6">
-                       <p className="text-xs font-medium text-gray-500 dark:text-slate-400 transition-colors">P: {tx.phone}</p>
+                       <div className="flex items-center gap-2 mb-1">
+                         <span className="text-xs text-gray-500 font-medium">P:</span>
+                         <span className="text-lg font-semibold text-gray-900 dark:text-slate-100">{tx.phone}</span>
+                         {tx.phone && (
+                           <button 
+                             onClick={() => {
+                               navigator.clipboard.writeText(tx.phone);
+                               toast.success('Copied!');
+                             }}
+                             className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700/50 rounded transition-colors text-gray-400 hover:text-gray-900 dark:text-slate-500 dark:hover:text-slate-200"
+                             title="Copy phone"
+                           >
+                             <Copy className="w-4 h-4" />
+                           </button>
+                         )}
+                       </div>
                        <p className="text-xs font-medium text-gray-500 dark:text-slate-400 transition-colors">T: {tx.transactionId}</p>
                     </td>
                     <td className="p-6">
@@ -2257,6 +2358,27 @@ export function AdminPanel() {
             </div>
 
             <form onSubmit={handleUpdateConfig} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="md:col-span-2 space-y-4 border-b border-gray-100 dark:border-slate-800 pb-8">
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Payment Methods Status</h3>
+                  <div className="flex flex-col sm:flex-row gap-8">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div className="relative">
+                        <input type="checkbox" className="sr-only peer" checked={config.is_bkash_enabled !== false} onChange={e => setConfig({...config, is_bkash_enabled: e.target.checked})} />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-500"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">bKash Enabled</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div className="relative">
+                        <input type="checkbox" className="sr-only peer" checked={config.is_nagad_enabled !== false} onChange={e => setConfig({...config, is_nagad_enabled: e.target.checked})} />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Nagad Enabled</span>
+                    </label>
+                  </div>
+               </div>
+
                <div className="space-y-4 md:col-span-2">
                   <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Global Dashboard Notice</label>
                   <textarea 

@@ -73,7 +73,6 @@ export async function getReferralStatus(req: any, res: any) {
         const token = authHeader.replace(/^Bearer /i, '');
         let { data: { user }, error: authErr } = await supabase.auth.getUser(token);
         if (authErr || !user) {
-            console.error("Auth Error in getReferralStatus:", authErr);
             // Try fallback decode if jwt is valid
             try {
                const jwtPayload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
@@ -81,9 +80,11 @@ export async function getReferralStatus(req: any, res: any) {
                    user = { id: jwtPayload.sub } as any;
                    authErr = null;
                } else {
+                   console.error("Auth Error in getReferralStatus:", authErr);
                    return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
                }
             } catch(e) {
+               console.error("Auth Error in getReferralStatus:", authErr);
                return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
             }
         }
@@ -108,49 +109,77 @@ export async function getReferralStatus(req: any, res: any) {
             }
         }
 
-        // Count referrals
-        let referrals: any[] = [];
+        let validCount = 0;
+        let pendingCount = 0;
         let joinedUsers: any[] = [];
-        try {
-            const { data: refs, error: refErr } = await supabase
-                .from('referrals')
-                .select('status, referred_id, created_at')
-                .eq('referrer_id', user.id);
-            if (refs) {
-                referrals = refs;
-                
-                const referredIds = refs.map((r: any) => r.referred_id).filter(Boolean);
-                if (referredIds.length > 0) {
-                    const { data: profiles, error: pErr } = await supabase
-                        .from('profiles')
-                        .select('id, displayName, username')
-                        .in('id', referredIds);
-                    
-                    const profileMap = new Map();
-                    if (profiles) {
-                        for (const p of profiles) {
-                            profileMap.set(p.id, p);
-                        }
-                    }
 
-                    joinedUsers = refs.map((r: any) => {
-                        const prof = profileMap.get(r.referred_id);
-                        return {
-                            id: r.referred_id,
-                            name: prof?.displayName || prof?.username || 'User',
-                            username: prof?.username || 'user',
-                            status: r.status,
-                            createdAt: r.created_at || new Date().toISOString()
-                        };
-                    });
+        try {
+            // STEP 2: Fetch all users where referred_by matches this user's referral code
+            const { data: referredProfiles, error: pErr } = await supabase
+                .from('profiles')
+                .select('id, displayName, username, createdAt')
+                .eq('referred_by', code);
+
+            if (referredProfiles && referredProfiles.length > 0) {
+                const referredUserIds = referredProfiles.map(p => p.id);
+
+                // Fetch their referral status from the 'referrals' table 
+                // OR calculate it dynamically based on approved jobs if missing
+                const { data: refs } = await supabase
+                    .from('referrals')
+                    .select('referred_user_id, status')
+                    .in('referred_user_id', referredUserIds);
+
+                const referralStatusMap = new Map();
+                if (refs) {
+                    for (const r of refs) {
+                        referralStatusMap.set(r.referred_user_id, r.status);
+                    }
                 }
+
+                // If some users are NOT in 'referrals' table (due to old bugs), we check submissions directly to repair state
+                const missingIds = referredUserIds.filter(id => !referralStatusMap.has(id));
+                const dynamicStatusMap = new Map();
+                
+                if (missingIds.length > 0) {
+                    const { data: submissions } = await supabase
+                        .from('submissions')
+                        .select('worker_id, status')
+                        .eq('status', 'approved')
+                        .in('worker_id', missingIds);
+                        
+                    const approvedWorkers = new Set((submissions || []).map(s => s.worker_id));
+                    for (const id of missingIds) {
+                        const status = approvedWorkers.has(id) ? 'valid' : 'pending';
+                        dynamicStatusMap.set(id, status);
+                        // Optional: auto-insert missing referral record to self-heal the DB
+                        try {
+                            await supabase.from('referrals').insert({
+                                referrer_id: user.id,
+                                referred_user_id: id,
+                                status: status
+                            });
+                        } catch (e) { /* ignore insert errors */ }
+                    }
+                }
+
+                joinedUsers = referredProfiles.map(p => {
+                    let status = referralStatusMap.get(p.id) || dynamicStatusMap.get(p.id) || 'pending';
+                    if (status === 'valid') validCount++;
+                    else pendingCount++;
+                    
+                    return {
+                        id: p.id,
+                        name: p.displayName || p.username || 'User',
+                        username: p.username || 'user',
+                        status: status,
+                        createdAt: p.createdAt || new Date().toISOString()
+                    };
+                });
             }
         } catch (refE: any) {
             console.error("Error fetching referrals info:", refE);
         }
-
-        const validCount = referrals ? referrals.filter((r: any) => r.status === 'valid').length : 0;
-        const pendingCount = referrals ? referrals.filter((r: any) => r.status === 'pending').length : 0;
         
         let isExpired = false;
         let campaignEndDate = config?.campaign_end_date || null;

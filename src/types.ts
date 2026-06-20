@@ -74,7 +74,7 @@ export interface Submission {
   reward: number;
 }
 
-export type TransactionType = 'deposit' | 'withdrawal' | 'payment' | 'refund';
+export type TransactionType = 'deposit' | 'withdrawal' | 'payment' | 'refund' | 'bonus';
 export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'rejected' | 'approved';
 export type PaymentMethod = 'bKash' | 'Nagad';
 
