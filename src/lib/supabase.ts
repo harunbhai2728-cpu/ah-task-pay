@@ -43,6 +43,10 @@ const createProxyBuilder = (table: string) => {
             chain.neqs = [...(chain.neqs || []), args]; 
             return builder; 
         },
+        ilike: (...args: any[]) => {
+            chain.ilike = args;
+            return builder;
+        },
         or: (...args: any[]) => { chain.or = args[0]; return builder; },
         order: (...args: any[]) => { chain.order = args; return builder; },
         limit: (...args: any[]) => { chain.limit = args[0]; return builder; },

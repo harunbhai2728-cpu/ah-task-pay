@@ -24,12 +24,24 @@ export function BrowseJobs() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
+
+  // Debouncing the Search Term Input gracefully
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   useEffect(() => {
     if (!user?.id) return;
     const fetchAllData = async () => {
       try {
+        setLoading(true);
         let submitMap = new Map<string, string>();
         let jobIdsToExclude: string[] = [];
 
@@ -53,13 +65,19 @@ export function BrowseJobs() {
           .from('jobs')
           .select('*')
           .eq('status', 'open');
+
+        // Apply db-level search constraint via .ilike() as specified
+        if (debouncedSearch.trim()) {
+          query = query.ilike('title', `%${debouncedSearch.trim()}%`);
+        }
           
+        // Apply db-level sort order matching specified layout options
         if (sortOrder === 'price_asc') {
-          query = query.order('pricePerWork', { ascending: true });
+          query = query.order('reward', { ascending: true });
         } else if (sortOrder === 'price_desc') {
-          query = query.order('pricePerWork', { ascending: false });
+          query = query.order('reward', { ascending: false });
         } else {
-          query = query.order('createdAt', { ascending: false });
+          query = query.order('created_at', { ascending: false });
         }
 
         if (jobIdsToExclude.length > 0) {
@@ -84,7 +102,7 @@ export function BrowseJobs() {
       }
     };
     fetchAllData();
-  }, [user?.id, sortOrder]);
+  }, [user?.id, debouncedSearch, sortOrder]);
 
   const filteredJobs = jobs.filter(job => {
     // Hide user's own self-posted jobs
@@ -99,10 +117,7 @@ export function BrowseJobs() {
     if (job.isFull) {
       return false;
     }
-    return (
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return true; // Match is fully handled at database level via query!
   });
 
   return (
