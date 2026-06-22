@@ -311,9 +311,8 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
           <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 text-orange-850 space-y-2">
             <h3 className="font-bold flex items-center gap-1 text-orange-900"><Zap className="w-4 h-4" /> Important Rules</h3>
             <ul className="list-disc pl-4 text-xs font-semibold space-y-1">
-              <li>A referral counts as <strong className="text-orange-950">Valid</strong> only when the referred user completes and gets paid for <strong className="text-orange-950">1 microjob</strong>.</li>
+              <li>A referral counts as <strong className="text-orange-950">Valid</strong> only when the referred user completes and gets paid for <strong className="text-orange-950">{data?.referralValidationCriteria || 1} microjob(s)</strong>.</li>
               <li>Fake accounts or multiple accounts result in a permanent ban.</li>
-              <li>You have 15 days from your first visit here to reach the milestones.</li>
             </ul>
           </div>
         </div>
@@ -453,21 +452,24 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-4 text-right pr-2">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
-                          item.status === 'valid'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {item.status === 'valid' ? (
-                            <>
+                        {item.status === 'valid' ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-green-100 text-green-700">
                               <CheckCircle className="w-3.5 h-3.5" /> Validated
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="w-3.5 h-3.5" /> Pending Job
-                            </>
-                          )}
-                        </span>
+                            </span>
+                        ) : item.status === 'expired' || item.status === 'cropped' ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-red-100 text-red-700">
+                              <Clock className="w-3.5 h-3.5" /> Expired
+                            </span>
+                        ) : (
+                            <div className="flex flex-col items-end">
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-yellow-100 text-yellow-700">
+                                  <Clock className="w-3.5 h-3.5" /> Pending Job
+                                </span>
+                                {item.expiration && (
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase mt-1">Exp: {new Date(item.expiration).toLocaleDateString()}</span>
+                                )}
+                            </div>
+                        )}
                       </td>
                     </tr>
                   ))}

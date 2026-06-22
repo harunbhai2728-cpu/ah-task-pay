@@ -196,9 +196,9 @@ export function Withdraw() {
                          value={formData.method}
                          onChange={e => setFormData({...formData, method: e.target.value as any})}
                        >
-                          {systemConfig?.is_bkash_enabled !== false && <option value="bKash" className="dark:bg-slate-800">bKash</option>}
-                          {systemConfig?.is_nagad_enabled !== false && <option value="Nagad" className="dark:bg-slate-800">Nagad</option>}
-                          {(systemConfig?.is_bkash_enabled === false && systemConfig?.is_nagad_enabled === false) && (
+                          {systemConfig?.withdrawBkashEnabled !== false && <option value="bKash" className="dark:bg-slate-800">bKash</option>}
+                          {systemConfig?.withdrawNagadEnabled !== false && <option value="Nagad" className="dark:bg-slate-800">Nagad</option>}
+                          {(systemConfig?.withdrawBkashEnabled === false && systemConfig?.withdrawNagadEnabled === false) && (
                             <option value="" disabled className="dark:bg-slate-800">No payment methods</option>
                           )}
                        </select>

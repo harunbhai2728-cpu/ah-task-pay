@@ -196,14 +196,17 @@ async function startServer() {
                       bkashMethod: data.bkash_method || 'Personal',
                       nagadNumber: data.official_nagad || '',
                       nagadMethod: data.nagad_method || 'Personal',
-                      is_bkash_enabled: data.is_bkash_enabled !== false,
-                      is_nagad_enabled: data.is_nagad_enabled !== false,
+                      depositBkashEnabled: data.deposit_bkash_enabled !== false,
+                      depositNagadEnabled: data.deposit_nagad_enabled !== false,
+                      withdrawBkashEnabled: data.withdraw_bkash_enabled !== false,
+                      withdrawNagadEnabled: data.withdraw_nagad_enabled !== false,
                       transferEarningToDepositFee: data.transfer_earning_deposit_fee || 0,
                       transferDepositToEarningFee: data.transfer_deposit_earning_fee || 10,
                       loginTitle: data.login_title || 'Welcome to TaskPay',
                       loginBannerUrl: data.login_banner_url || '',
                       referralBonusAmount: data.referral_bonus_amount ?? 5,
                       referralValidationCriteria: data.referral_validation_criteria ?? 1,
+                      referralValidityDays: data.referral_validity_days ?? 30,
                       campaignEndDate: data.campaign_end_date || null,
                       target1Referrals: data.target_1_referrals || 0,
                       target1Reward: data.target_1_reward || 0,
@@ -238,13 +241,16 @@ async function startServer() {
               if (input.loginBannerUrl !== undefined) mappedUpdate.login_banner_url = input.loginBannerUrl;
               if (input.referralBonusAmount !== undefined) mappedUpdate.referral_bonus_amount = input.referralBonusAmount;
               if (input.referralValidationCriteria !== undefined) mappedUpdate.referral_validation_criteria = input.referralValidationCriteria;
+              if (input.referralValidityDays !== undefined) mappedUpdate.referral_validity_days = input.referralValidityDays;
               if (input.campaignEndDate !== undefined) mappedUpdate.campaign_end_date = input.campaignEndDate === '' ? null : input.campaignEndDate;
               if (input.target1Referrals !== undefined) mappedUpdate.target_1_referrals = input.target1Referrals;
               if (input.target1Reward !== undefined) mappedUpdate.target_1_reward = input.target1Reward;
               if (input.target2Referrals !== undefined) mappedUpdate.target_2_referrals = input.target2Referrals;
               if (input.target2Reward !== undefined) mappedUpdate.target_2_reward = input.target2Reward;
-              if (input.is_bkash_enabled !== undefined) mappedUpdate.is_bkash_enabled = input.is_bkash_enabled;
-              if (input.is_nagad_enabled !== undefined) mappedUpdate.is_nagad_enabled = input.is_nagad_enabled;
+              if (input.depositBkashEnabled !== undefined) mappedUpdate.deposit_bkash_enabled = input.depositBkashEnabled;
+              if (input.depositNagadEnabled !== undefined) mappedUpdate.deposit_nagad_enabled = input.depositNagadEnabled;
+              if (input.withdrawBkashEnabled !== undefined) mappedUpdate.withdraw_bkash_enabled = input.withdrawBkashEnabled;
+              if (input.withdrawNagadEnabled !== undefined) mappedUpdate.withdraw_nagad_enabled = input.withdrawNagadEnabled;
  
               mappedUpdate.updated_at = new Date().toISOString();
  
@@ -1533,6 +1539,132 @@ async function startServer() {
     }
   });
 
+  app.post('/api/admin/impersonate', express.json(), async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        let adminUser;
+        let token = '';
+        if (!authHeader) return res.status(401).json({ error: 'No auth header' });
+
+        token = authHeader.replace(/^Bearer /i, '');
+        const authRes = await supabase.auth.getUser(token);
+        adminUser = authRes.data.user;
+
+        if (!adminUser) {
+            try {
+                const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                if (payload && payload.sub) {
+                    adminUser = { id: payload.sub, email: payload.email || '' } as any;
+                }
+            } catch (e) {}
+        }
+        if (!adminUser) return res.status(401).json({ error: 'Invalid admin token' });
+
+        const { targetUserId } = req.body;
+        if (!targetUserId) return res.status(400).json({ error: 'No target user provided' });
+
+        // Admin checks
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', adminUser.id).maybeSingle();
+        const isMaster = ['superadmin@taskpay.systems', 'harunurrashid93427@gmail.com', 'harunbhai2728@gmail.com'].includes(adminUser.email?.toLowerCase() || '');
+        if (profile?.role !== 'admin' && !isMaster) {
+            return res.status(403).json({ error: 'Forbidden. Not an admin.' });
+        }
+
+        // Get target user
+        const { data: targetProfile, error: targetError } = await supabase.from('profiles').select('email').eq('id', targetUserId).maybeSingle();
+        if (targetError || !targetProfile?.email) {
+            return res.status(404).json({ error: 'Target user or email not found' });
+        }
+
+        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+            type: 'magiclink',
+            email: targetProfile.email
+        });
+
+        if (linkError) {
+             return res.status(400).json({ error: 'Failed to generate impersonation link: ' + linkError.message });
+        }
+
+        // Set tracking cookie
+        res.cookie('sb-admin-impersonating', adminUser.id, {
+            path: '/',
+            httpOnly: false,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 1000 * 60 * 60 * 2 // 2 hours
+        });
+
+        return res.json({ 
+            success: true, 
+            impersonateUrl: linkData.properties.action_link 
+        });
+
+    } catch(err: any) {
+        return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/exit-impersonation', express.json(), async (req, res) => {
+    try {
+        const { targetJwt } = req.body;
+        
+        // Read tracking cookie
+        const cookies = req.headers.cookie?.split(';').reduce((acc, current) => {
+            const [name, ...value] = current.trim().split('=');
+            acc[name] = value.join('=');
+            return acc;
+        }, {} as Record<string, string>) || {};
+        
+        const adminId = cookies['sb-admin-impersonating'];
+        
+        if (!adminId) {
+            return res.status(401).json({ error: 'No active impersonation session found' });
+        }
+
+        const { data: profile } = await supabase.from('profiles').select('email, role').eq('id', adminId).maybeSingle();
+        if (!profile || !profile.email) {
+            return res.status(404).json({ error: 'Admin profile not found' });
+        }
+
+        const isMaster = ['superadmin@taskpay.systems', 'harunurrashid93427@gmail.com', 'harunbhai2728@gmail.com'].includes(profile.email.toLowerCase());
+        if (profile.role !== 'admin' && !isMaster) {
+            return res.status(403).json({ error: 'Forbidden. Not an admin.' });
+        }
+
+        // logout the impersonated user (targetUserId context)
+        if (targetJwt) {
+            try {
+                await supabase.auth.admin.signOut(targetJwt, 'local');
+            } catch (e) {
+                console.warn('Could not gracefully sign out target user on backend:', e);
+            }
+        }
+        
+        // Generate a new link for the admin to log back in
+        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+            type: 'magiclink',
+            email: profile.email,
+            options: {
+                redirectTo: req.body.redirectTo || `${req.headers.origin || 'http://localhost:3000'}/admin`
+            }
+        });
+
+        res.clearCookie('sb-admin-impersonating', { path: '/' });
+
+        if (linkError) {
+             return res.status(400).json({ error: 'Failed to generate admin restore link: ' + linkError.message });
+        }
+
+        return res.json({ 
+            success: true, 
+            restoreUrl: linkData.properties.action_link 
+        });
+
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get('/api/admin/data', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
@@ -1594,14 +1726,17 @@ async function startServer() {
             bkashMethod: configSnap.bkash_method || 'Personal',
             nagadNumber: configSnap.official_nagad || '',
             nagadMethod: configSnap.nagad_method || 'Personal',
-            is_bkash_enabled: configSnap.is_bkash_enabled !== false,
-            is_nagad_enabled: configSnap.is_nagad_enabled !== false,
+            depositBkashEnabled: configSnap.deposit_bkash_enabled !== false,
+            depositNagadEnabled: configSnap.deposit_nagad_enabled !== false,
+            withdrawBkashEnabled: configSnap.withdraw_bkash_enabled !== false,
+            withdrawNagadEnabled: configSnap.withdraw_nagad_enabled !== false,
             transferEarningToDepositFee: configSnap.transfer_earning_deposit_fee || 0,
             transferDepositToEarningFee: configSnap.transfer_deposit_earning_fee || 10,
             loginTitle: configSnap.login_title || 'Welcome to TaskPay',
             loginBannerUrl: configSnap.login_banner_url || '',
             referralBonusAmount: configSnap.referral_bonus_amount ?? 5,
             referralValidationCriteria: configSnap.referral_validation_criteria ?? 1,
+            referralValidityDays: configSnap.referral_validity_days ?? 30,
             campaignEndDate: configSnap.campaign_end_date || null,
             target1Referrals: configSnap.target_1_referrals || 0,
             target1Reward: configSnap.target_1_reward || 0,
@@ -2590,6 +2725,22 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // Background task to expire old referrals
+    setInterval(async () => {
+      try {
+        const now = new Date().toISOString();
+        const { error } = await supabase
+          .from('referrals')
+          .update({ status: 'expired' })
+          .eq('status', 'pending')
+          .not('expiration_date', 'is', null)
+          .lt('expiration_date', now);
+        if (error) console.error('Error expiring referrals:', error);
+      } catch (err) {
+        console.error('Interval error expiring referrals:', err);
+      }
+    }, 1000 * 60 * 60); // Check every hour
   });
 }
 startServer();

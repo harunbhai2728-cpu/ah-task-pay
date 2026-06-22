@@ -127,6 +127,7 @@ export function AdminPanel() {
   const [editUsername, setEditUsername] = useState('');
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editSubmitLoading, setEditSubmitLoading] = useState(false);
+  const [impersonateLoading, setImpersonateLoading] = useState(false);
   
   const [deleteAdConfirm, setDeleteAdConfirm] = useState<any | null>(null);
   const [deleteJobConfirm, setDeleteJobConfirm] = useState<string | null>(null);
@@ -907,6 +908,30 @@ export function AdminPanel() {
     setEditDisplayName(u.displayName || '');
     setEditUsername(u.username || '');
     setEditPassword('');
+  };
+
+  const handleAdminImpersonate = async () => {
+    if (!editingUser) return;
+    setImpersonateLoading(true);
+    try {
+      const sessionRes = await supabase.auth.getSession();
+      const token = sessionRes.data?.session?.access_token;
+      if (!token) throw new Error("No admin session found");
+
+      const res = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ targetUserId: editingUser.uid })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to impersonate');
+
+      toast.success('Entering Support Mode...');
+      window.location.href = data.impersonateUrl;
+    } catch (err: any) {
+      toast.error(err.message || 'Error occurred while impersonating');
+      setImpersonateLoading(false);
+    }
   };
 
   const handleSaveUserDetails = async () => {
@@ -2359,11 +2384,11 @@ export function AdminPanel() {
 
             <form onSubmit={handleUpdateConfig} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <div className="md:col-span-2 space-y-4 border-b border-gray-100 dark:border-slate-800 pb-8">
-                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Payment Methods Status</h3>
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Deposit Methods Status</h3>
                   <div className="flex flex-col sm:flex-row gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <div className="relative">
-                        <input type="checkbox" className="sr-only peer" checked={config.is_bkash_enabled !== false} onChange={e => setConfig({...config, is_bkash_enabled: e.target.checked})} />
+                        <input type="checkbox" className="sr-only peer" checked={config.depositBkashEnabled !== false} onChange={e => setConfig({...config, depositBkashEnabled: e.target.checked})} />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-500"></div>
                       </div>
                       <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">bKash Enabled</span>
@@ -2371,7 +2396,28 @@ export function AdminPanel() {
 
                     <label className="flex items-center gap-3 cursor-pointer">
                       <div className="relative">
-                        <input type="checkbox" className="sr-only peer" checked={config.is_nagad_enabled !== false} onChange={e => setConfig({...config, is_nagad_enabled: e.target.checked})} />
+                        <input type="checkbox" className="sr-only peer" checked={config.depositNagadEnabled !== false} onChange={e => setConfig({...config, depositNagadEnabled: e.target.checked})} />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Nagad Enabled</span>
+                    </label>
+                  </div>
+               </div>
+
+               <div className="md:col-span-2 space-y-4 border-b border-gray-100 dark:border-slate-800 pb-8">
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Withdrawal Methods Status</h3>
+                  <div className="flex flex-col sm:flex-row gap-8">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div className="relative">
+                        <input type="checkbox" className="sr-only peer" checked={config.withdrawBkashEnabled !== false} onChange={e => setConfig({...config, withdrawBkashEnabled: e.target.checked})} />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-500"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">bKash Enabled</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div className="relative">
+                        <input type="checkbox" className="sr-only peer" checked={config.withdrawNagadEnabled !== false} onChange={e => setConfig({...config, withdrawNagadEnabled: e.target.checked})} />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
                       </div>
                       <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Nagad Enabled</span>
@@ -2510,6 +2556,17 @@ export function AdminPanel() {
                     className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
                     value={config.referralValidationCriteria ?? 1}
                     onChange={e => setConfig({...config, referralValidationCriteria: e.target.value === '' ? '' : Number(e.target.value)})}
+                  />
+               </div>
+
+               <div className="space-y-4">
+                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Referral Validation Timeframe (Days)</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    value={config.referralValidityDays ?? 30}
+                    onChange={e => setConfig({...config, referralValidityDays: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
 
@@ -2999,26 +3056,39 @@ export function AdminPanel() {
               </div>
             </div>
 
-            <div className="flex gap-4 pt-2">
+            <div className="flex flex-col gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setEditingUser(null)}
-                className="flex-1 py-3.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs"
-                disabled={editSubmitLoading}
+                onClick={handleAdminImpersonate}
+                className="w-full py-3.5 border-2 border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-xs flex items-center justify-center gap-2"
+                disabled={editSubmitLoading || impersonateLoading}
               >
-                বাতিল (Cancel)
+                 {impersonateLoading ? (
+                   <span className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
+                 ) : null}
+                 {impersonateLoading ? 'Loading...' : 'Login As User (Support Mode)'}
               </button>
-              <button
-                type="button"
-                onClick={handleSaveUserDetails}
-                className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all text-xs shadow-lg dark:shadow-none shadow-indigo-100 flex items-center justify-center gap-2"
-                disabled={editSubmitLoading}
-              >
-                {editSubmitLoading && (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                )}
-                সংরক্ষণ করুন (Save Changes)
-              </button>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="flex-1 py-3.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs"
+                  disabled={editSubmitLoading}
+                >
+                  বাতিল (Cancel)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveUserDetails}
+                  className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all text-xs shadow-lg dark:shadow-none shadow-indigo-100 flex items-center justify-center gap-2"
+                  disabled={editSubmitLoading || impersonateLoading}
+                >
+                  {editSubmitLoading && (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  )}
+                  সংরক্ষণ করুন (Save Changes)
+                </button>
+              </div>
             </div>
           </div>
         </div>

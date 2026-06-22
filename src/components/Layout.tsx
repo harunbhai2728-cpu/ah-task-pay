@@ -36,10 +36,56 @@ export function Layout() {
   const { profile, isAdmin, isSuperAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
+  React.useEffect(() => {
+    // Check for our dedicated tracking cookie
+    const hasImpersonationCookie = document.cookie.includes('sb-admin-impersonating=');
+    setIsImpersonating(hasImpersonationCookie);
+  }, []);
+
+  const handleExitSupportMode = async () => {
+    if (isImpersonating) {
+      try {
+        const sessionRes = await supabase.auth.getSession();
+        const targetJwt = sessionRes.data?.session?.access_token;
+
+        const res = await fetch('/api/admin/exit-impersonation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                targetJwt: targetJwt,
+                redirectTo: window.location.origin + '/admin'
+            })
+        });
+        const data = await res.json();
+        
+        // Ensure standard local storage backups are also cleared
+        localStorage.removeItem('admin_session_backup');
+        
+        if (res.ok && data.restoreUrl) {
+             await supabase.auth.signOut(); 
+             window.location.href = data.restoreUrl;
+        } else {
+             await supabase.auth.signOut();
+             window.location.href = '/login';
+        }
+      } catch(e) {
+        console.error('Failed to restore admin session:', e);
+        localStorage.removeItem('admin_session_backup');
+        await supabase.auth.signOut();
+        window.location.href = '/login';
+      }
+    }
+  };
+
   const handleLogout = async () => {
+    if (isImpersonating || localStorage.getItem('admin_session_backup')) {
+      alert("You are currently impersonating a user. Please use the 'EXIT SUPPORT MODE' button to safely end the session.");
+      return;
+    }
     await supabase.auth.signOut();
     navigate('/');
   };
@@ -153,8 +199,23 @@ export function Layout() {
 
       {/* Main Content */}
       <main className="flex-1 md:ml-72 relative pb-24 md:pb-0 transition-colors duration-300">
+        {(isImpersonating && !location.pathname.startsWith('/admin')) && (
+          <div className="sticky top-0 z-50 bg-amber-500 text-amber-950 px-4 py-2 flex flex-col sm:flex-row items-center justify-between shadow-md">
+             <div className="flex items-center gap-2 font-bold mb-2 sm:mb-0">
+               <LifeBuoy className="w-5 h-5" />
+               <span className="text-sm">Impersonating User: <span className="uppercase">{profile?.displayName || 'Unknown'}</span></span>
+             </div>
+             <button 
+               onClick={handleExitSupportMode}
+               className="bg-amber-950 text-amber-500 hover:bg-amber-900 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-colors shadow-sm"
+             >
+               Exit Support Mode
+             </button>
+          </div>
+        )}
+
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 sticky top-0 z-40 transition-colors">
+        <header className={cn("md:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b dark:border-slate-700 transition-colors", !isImpersonating && "sticky top-0 z-40")}>
           <Link to="/dashboard">
             <BrandLogo size="sm" />
           </Link>

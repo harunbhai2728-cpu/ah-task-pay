@@ -53,11 +53,17 @@ export async function registerReferral(req: any, res: any) {
 
         if (!referrer) return res.status(404).json({ error: 'Referrer not found' });
 
+        const { data: config } = await supabase.from('system_configuration').select('referral_validity_days').eq('id', 1).maybeSingle();
+        const validityDays = Number(config?.referral_validity_days ?? 30);
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + validityDays);
+
         // Insert referral
         await supabase.from('referrals').insert({
             referrer_id: referrer.id,
             referred_user_id: newUserId,
-            status: 'pending'
+            status: 'pending',
+            expiration_date: expirationDate.toISOString()
         });
 
         res.json({ success: true });
@@ -127,13 +133,17 @@ export async function getReferralStatus(req: any, res: any) {
                 // OR calculate it dynamically based on approved jobs if missing
                 const { data: refs } = await supabase
                     .from('referrals')
-                    .select('referred_user_id, status')
+                    .select('referred_user_id, status, expiration_date')
                     .in('referred_user_id', referredUserIds);
 
                 const referralStatusMap = new Map();
+                const referralExpiryMap = new Map();
                 if (refs) {
                     for (const r of refs) {
                         referralStatusMap.set(r.referred_user_id, r.status);
+                        if (r.expiration_date) {
+                            referralExpiryMap.set(r.referred_user_id, r.expiration_date);
+                        }
                     }
                 }
 
@@ -173,6 +183,7 @@ export async function getReferralStatus(req: any, res: any) {
                         name: p.displayName || p.username || 'User',
                         username: p.username || 'user',
                         status: status,
+                        expiration: referralExpiryMap.get(p.id) || null,
                         createdAt: p.createdAt || new Date().toISOString()
                     };
                 });
@@ -202,6 +213,7 @@ export async function getReferralStatus(req: any, res: any) {
             target1Reward: config?.target_1_reward || 0,
             target2Referrals: config?.target_2_referrals || 0,
             target2Reward: config?.target_2_reward || 0,
+            referralValidationCriteria: config?.referral_validation_criteria || 1,
             referralCode: code,
             isExpired,
             joinedUsers,
@@ -323,6 +335,16 @@ export async function validateReferral(workerId: string) {
     try {
         const { data: referral } = await supabase.from('referrals').select('*').eq('referred_user_id', workerId).eq('status', 'pending').maybeSingle();
         if (!referral) return;
+
+        // Check if referral is expired
+        if (referral.expiration_date) {
+            const expirationTime = new Date(referral.expiration_date).getTime();
+            const now = new Date().getTime();
+            if (now > expirationTime) {
+                await supabase.from('referrals').update({ status: 'expired' }).eq('id', referral.id);
+                return; // Reached expiration, so it can't become valid anymore
+            }
+        }
 
         const { data: config } = await supabase.from('system_configuration').select('*').eq('id', 1).maybeSingle();
         const validationCriteria = config?.referral_validation_criteria ?? 1;
