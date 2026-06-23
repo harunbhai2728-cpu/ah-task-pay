@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2, AlertTriangle, X, BellRing } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { askNotificationPermission } from '../lib/pushNotifications';
 
 export default function ProfileSettings() {
   const { profile, user } = useAuth();
@@ -16,6 +17,9 @@ export default function ProfileSettings() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showDeletionModal, setShowDeletionModal] = useState(false);
+  const [deletionReason, setDeletionReason] = useState('');
+  const [deletionLoading, setDeletionLoading] = useState(false);
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +35,30 @@ export default function ProfileSettings() {
       setError(err.message || 'Failed to update name');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRequestDeletion = async () => {
+    if (!user) return;
+    if (!deletionReason.trim()) {
+       setError('Please provide a reason for deletion');
+       return;
+    }
+    setDeletionLoading(true);
+    setError('');
+    
+    try {
+       await supabase.from('profiles').update({
+          account_status: 'pending_deletion',
+          deletion_reason: deletionReason
+       }).eq('id', user.id);
+       
+       setSuccess('Your account deletion request has been submitted and is pending admin approval.');
+       setShowDeletionModal(false);
+    } catch(err: any) {
+       setError(err.message || 'Failed to request deletion');
+    } finally {
+       setDeletionLoading(false);
     }
   };
 
@@ -178,6 +206,94 @@ export default function ProfileSettings() {
          </div>
          <div className="bg-white/10 px-6 py-3 rounded-full font-bold text-sm">Verified User</div>
       </div>
+
+      <div className="mt-8 bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-colors">
+         <div className="flex items-center gap-4">
+            <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 p-4 rounded-2xl">
+               <BellRing className="w-8 h-8" />
+            </div>
+            <div>
+               <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Push Notifications</h3>
+               <p className="text-gray-500 dark:text-slate-400 font-medium text-sm">Get real-time updates for approvals and withdrawals on your device.</p>
+            </div>
+         </div>
+         <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => user && askNotificationPermission(user.id)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 dark:shadow-none whitespace-nowrap"
+         >
+            Enable Notifications
+         </motion.button>
+      </div>
+
+      {/* Account Deletion Section */}
+      <section className="bg-red-50 dark:bg-red-950/20 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/50 shadow-sm space-y-6 transition-colors mt-8">
+        <div className="flex items-center gap-3">
+           <div className="bg-red-100 dark:bg-red-900/40 p-2 rounded-xl text-red-600 dark:text-red-400">
+              <AlertTriangle className="w-6 h-6" />
+           </div>
+           <h2 className="text-xl font-black text-red-900 dark:text-red-400 uppercase">Danger Zone</h2>
+        </div>
+        <p className="text-red-700 dark:text-red-300 font-medium text-sm">
+          Once your account is deleted, all of your data, balances, and history will be permanently lost. This action cannot be undone.
+        </p>
+        <motion.button
+           whileTap={{ scale: 0.98 }}
+           onClick={() => setShowDeletionModal(true)}
+           className="px-6 py-3 bg-red-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-colors shadow-lg shadow-red-200 dark:shadow-none"
+        >
+           Request Account Deletion
+        </motion.button>
+      </section>
+
+      {/* Deletion Modal */}
+      {showDeletionModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-md p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-slate-800"
+          >
+            <div className="flex justify-between items-center mb-6">
+               <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                 <AlertTriangle className="w-6 h-6 text-red-500" />
+                 Delete Account
+               </h3>
+               <button onClick={() => setShowDeletionModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                 <X className="w-5 h-5" />
+               </button>
+            </div>
+            
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 font-medium">
+              Please enter the reason for requesting account deletion. An administrator will review your request.
+            </p>
+            
+            <textarea
+               value={deletionReason}
+               onChange={(e) => setDeletionReason(e.target.value)}
+               placeholder="Why are you leaving?"
+               rows={4}
+               className="w-full p-4 mb-6 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-red-500 font-medium text-sm text-gray-900 dark:text-white resize-none"
+            ></textarea>
+            
+            <div className="flex gap-4">
+               <button
+                  onClick={() => setShowDeletionModal(false)}
+                  className="flex-1 py-3 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+               >
+                  Cancel
+               </button>
+               <button
+                  onClick={handleRequestDeletion}
+                  disabled={deletionLoading || !deletionReason.trim()}
+                  className="flex-1 py-3 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
+               >
+                  {deletionLoading ? 'Submitting...' : 'Submit Request'}
+               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

@@ -60,6 +60,8 @@ const createProxyBuilder = (table: string) => {
 // Global interceptor for relations experiencing infinite recursion due to RLS bugs or schema differences
 export const supabase = {
     ...realSupabase,
+    channel: realSupabase.channel.bind(realSupabase),
+    removeChannel: realSupabase.removeChannel.bind(realSupabase),
     from: (table: string) => {
         if (table === 'profiles' || table === 'transactions' || table === 'system_config' || table === 'tickets' || table === 'advertisements' || table === 'jobs' || table === 'submissions') {
              return createProxyBuilder(table);

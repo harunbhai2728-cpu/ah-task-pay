@@ -37,11 +37,28 @@ export function BrowseJobs() {
     };
   }, [searchTerm]);
 
+  const [vpnBlocked, setVpnBlocked] = useState(false);
+
   useEffect(() => {
     if (!user?.id) return;
     const fetchAllData = async () => {
       try {
         setLoading(true);
+        setErrorMsg(null);
+        setVpnBlocked(false);
+
+        try {
+          const ipCheckRes = await fetch('/api/security/ip-check');
+          const ipCheckData = await ipCheckRes.json();
+          if (ipCheckData && ipCheckData.vpn) {
+            setVpnBlocked(true);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn("Could not check VPN status", e);
+        }
+
         let submitMap = new Map<string, string>();
         let jobIdsToExclude: string[] = [];
 
@@ -133,33 +150,40 @@ export function BrowseJobs() {
           <p className="text-gray-400 dark:text-slate-500 font-medium">Find tasks that match your skills and start earning BDT instantly.</p>
         </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 dark:text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search tasks (e.g. YouTube, Like, Comment)"
-              className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all placeholder:text-gray-500 dark:placeholder:text-slate-600 text-lg font-medium"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+        {vpnBlocked ? (
+          <div className="relative z-10 p-6 bg-red-500/20 text-red-100 rounded-2xl border border-red-500/50">
+             <h3 className="text-xl font-bold mb-2">Security Alert</h3>
+             <p>VPN/Proxy usage is strictly prohibited on this platform. Please disable it to continue viewing jobs.</p>
           </div>
-          <div className="relative min-w-[240px]">
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as any)}
-              className="w-full h-full px-6 py-4 appearance-none rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all text-lg font-bold text-white cursor-pointer"
-            >
-              <option value="newest" className="bg-gray-900 text-white">Newest First</option>
-              <option value="price_asc" className="bg-gray-900 text-white">Low Price To High Price</option>
-              <option value="price_desc" className="bg-gray-900 text-white">High Price To Low Price</option>
-            </select>
-            <Filter className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
+        ) : (
+          <div className="relative z-10 flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 dark:text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search tasks (e.g. YouTube, Like, Comment)"
+                className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all placeholder:text-gray-500 dark:placeholder:text-slate-600 text-lg font-medium"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="relative min-w-[240px]">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+                className="w-full h-full px-6 py-4 appearance-none rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all text-lg font-bold text-white cursor-pointer"
+              >
+                <option value="newest" className="bg-gray-900 text-white">Newest First</option>
+                <option value="price_asc" className="bg-gray-900 text-white">Low Price To High Price</option>
+                <option value="price_desc" className="bg-gray-900 text-white">High Price To Low Price</option>
+              </select>
+              <Filter className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {loading ? (
+      {vpnBlocked ? null : loading ? (
         <div className="flex justify-center py-24">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-600 dark:border-indigo-500"></div>
         </div>

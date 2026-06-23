@@ -313,6 +313,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
             <ul className="list-disc pl-4 text-xs font-semibold space-y-1">
               <li>A referral counts as <strong className="text-orange-950">Valid</strong> only when the referred user completes and gets paid for <strong className="text-orange-950">{data?.referralValidationCriteria || 1} microjob(s)</strong>.</li>
               <li>Fake accounts or multiple accounts result in a permanent ban.</li>
+              <li>Pending referrals will automatically expire if they are not validated within 1 month (30 days) of joining.</li>
             </ul>
           </div>
         </div>

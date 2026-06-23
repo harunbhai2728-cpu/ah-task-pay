@@ -184,6 +184,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    
+    // Subscribe to realtime updates for this user's profile
+    const channel = supabase.channel(`public:profiles:id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+        (payload) => {
+          // Update profile state directly or re-fetch
+          setProfile(prev => {
+            if (!prev) return null;
+            return { ...prev, ...payload.new };
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   return (
     <AuthContext.Provider value={{ user, profile, systemConfig, loading, isAdmin, isSuperAdmin, error, refreshProfile, refreshConfig }}>
       {children}

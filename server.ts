@@ -3567,6 +3567,29 @@ async function startServer() {
     }
   });
 
+  app.get("/api/security/ip-check", async (req, res) => {
+    try {
+      let ip = req.headers["x-forwarded-for"] || req.ip;
+      if (typeof ip === "string") {
+        ip = ip.split(",")[0].trim();
+      }
+      if (!ip || ip === "::1" || ip === "127.0.0.1") {
+         return res.json({ ip: "127.0.0.1", vpn: false, ok: true });
+      }
+      const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,proxy,hosting,query`);
+      const data = await response.json();
+      if (data && data.status === "success") {
+        const isVpn = data.proxy === true || data.hosting === true;
+        return res.json({ ip: data.query, vpn: isVpn, ok: true });
+      }
+      res.json({ ip, vpn: false, ok: false });
+    } catch(e) {
+      let ip = req.headers["x-forwarded-for"] || req.ip;
+      if (typeof ip === "string") ip = ip.split(",")[0].trim();
+      res.json({ ip, vpn: false, ok: false });
+    }
+  });
+
   app.post("/api/referral/register", async (req, res) =>
     registerReferral(req, res),
   );

@@ -77,7 +77,7 @@ const createAdminDb = (supabaseClient: any) => {
 export function AdminPanel() {
   const adminDb = createAdminDb(supabase);
   const { isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'transactions' | 'users' | 'jobs' | 'submissions' | 'settings' | 'tickets' | 'ads' | 'redeem_codes'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'users' | 'jobs' | 'submissions' | 'settings' | 'tickets' | 'ads' | 'redeem_codes' | 'deletions'>('transactions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -131,6 +131,54 @@ export function AdminPanel() {
   
   const [deleteAdConfirm, setDeleteAdConfirm] = useState<any | null>(null);
   const [deleteJobConfirm, setDeleteJobConfirm] = useState<string | null>(null);
+  const [deleteUserConfirmUser, setDeleteUserConfirmUser] = useState<UserProfile | null>(null);
+  const [deleteUserPassword, setDeleteUserPassword] = useState('');
+
+  const handleForceDeleteUser = async () => {
+    if (!deleteUserConfirmUser) return;
+    if (deleteUserPassword !== 'ah2781') {
+      alert("ভুল পাসওয়ার্ড! (Incorrect Password)");
+      return;
+    }
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'deleted' }).eq('id', deleteUserConfirmUser.uid || deleteUserConfirmUser.id);
+      setDeleteUserConfirmUser(null);
+      setDeleteUserPassword('');
+      setEditingUser(null);
+      alert("একাউন্ট ডিলিট করা হয়েছে। (Account deleted successfully)");
+      await fetchAdminData();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete account");
+    } finally {
+      setAdminActionLoading(false);
+    }
+  };
+
+  const handleApproveDeletion = async (userId: string) => {
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'deleted' }).eq('id', userId);
+      await fetchAdminData();
+    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+  };
+
+  const handleRejectDeletion = async (userId: string) => {
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null }).eq('id', userId);
+      await fetchAdminData();
+    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+  };
+
+  const handleRecoverAccount = async (userId: string) => {
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null }).eq('id', userId);
+      await fetchAdminData();
+    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+  };
 
   // Deposit Rules states
   const [depositRules, setDepositRules] = useState('');
@@ -1566,7 +1614,7 @@ export function AdminPanel() {
       </div>
 
       <div className="flex bg-white dark:bg-slate-800 p-2 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-x-auto gap-2 transition-colors">
-        {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'settings'] as const).map(tab => {
+        {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'deletions', 'settings'] as const).map(tab => {
           let hasPending = false;
           if (tab === 'transactions') {
             hasPending = transactions.some(t => t.status === 'pending');
@@ -1578,6 +1626,8 @@ export function AdminPanel() {
             hasPending = jobs.some(j => j.status === 'pending' || j.status === 'delete_requested');
           } else if (tab === 'ads') {
             hasPending = ads.some(a => a.status === 'pending');
+          } else if (tab === 'deletions') {
+            hasPending = users.some(u => u.account_status === 'pending_deletion');
           }
 
           return (
@@ -1589,7 +1639,7 @@ export function AdminPanel() {
                 activeTab === tab ? "bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg" : "text-gray-400 dark:text-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-600 dark:hover:text-slate-300"
               )}
             >
-              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab}</span>
+              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab === 'deletions' ? 'Deletions' : tab}</span>
               {hasPending && (
                 <span className="w-2.5 h-2.5 bg-red-600 border-2 border-white dark:border-slate-800 rounded-full animate-pulse shrink-0" />
               )}
@@ -1782,6 +1832,9 @@ export function AdminPanel() {
                             </p>
                             <p className="text-xs text-gray-400 dark:text-slate-500 font-bold" title={(u as any).username || 'nousername'}>
                               @{((u as any).username && (u as any).username.length > 14) ? `${(u as any).username.slice(0, 14)}...` : ((u as any).username || 'nousername')} • {(u as any).phone || u.email || 'No Phone'}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                              IP: {u.last_ip_address || 'N/A'}
                             </p>
                             {u.warning && (
                                <div className="mt-2 flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg text-orange-600 dark:text-orange-400 transition-colors">
@@ -2370,6 +2423,70 @@ export function AdminPanel() {
                     </table>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'deletions' && (
+          <div className="p-6 md:p-8 space-y-8">
+            <div className="flex items-center gap-3 mb-6 transition-colors">
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+              <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase">Account Deletions</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Pending Requests */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
+                 <h3 className="text-lg font-black text-amber-600 dark:text-amber-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Pending Requests</h3>
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {users.filter(u => u.account_status === 'pending_deletion').length === 0 ? (
+                       <p className="text-gray-400 text-sm font-medium">No pending deletion requests.</p>
+                    ) : (
+                       users.filter(u => u.account_status === 'pending_deletion').map(u => (
+                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                             <div className="flex justify-between items-start mb-2">
+                               <div>
+                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-gray-500 font-mono">UID: {u.uid}</p>
+                               </div>
+                               <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold">Pending</span>
+                             </div>
+                             <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 p-3 rounded-xl mb-4 italic">"{u.deletion_reason || 'No reason provided'}"</p>
+                             <div className="flex gap-2">
+                                <button onClick={() => handleRejectDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs hover:bg-gray-300 dark:hover:bg-slate-600">Reject</button>
+                                <button onClick={() => handleApproveDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700">Approve Deletion</button>
+                             </div>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+
+              {/* Deleted Accounts */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
+                 <h3 className="text-lg font-black text-red-600 dark:text-red-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Deleted Accounts</h3>
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {users.filter(u => u.account_status === 'deleted').length === 0 ? (
+                       <p className="text-gray-400 text-sm font-medium">No deleted accounts.</p>
+                    ) : (
+                       users.filter(u => u.account_status === 'deleted').map(u => (
+                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-red-100 dark:border-red-900/30">
+                             <div className="flex justify-between items-start mb-2">
+                               <div>
+                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-gray-500 font-mono">UID: {u.uid}</p>
+                               </div>
+                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold">Deleted</span>
+                             </div>
+                             {u.deletion_reason && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 px-2">Reason: {u.deletion_reason}</p>
+                             )}
+                             <button onClick={() => handleRecoverAccount(u.id)} disabled={adminActionLoading} className="w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
+                          </div>
+                       ))
+                    )}
+                 </div>
               </div>
             </div>
           </div>
@@ -3041,6 +3158,17 @@ export function AdminPanel() {
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Last Known IP (আইপি অ্যাড্রেস)</label>
+                <input
+                  type="text"
+                  value={editingUser.last_ip_address || 'Not Recorded Yet'}
+                  disabled
+                  readOnly
+                  className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none text-gray-500 dark:text-slate-400 opacity-80 cursor-not-allowed transition-colors"
+                />
+              </div>
+
               <div className="space-y-1.5 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 transition-colors">
                 <label className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest block mb-1">নতুন পাসওয়ার্ড সেট করুন (New Password)</label>
                 <input
@@ -3089,6 +3217,46 @@ export function AdminPanel() {
                   সংরক্ষণ করুন (Save Changes)
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setDeleteUserConfirmUser(editingUser)}
+                className="w-full py-3.5 mt-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-2xl font-black uppercase tracking-widest hover:bg-red-200 dark:hover:bg-red-900/50 transition-all text-xs border border-red-200 dark:border-red-900/50"
+              >
+                Delete Account (একাউন্ট ডিলিট)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteUserConfirmUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl space-y-6">
+            <h3 className="text-xl font-black text-gray-900 dark:text-slate-100">একাউন্ট ডিলিট নিশ্চিত করুন</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 font-bold leading-relaxed">
+              আপনি {deleteUserConfirmUser.displayName || 'এই ব্যবহারকারী'}-এর একাউন্ট পার্মানেন্টলি ডিলিট করতে যাচ্ছেন। অনুগ্রহ করে এডমিন পাসওয়ার্ড দিন।
+            </p>
+            <input
+              type="password"
+              placeholder="Admin Password (ah2781)"
+              value={deleteUserPassword}
+              onChange={(e) => setDeleteUserPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-slate-100"
+            />
+            <div className="flex gap-4">
+              <button
+                onClick={() => { setDeleteUserConfirmUser(null); setDeleteUserPassword(''); }}
+                className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={handleForceDeleteUser}
+                disabled={adminActionLoading}
+                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-red-700 transition-all text-xs shadow-lg shadow-red-200 dark:shadow-none"
+              >
+                {adminActionLoading ? 'লোড হচ্ছে...' : 'ডিলিট করুন'}
+              </button>
             </div>
           </div>
         </div>

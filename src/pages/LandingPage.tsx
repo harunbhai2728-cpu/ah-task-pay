@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 import { BrandLogo } from '../components/BrandLogo';
 
+import fpPromise from '@fingerprintjs/fingerprintjs';
+
 export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }) {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading, systemConfig } = useAuth();
@@ -22,6 +24,8 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
+  
+  const [vpnWarning, setVpnWarning] = useState(false);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -50,6 +54,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
     e.preventDefault();
     setLoading(true);
     setError('');
+    setVpnWarning(false);
 
     try {
       let actualEmail = email.trim();
@@ -57,27 +62,79 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
       const formData = new FormData(formEl);
       const referredBy = formData.get('referred_by') as string || '';
       
+      // 1. IP & VPN Security Check
+      let ipAddress = '';
+      try {
+        const ipCheckRes = await fetch('/api/security/ip-check');
+        const ipCheckData = await ipCheckRes.json();
+        if (ipCheckData && ipCheckData.vpn) {
+          setVpnWarning(true);
+          return;
+        }
+        ipAddress = ipCheckData.ip || '';
+      } catch (e) {
+        console.warn("Could not check VPN status", e);
+      }
+
+      // 2. Device Fingerprint Capture
+      let visitorId = '';
+      try {
+        const fp = await fpPromise.load();
+        const result = await fp.get();
+        visitorId = result.visitorId;
+      } catch (e) {
+        console.warn("Could not capture device fingerprint", e);
+      }
+      
       if (isLogin) {
         if (!actualEmail.includes('@')) {
            throw new Error('Please enter a valid email address.');
         }
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: actualEmail,
           password
         });
         
-        if (error) {
-           if (error.message.includes('Invalid login credentials')) {
+        if (signInError) {
+           if (signInError.message.includes('Invalid login credentials')) {
                throw new Error('invalid email/password');
-           } else if (error.message.includes('Email not confirmed')) {
+           } else if (signInError.message.includes('Email not confirmed')) {
                throw new Error('Please check your inbox and confirm your email address before logging in.');
            } else {
-              throw error;
+              throw signInError;
            }
         }
+        
+        // Update footprint on successful login
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+           const { data: profile } = await supabase.from('profiles').select('account_status').eq('id', user.id).single();
+           if (profile && profile.account_status === 'deleted') {
+              await supabase.auth.signOut();
+              throw new Error('This account has been permanently deleted.');
+           }
+           await supabase.from('profiles').update({
+             last_ip_address: ipAddress || null,
+             device_fingerprint: visitorId || null
+           }).eq('id', user.id);
+        }
+
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        // Prevent Duplicate Fingerprints
+        if (visitorId) {
+          const { data: existingAccounts, error: checkError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('device_fingerprint', visitorId)
+            .limit(1);
+          
+          if (existingAccounts && existingAccounts.length > 0) {
+             throw new Error("Registration failed: Multiple accounts are strictly prohibited from the same device or IP.");
+          }
+        }
+
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email: actualEmail,
           password,
           options: {
@@ -89,7 +146,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             }
           }
         });
-        if (error) throw error;
+        if (signUpError) throw signUpError;
         
         if (data.user) {
           const generatedCode = `AH${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -105,6 +162,8 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             heldBalance: 0,
             referral_code: generatedCode,
             referred_by: referredBy,
+            last_ip_address: ipAddress || null,
+            device_fingerprint: visitorId || null,
             createdAt: new Date().toISOString()
           }, { onConflict: 'id' });
           
@@ -200,6 +259,11 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {vpnWarning && (
+                 <div className="p-4 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-sm rounded-2xl border border-orange-100 dark:border-orange-900/50 font-bold">
+                    Security Alert: VPN/Proxy usage is strictly prohibited on this platform. Please disable it to continue.
+                 </div>
+              )}
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm rounded-2xl border border-red-100 dark:border-red-900/50 font-bold">
                   {error}
