@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2, AlertTriangle, X, BellRing } from 'lucide-react';
+import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { askNotificationPermission } from '../lib/pushNotifications';
 
 export default function ProfileSettings() {
   const { profile, user } = useAuth();
@@ -194,7 +193,7 @@ export default function ProfileSettings() {
         </section>
       </div>
 
-      <div className="bg-primary-600 p-8 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="mt-8 bg-primary-600 p-8 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6">
          <div className="flex items-center gap-4">
             <div className="bg-white/20 p-4 rounded-2xl">
                <ShieldCheck className="w-10 h-10" />
@@ -207,43 +206,24 @@ export default function ProfileSettings() {
          <div className="bg-white/10 px-6 py-3 rounded-full font-bold text-sm">Verified User</div>
       </div>
 
-      <div className="mt-8 bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-colors">
+      {/* Account Deletion Section */}
+      <section className="mt-8 bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/50 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-colors">
          <div className="flex items-center gap-4">
-            <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 p-4 rounded-2xl">
-               <BellRing className="w-8 h-8" />
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl text-red-600 dark:text-red-400">
+               <AlertTriangle className="w-10 h-10" />
             </div>
             <div>
-               <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Push Notifications</h3>
-               <p className="text-gray-500 dark:text-slate-400 font-medium text-sm">Get real-time updates for approvals and withdrawals on your device.</p>
+               <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Danger Zone</h3>
+               <p className="text-gray-500 dark:text-slate-400 font-medium text-sm mt-1">Once deleted, your account data and balances are permanently lost.</p>
             </div>
          </div>
          <motion.button
             whileTap={{ scale: 0.98 }}
-            onClick={() => user && askNotificationPermission(user.id)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 dark:shadow-none whitespace-nowrap"
+            onClick={() => setShowDeletionModal(true)}
+            className="px-6 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors whitespace-nowrap"
          >
-            Enable Notifications
+            Request Account Deletion
          </motion.button>
-      </div>
-
-      {/* Account Deletion Section */}
-      <section className="bg-red-50 dark:bg-red-950/20 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/50 shadow-sm space-y-6 transition-colors mt-8">
-        <div className="flex items-center gap-3">
-           <div className="bg-red-100 dark:bg-red-900/40 p-2 rounded-xl text-red-600 dark:text-red-400">
-              <AlertTriangle className="w-6 h-6" />
-           </div>
-           <h2 className="text-xl font-black text-red-900 dark:text-red-400 uppercase">Danger Zone</h2>
-        </div>
-        <p className="text-red-700 dark:text-red-300 font-medium text-sm">
-          Once your account is deleted, all of your data, balances, and history will be permanently lost. This action cannot be undone.
-        </p>
-        <motion.button
-           whileTap={{ scale: 0.98 }}
-           onClick={() => setShowDeletionModal(true)}
-           className="px-6 py-3 bg-red-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-700 transition-colors shadow-lg shadow-red-200 dark:shadow-none"
-        >
-           Request Account Deletion
-        </motion.button>
       </section>
 
       {/* Deletion Modal */}
