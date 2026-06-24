@@ -20,6 +20,15 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Global cache-busting middleware for all /api routes
+  app.use("/api", (req, res, next) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
+    next();
+  });
+
   const supabaseUrl =
     process.env.VITE_SUPABASE_URL || "https://placeholder.supabase.co";
   const supabaseServiceKey =
@@ -123,36 +132,47 @@ async function startServer() {
   app.post("/api/proxy", async (req, res) => {
     let writeLockKey = "";
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader) return res.status(401).json({ error: "No auth header" });
-      const token = authHeader.replace(/^Bearer /i, "");
-      const authRes = await supabase.auth.getUser(token);
-      let user = authRes.data?.user;
-      let authErr = authRes.error;
+      const isPublicSystemConfigFetch = req.body?.table === "system_config" && req.body?.method === "select";
 
-      if (authErr || !user) {
-        try {
-          const base64Url = token.split(".")[1];
-          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-          const buf = Buffer.from(base64, "base64");
-          const payload = JSON.parse(buf.toString());
-          if (payload && payload.sub) {
-            user = { id: payload.sub, email: payload.email || "" } as any;
-            authErr = null;
-          }
-        } catch (e) {}
+      const authHeader = req.headers.authorization;
+      if (!authHeader && !isPublicSystemConfigFetch) {
+        return res.status(401).json({ error: "No auth header" });
       }
 
-      if (authErr || !user)
-        return res
-          .status(401)
-          .json({
-            error:
-              "Invalid token: " +
-              (authErr?.message || "no user") +
-              " / token was: " +
-              token.substring(0, 5),
-          });
+      let user: any = null;
+      let token = "";
+      
+      if (authHeader) {
+        token = authHeader.replace(/^Bearer /i, "");
+        const authRes = await supabase.auth.getUser(token);
+        user = authRes.data?.user;
+        let authErr = authRes.error;
+
+        if (authErr || !user) {
+          try {
+            const base64Url = token.split(".")[1];
+            const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+            const buf = Buffer.from(base64, "base64");
+            const payload = JSON.parse(buf.toString());
+            if (payload && payload.sub) {
+              user = { id: payload.sub, email: payload.email || "" } as any;
+              authErr = null;
+            }
+          } catch (e) {}
+        }
+
+        if ((authErr || !user) && !isPublicSystemConfigFetch) {
+          return res
+            .status(401)
+            .json({
+              error:
+                "Invalid token: " +
+                (authErr?.message || "no user") +
+                " / token was: " +
+                token.substring(0, 5),
+            });
+        }
+      }
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -234,7 +254,7 @@ async function startServer() {
           }
           if (method === "update" && (!dbEq || dbEq[1] !== user.id))
             return res.status(403).json({ error: "Forbidden profile update" });
-        } else if (table === "transactions") {
+        } else if (table === "transactions" || table === "tickets") {
           if (method === "select") {
             let hasUserFilter = false;
             dbEqs = dbEqs.map((rule) => {
@@ -254,10 +274,13 @@ async function startServer() {
               if (t.userId !== user.id)
                 return res.status(403).json({ error: "Forbidden" });
             }
+          } else if (method === "update" || method === "upsert") {
+            dbEqs.push(["userId", user.id]);
+            dbEq = null;
           } else if (method !== "select" && method !== "insert") {
             return res
               .status(403)
-              .json({ error: "Forbidden transaction access" });
+              .json({ error: "Forbidden access" });
           }
         }
       }
@@ -494,7 +517,7 @@ async function startServer() {
       }
 
       // Map frontend-to-backend transaction types and filter parameters to match the database ENUM schemas
-      if (req.body.eq) dbEq = req.body.eq;
+      // if (req.body.eq) dbEq = req.body.eq; // REMOVED THIS DANGEROUS REVERT
 
       if (table === "transactions") {
         const normalizeTxForBackend = (t: any) => {

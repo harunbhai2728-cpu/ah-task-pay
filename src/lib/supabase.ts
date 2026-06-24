@@ -11,11 +11,16 @@ const createProxyBuilder = (table: string) => {
     const execute = async () => {
         const { data: { session } } = await realSupabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) return { data: null, error: new Error('No auth token') };
+        const isPublic = chain.table === 'system_config' && chain.method === 'select';
+        
+        if (!token && !isPublic) return { data: null, error: new Error('No auth token') };
+
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
 
         const res = await fetchWithRetry('/api/proxy', {
            method: 'POST',
-           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+           headers,
            body: JSON.stringify(chain)
         });
         const json = await res.json();

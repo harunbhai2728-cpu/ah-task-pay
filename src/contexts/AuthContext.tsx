@@ -36,8 +36,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   const fetchConfig = async () => {
-    const { data } = await supabase.from('system_config').select('*').eq('id', 'config').single();
-    if (data) setSystemConfig(data);
+    try {
+      const { data } = await supabase.from('system_config').select('*').eq('id', 'config').single();
+      if (data) setSystemConfig(data);
+      else setSystemConfig({});
+    } catch (err) {
+      console.warn("Failed to fetch system config", err);
+      setSystemConfig({});
+    }
   };
 
   const fetchProfile = async (sessionUser: any) => {
@@ -161,6 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user);
+        fetchConfig();
       } else {
         setLoading(false);
       }
@@ -173,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user);
+        fetchConfig();
       } else {
         setProfile(null);
         setIsAdmin(false);
@@ -182,6 +190,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Subscribe to realtime updates for system config
+    const configChannel = supabase.channel('public:system_configuration')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'system_configuration' },
+        (payload) => {
+          fetchConfig(); // Re-fetch through API to ensure consistent data mapping
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(configChannel);
+    };
   }, []);
 
   useEffect(() => {

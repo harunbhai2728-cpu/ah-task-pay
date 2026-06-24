@@ -50,6 +50,15 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
     }
   }, [user, isAdmin, authLoading, navigate]);
 
+  if (authLoading || (systemConfig === null)) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 transition-colors">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary-600 mb-4"></div>
+        <p className="text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest text-sm animate-pulse">Initializing Environment...</p>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -229,7 +238,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
                 className="mt-8 rounded-3xl overflow-hidden shadow-xl"
               >
                 <img 
-                  src={systemConfig.loginBannerUrl} 
+                  src={systemConfig.loginBannerUrl + '?t=' + new Date().getTime()} 
                   alt="Promo Banner" 
                   referrerPolicy="no-referrer"
                   className="w-full object-cover max-h-64"

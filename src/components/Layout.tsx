@@ -22,7 +22,8 @@ import {
   Book,
   Gift,
   Sun,
-  Moon
+  Moon,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -40,11 +41,39 @@ export function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
   React.useEffect(() => {
     // Check for our dedicated tracking cookie
     const hasImpersonationCookie = document.cookie.includes('sb-admin-impersonating=');
     setIsImpersonating(hasImpersonationCookie);
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check if running standalone
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (isStandalone) {
+      setDeferredPrompt(null);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleExitSupportMode = async () => {
     if (isImpersonating) {
@@ -180,6 +209,20 @@ export function Layout() {
             <p className="text-xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(profile?.depositBalance || 0)}</p>
           </div>
           
+          {deferredPrompt && (
+            <button 
+              type="button"
+              onClick={handleInstallClick}
+              className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl transition-all shadow-md text-left"
+            >
+              <Download className="w-5 h-5 animate-bounce" />
+              <div className="flex flex-col">
+                <span className="text-xs font-black uppercase tracking-wide">Install App</span>
+                <span className="text-[9px] text-indigo-100 font-bold">অ্যাপ ইন্সটল করুন</span>
+              </div>
+            </button>
+          )}
+
           <Link 
             to="/terms-privacy" 
             className="flex items-center gap-3 w-full px-4 py-3 text-gray-500 dark:text-slate-400 font-medium hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-slate-100 rounded-xl transition-all"
@@ -319,6 +362,23 @@ export function Layout() {
                     {item.label}
                   </Link>
                 ))}
+                {deferredPrompt && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleInstallClick();
+                    }}
+                    className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl transition-all shadow-md text-left"
+                  >
+                    <Download className="w-5 h-5 animate-bounce" />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-black uppercase tracking-wide">Install App</span>
+                      <span className="text-[9px] text-indigo-100 font-bold">অ্যাপ ইন্সটল করুন</span>
+                    </div>
+                  </button>
+                )}
+
                 <Link
                   to="/terms-privacy"
                   onClick={() => setIsMobileMenuOpen(false)}

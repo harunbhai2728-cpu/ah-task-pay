@@ -81,13 +81,20 @@ Object.defineProperty(window, 'fetch', {
   }
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').catch((err) => {
-      console.warn('Service worker registration failed:', err);
-    });
-  });
-}
+import { registerSW } from 'virtual:pwa-register';
+
+// Register PWA service worker via vite-plugin-pwa with automatic hot-update notifications
+const updateSW = registerSW({
+  onNeedRefresh() {
+    toast('New update available! Refreshing to update...', { icon: '🔄' });
+    setTimeout(() => {
+      updateSW(true);
+    }, 1500);
+  },
+  onOfflineReady() {
+    console.log('AH Task Pay is now ready for offline use.');
+  },
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

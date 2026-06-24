@@ -100,10 +100,8 @@ export type TicketStatus = 'open' | 'resolved';
 export interface Ticket {
   id: string;
   userId: string;
-  userName: string;
   userSerial?: number | null;
   subject: string;
-  description: string;
   status: TicketStatus;
   createdAt: any;
   resolvedAt?: any;

@@ -17,19 +17,39 @@ export function SupportTickets() {
   const fetchTickets = async () => {
     if (!user) return;
     try {
-      const { data: snap } = await supabase.from('tickets')
+      const { data: snap, error } = await supabase.from('tickets')
         .select('*')
         .eq('userId', user.id)
-        .order('createdAt', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      if (snap) setTickets(snap as unknown as Ticket[]);
+      if (error) {
+        console.error('Error fetching tickets:', error);
+      } else if (snap) {
+        setTickets(snap as unknown as Ticket[]);
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Unexpected error fetching tickets:', err);
     }
   };
 
   useEffect(() => {
     fetchTickets();
+    if (!user) return;
+
+    // Real-time listener for ticket updates
+    const channel = supabase.channel(`public:tickets:user_id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets', filter: `user_id=eq.${user.id}` },
+        () => {
+          fetchTickets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,24 +57,28 @@ export function SupportTickets() {
     if (!user || !profile) return;
     
     setSubmitting(true);
+    const newTicket = {
+      userId: user.id,
+      userSerial: profile?.serialNumber || null,
+      subject,
+      status: 'open',
+      replies: [{ sender: 'user', text: description, createdAt: Date.now() }],
+      createdAt: new Date().toISOString()
+    };
+    
+    // Optimistic UI Update
+    setTickets([{ ...newTicket, id: 'temp-' + Date.now() } as unknown as Ticket, ...tickets]);
+    
     try {
-      await supabase.from('tickets').insert({
-        userId: user.id,
-        userName: profile?.displayName || 'User',
-        userSerial: profile?.serialNumber || null,
-        subject,
-        description,
-        status: 'open',
-        createdAt: new Date().toISOString()
-      });
+      await supabase.from('tickets').insert(newTicket);
       setIsFormOpen(false);
       setSubject('');
       setDescription('');
-      fetchTickets();
-      alert('Ticket submitted successfully! We will get back to you soon.');
+      fetchTickets(); // Refetch to get actual IDs
     } catch (error) {
       console.error(error);
       alert('Failed to submit ticket');
+      fetchTickets(); // Revert optimistic update
     }
     setSubmitting(false);
   };
@@ -147,12 +171,12 @@ export function SupportTickets() {
               </div>
 
               <div className="bg-gray-50 p-4 rounded-2xl text-gray-700 text-sm">
-                {ticket.description}
+                {Array.isArray(ticket.replies) && ticket.replies.length > 0 ? ticket.replies[0].text : 'No description'}
               </div>
 
-              {ticket.replies && ticket.replies.length > 0 && (
+              {Array.isArray(ticket.replies) && ticket.replies.length > 1 && (
                 <div className="mt-4 space-y-3">
-                  {ticket.replies.map((reply, i) => (
+                  {ticket.replies.slice(1).map((reply: any, i: number) => (
                     <div key={i} className={cn(
                       "p-4 rounded-xl text-sm font-medium",
                       reply.sender === 'admin' ? "bg-blue-50 border border-blue-100 mr-8" : "bg-gray-100 border border-gray-200 ml-8"
@@ -166,7 +190,7 @@ export function SupportTickets() {
                 </div>
               )}
 
-              {ticket.adminReply && (!ticket.replies || ticket.replies.length === 0) && (
+              {ticket.adminReply && (!Array.isArray(ticket.replies) || ticket.replies.length === 0) && (
                 <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mt-4 mr-8">
                   <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest mb-2">
                     <MessageSquare className="w-3 h-3" /> Admin Reply
@@ -176,7 +200,9 @@ export function SupportTickets() {
               )}
               
               {ticket.status !== 'resolved' && (
-                <ReplyBox ticketId={ticket.id} />
+                <ReplyBox ticketId={ticket.id} onOptimisticReply={(reply) => {
+                  setTickets(prev => prev.map(t => t.id === ticket.id ? { ...t, replies: [...(t.replies || []), reply] } : t));
+                }} />
               )}
             </div>
           ))
@@ -186,7 +212,7 @@ export function SupportTickets() {
   );
 }
 
-const ReplyBox = ({ ticketId }: { ticketId: string }) => {
+const ReplyBox = ({ ticketId, onOptimisticReply }: { ticketId: string, onOptimisticReply: (reply: any) => void }) => {
   const [replyMessage, setReplyMessage] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -194,18 +220,29 @@ const ReplyBox = ({ ticketId }: { ticketId: string }) => {
     e.preventDefault();
     if (!replyMessage.trim()) return;
     setSending(true);
+    
+    const reply: { sender: 'user' | 'admin'; text: string; createdAt: number } = {
+      sender: 'user',
+      text: replyMessage.trim(),
+      createdAt: Date.now()
+    };
+    
+    // Optimistic UI Update
+    onOptimisticReply(reply);
+    const msg = replyMessage.trim();
+    setReplyMessage('');
+
     try {
       const snap = await supabase.from('tickets').select('*').eq('id', ticketId).single();
       if (snap.data) {
         const ticket = snap.data as unknown as Ticket;
-        const newReplies = ticket.replies || [];
-        newReplies.push({
-          sender: 'user',
-          text: replyMessage.trim(),
-          createdAt: Date.now()
-        });
+        let parsedReplies = ticket.replies;
+        if (typeof parsedReplies === 'string') {
+          try { parsedReplies = JSON.parse(parsedReplies); } catch (e) { parsedReplies = []; }
+        }
+        const newReplies = Array.isArray(parsedReplies) ? [...parsedReplies] : [];
+        newReplies.push(reply);
         await supabase.from('tickets').update({ replies: newReplies }).eq('id', ticketId);
-        setReplyMessage('');
       }
     } catch (err) {
       console.error(err);

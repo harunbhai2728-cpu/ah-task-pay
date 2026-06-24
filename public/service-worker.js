@@ -1,3 +1,18 @@
+self.addEventListener('fetch', function(event) {
+  const url = new URL(event.request.url);
+  
+  // Use Network-Only / No-Cache strategy for proxy API and Supabase requests
+  if (url.pathname.includes('/api/proxy') || url.pathname.includes('/rest/v1/')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch((err) => {
+        console.warn('Network request failed for API', err);
+        throw err;
+      })
+    );
+    return;
+  }
+});
+
 self.addEventListener('push', function(event) {
   if (event.data) {
     const data = event.data.json();

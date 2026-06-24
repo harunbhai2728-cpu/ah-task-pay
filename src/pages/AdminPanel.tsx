@@ -188,7 +188,7 @@ export function AdminPanel() {
 
   const fetchDepositRulesData = async () => {
     try {
-      const res = await fetch('/api/settings/deposit-rules');
+      const res = await fetch(`/api/settings/deposit-rules?t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         setDepositRules(json.setting_value || '');
@@ -238,7 +238,7 @@ export function AdminPanel() {
 
   const fetchWithdrawRulesData = async () => {
     try {
-      const res = await fetch('/api/settings/withdraw-rules');
+      const res = await fetch(`/api/settings/withdraw-rules?t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         setWithdrawRules(json.setting_value || '');
@@ -288,7 +288,7 @@ export function AdminPanel() {
 
   const fetchAdPostRulesData = async () => {
     try {
-      const res = await fetch('/api/settings/ad-post-rules');
+      const res = await fetch(`/api/settings/ad-post-rules?t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         setAdPostRules(json.setting_value || '');
@@ -350,6 +350,11 @@ export function AdminPanel() {
     return u?.serialNumber || uid.slice(0, 6).toUpperCase();
   };
 
+  const getUserName = (uid: string) => {
+    const u = users.find(user => user.uid === uid);
+    return u?.displayName || 'Unknown User';
+  };
+
   const { isAdmin: isSystemAdmin, refreshConfig } = useAuth();
 
   const fetchAdminData = async (silent = false, background = false) => {
@@ -370,10 +375,10 @@ export function AdminPanel() {
       let res, codesRes;
       try {
         const results = await Promise.all([
-          fetch('/api/admin/data', {
+          fetch(`/api/admin/data?t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
-          fetch('/api/redeem-code/list', {
+          fetch(`/api/redeem-code/list?t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);
@@ -878,7 +883,12 @@ export function AdminPanel() {
     if (!text) return;
 
     const previousTickets = [...tickets];
-    const newReplies = [...(ticket.replies || []), { 
+    
+    let parsedReplies = ticket.replies;
+    if (typeof parsedReplies === 'string') {
+      try { parsedReplies = JSON.parse(parsedReplies); } catch (e) { parsedReplies = []; }
+    }
+    const newReplies = [...(Array.isArray(parsedReplies) ? parsedReplies : []), { 
       sender: 'admin' as const, 
       text, 
       createdAt: Date.now() 
@@ -1726,6 +1736,9 @@ export function AdminPanel() {
                         {tx.type === 'deposit' ? <ArrowDownLeft className="text-green-500 w-4 h-4" /> : <ArrowUpRight className="text-orange-500 w-4 h-4" />}
                         <span className="font-bold capitalize">{tx.type} ({tx.method})</span>
                       </div>
+                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+                        {tx.createdAt ? new Date(tx.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                      </p>
                     </td>
                     <td className="p-6">
                       {tx.type === 'withdrawal' ? (
@@ -2134,7 +2147,7 @@ export function AdminPanel() {
                        <div>
                           <h4 className="font-black text-gray-900 dark:text-slate-100 uppercase text-lg">{ticket.subject}</h4>
                           <p className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest">
-                            User: {(ticket.userName && ticket.userName.length > 14) ? `${ticket.userName.slice(0, 14)}...` : ticket.userName} <span className="text-indigo-600 dark:text-indigo-400">#{ticket.userSerial || getUserSerial(ticket.userId)}</span>
+                            User: {(getUserName(ticket.userId) && getUserName(ticket.userId).length > 14) ? `${getUserName(ticket.userId).slice(0, 14)}...` : getUserName(ticket.userId)} <span className="text-indigo-600 dark:text-indigo-400">#{ticket.userSerial || getUserSerial(ticket.userId)}</span>
                           </p>
                           <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest transition-colors">Submitted: {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : ''}</p>
                        </div>
@@ -2147,12 +2160,12 @@ export function AdminPanel() {
                     </div>
 
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl text-gray-700 dark:text-slate-300 text-sm whitespace-pre-wrap border border-gray-100 dark:border-slate-700 transition-colors">
-                      {ticket.description}
+                      {Array.isArray(ticket.replies) && ticket.replies.length > 0 ? ticket.replies[0].text : 'No description'}
                     </div>
 
-                    {ticket.replies && ticket.replies.length > 0 && (
+                    {Array.isArray(ticket.replies) && ticket.replies.length > 1 && (
                       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl space-y-3 transition-colors">
-                        {ticket.replies.map((reply, i) => (
+                        {ticket.replies.slice(1).map((reply: any, i: number) => (
                            <div key={i} className={cn(
                              "p-3 rounded-xl text-sm font-medium transition-colors",
                              reply.sender === 'admin' ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 mr-8 text-blue-900 dark:text-blue-100" : "bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 ml-8 text-gray-700 dark:text-slate-300"
@@ -2196,7 +2209,7 @@ export function AdminPanel() {
                         </button>
                       </div>
                     )}
-                    {ticket.status === 'resolved' && ticket.adminReply && (!ticket.replies || ticket.replies.length === 0) && (
+                    {ticket.status === 'resolved' && ticket.adminReply && (!Array.isArray(ticket.replies) || ticket.replies.length === 0) && (
                       <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm font-medium text-blue-900">
                         <span className="font-bold text-blue-600 mr-2">Resolution:</span>
                         {ticket.adminReply}
