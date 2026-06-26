@@ -16,6 +16,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [refCode, setRefCode] = useState('');
+  const [bannerError, setBannerError] = useState(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -221,7 +222,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             <div className="space-y-4">
               <h2 className="text-5xl lg:text-6xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
                 {systemConfig?.loginTitle ? (
-                  <span dangerouslySetInnerHTML={{ __html: systemConfig.loginTitle.replace(/\n/g, '<br/>') }} />
+                  <span dangerouslySetInnerHTML={{ __html: systemConfig.loginTitle }} />
                 ) : (
                   <>Marketplace for <br/><span className="text-primary-600 dark:text-primary-400">Micro Jobs</span></>
                 )}
@@ -231,7 +232,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
               </p>
             </div>
             
-            {systemConfig?.loginBannerUrl && (
+            {systemConfig?.loginBannerUrl && !bannerError && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -241,6 +242,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
                   src={systemConfig.loginBannerUrl + '?t=' + new Date().getTime()} 
                   alt="Promo Banner" 
                   referrerPolicy="no-referrer"
+                  onError={() => setBannerError(true)}
                   className="w-full object-cover max-h-64"
                 />
               </motion.div>

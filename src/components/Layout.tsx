@@ -42,6 +42,7 @@ export function Layout() {
   const location = useLocation();
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   React.useEffect(() => {
     // Check for our dedicated tracking cookie
@@ -49,7 +50,8 @@ export function Layout() {
     setIsImpersonating(hasImpersonationCookie);
 
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
+      // Intentionally NOT preventing default to keep browser's native options fully functional
+      // e.preventDefault(); 
       setDeferredPrompt(e);
     };
 
@@ -66,13 +68,25 @@ export function Layout() {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (deferredPrompt && location.pathname === '/dashboard' && !sessionStorage.getItem('installPromptShown')) {
+      setShowInstallPrompt(true);
+      sessionStorage.setItem('installPromptShown', 'true');
+    }
+  }, [deferredPrompt, location.pathname]);
+
   const handleInstallClick = async () => {
+    setShowInstallPrompt(false);
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
     }
+  };
+
+  const handleCloseInstallPrompt = () => {
+    setShowInstallPrompt(false);
   };
 
   const handleExitSupportMode = async () => {
@@ -115,6 +129,7 @@ export function Layout() {
       alert("You are currently impersonating a user. Please use the 'EXIT SUPPORT MODE' button to safely end the session.");
       return;
     }
+    sessionStorage.removeItem('installPromptShown');
     await supabase.auth.signOut();
     navigate('/');
   };
@@ -208,20 +223,6 @@ export function Layout() {
             <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest mb-1">Deposit Balance</p>
             <p className="text-xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(profile?.depositBalance || 0)}</p>
           </div>
-          
-          {deferredPrompt && (
-            <button 
-              type="button"
-              onClick={handleInstallClick}
-              className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl transition-all shadow-md text-left"
-            >
-              <Download className="w-5 h-5 animate-bounce" />
-              <div className="flex flex-col">
-                <span className="text-xs font-black uppercase tracking-wide">Install App</span>
-                <span className="text-[9px] text-indigo-100 font-bold">অ্যাপ ইন্সটল করুন</span>
-              </div>
-            </button>
-          )}
 
           <Link 
             to="/terms-privacy" 
@@ -313,6 +314,52 @@ export function Layout() {
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
+        {showInstallPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-10"></div>
+              
+              <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+                <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner mb-2">
+                  <Download className="w-10 h-10 animate-bounce" />
+                </div>
+                
+                <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+                  Install AH Task Pay
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400 font-medium pb-2">
+                  Add our app to your home screen for faster access, notifications, and a better experience!
+                </p>
+
+                <div className="flex flex-col w-full gap-3 pt-4">
+                  <button
+                    onClick={handleInstallClick}
+                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                  >
+                    Install App
+                  </button>
+                  <button
+                    onClick={handleCloseInstallPrompt}
+                    className="w-full py-4 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-600 dark:text-slate-300 rounded-2xl font-bold uppercase tracking-widest text-xs transition-colors"
+                  >
+                    Not Now
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
         {isMobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -362,22 +409,6 @@ export function Layout() {
                     {item.label}
                   </Link>
                 ))}
-                {deferredPrompt && (
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      handleInstallClick();
-                    }}
-                    className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl transition-all shadow-md text-left"
-                  >
-                    <Download className="w-5 h-5 animate-bounce" />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black uppercase tracking-wide">Install App</span>
-                      <span className="text-[9px] text-indigo-100 font-bold">অ্যাপ ইন্সটল করুন</span>
-                    </div>
-                  </button>
-                )}
 
                 <Link
                   to="/terms-privacy"

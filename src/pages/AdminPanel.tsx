@@ -94,6 +94,7 @@ export function AdminPanel() {
   const [subSearchTerm, setSubSearchTerm] = useState('');
   const [ticketSearchTerm, setTicketSearchTerm] = useState('');
   const [adsSearchTerm, setAdsSearchTerm] = useState('');
+  const [userSortOrder, setUserSortOrder] = useState<'newest' | 'balance_high' | 'balance_low'>('newest');
 
   // Redeem Codes management states
   const [redeemCodes, setRedeemCodes] = useState<any[]>([]);
@@ -342,7 +343,8 @@ export function AdminPanel() {
     transferEarningToDepositFee: 0,
     transferDepositToEarningFee: 10,
     loginTitle: 'Welcome to TaskPay',
-    loginBannerUrl: ''
+    loginBannerUrl: '',
+    customBannerPresets: [] as string[]
   });
 
   const getUserSerial = (uid: string) => {
@@ -1411,7 +1413,8 @@ export function AdminPanel() {
         String(s.workerSerial || '').includes(term) ||
         s.workerName?.toLowerCase()?.includes(term) ||
         s.id?.toLowerCase()?.includes(term) ||
-        s.jobId?.toLowerCase()?.includes(term)
+        s.jobId?.toLowerCase()?.includes(term) ||
+        s.proofText?.toLowerCase()?.includes(term)
       );
     }
     return filtered.sort((a, b) => {
@@ -1425,6 +1428,16 @@ export function AdminPanel() {
 
   const sortedUsers = React.useMemo(() => {
     return [...filteredUsers].sort((a, b) => {
+      if (userSortOrder === 'balance_high') {
+        const balA = Number(a.earningBalance) || 0;
+        const balB = Number(b.earningBalance) || 0;
+        if (balA !== balB) return balB - balA;
+      }
+      if (userSortOrder === 'balance_low') {
+        const balA = Number(a.earningBalance) || 0;
+        const balB = Number(b.earningBalance) || 0;
+        if (balA !== balB) return balA - balB;
+      }
       const aTime = getMs(a.createdAt || a.created_at);
       const bTime = getMs(b.createdAt || b.created_at);
       if (aTime && bTime && aTime !== bTime) {
@@ -1432,7 +1445,7 @@ export function AdminPanel() {
       }
       return (b.serialNumber || 0) - (a.serialNumber || 0);
     });
-  }, [filteredUsers]);
+  }, [filteredUsers, userSortOrder]);
 
   const sortedJobs = React.useMemo(() => {
     let filtered = [...jobs];
@@ -1659,15 +1672,29 @@ export function AdminPanel() {
       </div>
 
         {activeTab === 'users' && (
-          <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input 
-              type="text"
-              placeholder="Search by ID, Phone, Email or Name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-red-50 dark:focus:ring-red-900/10 outline-none font-bold placeholder:text-gray-300 dark:placeholder:text-slate-600 text-gray-900 dark:text-slate-100 transition-colors"
-            />
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input 
+                type="text"
+                placeholder="Search by ID, Phone, Email or Name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-red-50 dark:focus:ring-red-900/10 outline-none font-bold placeholder:text-gray-300 dark:placeholder:text-slate-600 text-gray-900 dark:text-slate-100 transition-colors"
+              />
+            </div>
+            <div className="sm:w-64">
+              <select
+                value={userSortOrder}
+                onChange={(e) => setUserSortOrder(e.target.value as any)}
+                className="w-full px-6 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/10 outline-none font-bold text-gray-900 dark:text-slate-100 transition-colors cursor-pointer appearance-none"
+                style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.5rem top 50%', backgroundSize: '0.65rem auto' }}
+              >
+                <option value="newest">Sort by Newest Users</option>
+                <option value="balance_high">Sort by High Balance</option>
+                <option value="balance_low">Sort by Low Balance</option>
+              </select>
+            </div>
           </div>
         )}
 
@@ -2712,7 +2739,37 @@ export function AdminPanel() {
                </div>
 
                <div className="md:col-span-2 space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
-                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Dynamic Referral Campaign</h3>
+                  <div className="flex items-center justify-between">
+                     <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Dynamic Referral Campaign</h3>
+                     <button
+                        type="button"
+                        onClick={async () => {
+                           if (!confirm('Are you sure you want to reset all users\' claim progress for a new campaign?')) return;
+                           try {
+                              setAdminActionLoading(true);
+                              await adminDb.from('profiles').update({ target_1_claimed: false, target_2_claimed: false }).neq('id', 'placeholder');
+                              alert('All users campaign claims reset successfully!');
+                           } catch (err: any) {
+                              alert('Reset failed: ' + err.message);
+                           } finally {
+                              setAdminActionLoading(false);
+                           }
+                        }}
+                        className="px-4 py-2 bg-red-100 text-red-600 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-red-200 transition-colors"
+                     >
+                        Reset All User Claims
+                     </button>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Campaign Start Date</label>
+                  <input 
+                    type="datetime-local"
+                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    value={config.campaignStartDate ? new Date(config.campaignStartDate).toISOString().slice(0, 16) : ''}
+                    onChange={e => setConfig({...config, campaignStartDate: e.target.value})}
+                  />
                </div>
 
                <div className="space-y-4">
@@ -2724,8 +2781,6 @@ export function AdminPanel() {
                     onChange={e => setConfig({...config, campaignEndDate: e.target.value})}
                   />
                </div>
-               
-               <div className="space-y-4"></div>
 
                <div className="space-y-4">
                   <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Target 1: Req. Referrals</label>
@@ -2779,6 +2834,7 @@ export function AdminPanel() {
                     value={config.loginTitle || ''}
                     onChange={e => setConfig({...config, loginTitle: e.target.value})}
                   />
+                  <span className="text-xs text-gray-500 block mt-2">Use &lt;br&gt; for a new line. Use &lt;span style='color: #FF5733;'&gt;Word&lt;/span&gt; to color a specific word.</span>
                </div>
 
                <div className="md:col-span-2 space-y-4">
@@ -2796,13 +2852,30 @@ export function AdminPanel() {
                         className="w-full h-full object-cover" 
                         referrerPolicy="no-referrer"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setConfig({ ...config, loginBannerUrl: '' })}
-                        className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
-                      >
-                        Remove Image
-                      </button>
+                      <div className="absolute top-3 right-3 flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfig({ ...config, loginBannerUrl: '' })}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
+                        >
+                          Remove Image
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentPresets = config.customBannerPresets || [];
+                            if (!currentPresets.includes(config.loginBannerUrl)) {
+                                setConfig({ ...config, customBannerPresets: [...currentPresets, config.loginBannerUrl] });
+                                toast.success("Saved as preset!");
+                            } else {
+                                toast.error("Already saved as preset");
+                            }
+                          }}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
+                        >
+                          Save as Preset
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="w-full h-24 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 flex items-center justify-center text-gray-400 dark:text-slate-600 font-bold bg-gray-50/50 dark:bg-slate-700/20 text-sm transition-colors">
@@ -2820,18 +2893,56 @@ export function AdminPanel() {
                           type="file" 
                           accept="image/*" 
                           className="hidden" 
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (file.size > 3 * 1024 * 1024) {
                                 alert("Image is too large. Please select an image under 3MB.");
                                 return;
                               }
-                              const r = new FileReader();
-                              r.onload = (ev) => {
-                                setConfig({ ...config, loginBannerUrl: ev.target?.result as string });
-                              };
-                              r.readAsDataURL(file);
+                              const loadingToast = toast.loading('Uploading image...');
+                              try {
+                                const fileExt = file.name.split('.').pop();
+                                const fileName = `banner_${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+
+                                const base64Data = await new Promise<string>((resolve, reject) => {
+                                  const reader = new FileReader();
+                                  reader.onload = () => resolve(reader.result as string);
+                                  reader.onerror = () => reject(new Error("Failed to read file"));
+                                  reader.readAsDataURL(file);
+                                });
+
+                                const { data: { session } } = await supabase.auth.getSession();
+                                const token = session?.access_token;
+
+                                const res = await fetch('/api/admin/upload-banner', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': token ? `Bearer ${token}` : ''
+                                  },
+                                  body: JSON.stringify({
+                                    fileData: base64Data,
+                                    fileName,
+                                    mimeType: file.type
+                                  })
+                                });
+
+                                const json = await res.json();
+                                if (!res.ok || json.error) {
+                                  throw new Error(json.error || 'Upload failed');
+                                }
+
+                                if (json.publicUrl) {
+                                  setConfig({ ...config, loginBannerUrl: json.publicUrl });
+                                  toast.success('Image uploaded successfully', { id: loadingToast });
+                                } else {
+                                  throw new Error("Could not get public URL");
+                                }
+                              } catch (err: any) {
+                                console.error('Upload Error:', err);
+                                toast.error('Failed to upload image: ' + err.message, { id: loadingToast });
+                              }
                             }
                           }}
                         />
@@ -2851,31 +2962,40 @@ export function AdminPanel() {
 
                   {/* Curated Preset Banners Gallery */}
                   <div className="space-y-4 pt-2">
-                     <span className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest pl-1">Quick Select Presets Gallery</span>
+                     <span className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest pl-1">My Presets Gallery</span>
                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                        {[
-                          { name: 'Bangladesh Freelancing', url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Desk Working', url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Modern Office', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Digital Marketplace', url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Business Growth', url: 'https://images.unsplash.com/photo-1542744094-3a31f103e35a?q=80&w=600&auto=format&fit=crop' }
-                        ].map((preset, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => setConfig({ ...config, loginBannerUrl: preset.url })}
-                            className={cn(
-                              "relative aspect-video rounded-xl overflow-hidden border-2 transition-all hover:scale-105",
-                              config.loginBannerUrl === preset.url ? "border-primary-600 ring-2 ring-primary-100" : "border-transparent"
-                            )}
-                            title={preset.name}
-                          >
-                             <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                             <div className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center">
-                                <span className="text-[9px] font-black tracking-tight text-white uppercase">{preset.name.split(' ')[0]}</span>
-                             </div>
-                          </button>
-                        ))}
+                        {config.customBannerPresets && config.customBannerPresets.length > 0 ? (
+                          config.customBannerPresets.map((presetUrl, idx) => (
+                            <div key={idx} className="relative group aspect-video rounded-xl overflow-hidden transition-all hover:scale-105 border-transparent">
+                              <button
+                                type="button"
+                                onClick={() => setConfig({ ...config, loginBannerUrl: presetUrl })}
+                                className={cn(
+                                  "w-full h-full rounded-xl border-2 overflow-hidden",
+                                  config.loginBannerUrl === presetUrl ? "border-primary-600 ring-2 ring-primary-100" : "border-transparent"
+                                )}
+                              >
+                                <img src={presetUrl} alt="Preset" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updated = config.customBannerPresets.filter((p: string) => p !== presetUrl);
+                                  setConfig({ ...config, customBannerPresets: updated });
+                                  toast.success("Preset removed");
+                                }}
+                                className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-full text-center p-4 text-xs font-bold text-gray-500 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                            No presets saved yet. Upload an image and click "Save as Preset".
+                          </div>
+                        )}
                      </div>
                   </div>
                </div>

@@ -243,6 +243,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
   }
 
   const validCount = data?.validCount || 0;
+  const campaignValidCount = data?.campaignValidCount || 0;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -254,7 +255,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
               <Gift className="w-8 h-8" /> Refer & Earn Substantial Rewards
             </h1>
             <p className="text-indigo-100 font-medium">
-              Invite friends to sign up and complete their first microjob. Earn up to 50 BDT in bonuses!
+              Invite your friends and earn a guaranteed {data?.referralBonusAmount || 0} BDT for every valid referral!
             </p>
           </div>
           <div className="bg-white/20 backdrop-blur-md px-6 py-4 rounded-xl text-center min-w-[200px] border border-white/30">
@@ -353,24 +354,24 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
                 <p className="text-sm text-gray-500 font-medium">Reward: {data?.target1Reward || 0} BDT added to your balance.</p>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-black text-indigo-600">{validCount}</span>
+                <span className="text-2xl font-black text-indigo-600">{campaignValidCount}</span>
                 <span className="text-gray-400 font-bold">/{data?.target1Referrals || 0}</span>
               </div>
             </div>
             <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
               <motion.div 
                 initial={{ width: 0 }}
-                animate={{ width: `${Math.min((validCount / Math.max(data?.target1Referrals || 1, 1)) * 100, 100)}%` }}
+                animate={{ width: `${Math.min((campaignValidCount / Math.max(data?.target1Referrals || 1, 1)) * 100, 100)}%` }}
                 className="h-full bg-indigo-500 rounded-full"
               />
             </div>
             <button
                onClick={() => handleClaim(1)}
-               disabled={validCount < (data?.target1Referrals || 0) || data.target1Claimed || data.isExpired || claimLoading}
+               disabled={campaignValidCount < (data?.target1Referrals || 0) || data.target1Claimed || data.isExpired || claimLoading}
                className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all cursor-pointer ${
                  data.target1Claimed
                   ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
-                  : validCount < (data?.target1Referrals || 0) || data.isExpired
+                  : campaignValidCount < (data?.target1Referrals || 0) || data.isExpired
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'
                }`}
@@ -389,24 +390,24 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
                 <p className="text-sm text-gray-500 font-medium">Reward: {data?.target2Reward || 0} BDT added to your balance.</p>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-black text-purple-600">{validCount}</span>
+                <span className="text-2xl font-black text-purple-600">{campaignValidCount}</span>
                 <span className="text-gray-400 font-bold">/{data?.target2Referrals || 0}</span>
               </div>
             </div>
             <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
                <motion.div 
                 initial={{ width: 0 }}
-                animate={{ width: `${Math.min((validCount / Math.max(data?.target2Referrals || 1, 1)) * 100, 100)}%` }}
+                animate={{ width: `${Math.min((campaignValidCount / Math.max(data?.target2Referrals || 1, 1)) * 100, 100)}%` }}
                 className="h-full bg-purple-500 rounded-full"
               />
             </div>
             <button
                onClick={() => handleClaim(2)}
-               disabled={validCount < (data?.target2Referrals || 0) || data.target2Claimed || data.isExpired || claimLoading}
+               disabled={campaignValidCount < (data?.target2Referrals || 0) || data.target2Claimed || data.isExpired || claimLoading}
                className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all cursor-pointer ${
                  data.target2Claimed
                   ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
-                  : validCount < (data?.target2Referrals || 0) || data.isExpired
+                  : campaignValidCount < (data?.target2Referrals || 0) || data.isExpired
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-200'
                }`}

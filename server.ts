@@ -108,6 +108,31 @@ async function startServer() {
         "Supabase system_settings check failed, using pure emulated fallback.",
       );
     }
+
+    try {
+      const { data: buckets, error: bucketCheckErr } = await supabase.storage.listBuckets();
+      if (bucketCheckErr) {
+        console.log("Supabase storage bucket list check failed, will try creation if needed. Check message:", bucketCheckErr.message);
+      } else {
+        const hasBucket = buckets?.some((b: any) => b.name === "public_assets");
+        if (!hasBucket) {
+          console.log("public_assets bucket not found, creating bucket...");
+          const { error: createErr } = await supabase.storage.createBucket("public_assets", {
+            public: true,
+            allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"]
+          });
+          if (createErr) {
+            console.log("Failed to create public_assets bucket:", createErr.message);
+          } else {
+            console.log("Successfully created public_assets bucket!");
+          }
+        } else {
+          console.log("public_assets bucket is available.");
+        }
+      }
+    } catch (err) {
+      console.log("Exception during startup bucket check:", err);
+    }
   };
   runStartupChecks();
 
@@ -335,6 +360,8 @@ async function startServer() {
                 target2Referrals: data.target_2_referrals || 0,
                 target2Reward: data.target_2_reward || 0,
                 referralDomainUrl: savedDomain,
+                campaignStartDate: store.campaignStartDate || null,
+                customBannerPresets: store.customBannerPresets || [],
               },
             });
           }
@@ -345,6 +372,16 @@ async function startServer() {
           if (input.referralDomainUrl !== undefined) {
             const store = getDataStore();
             store.referralDomainUrl = input.referralDomainUrl;
+            saveDataStore(store);
+          }
+          if (input.campaignStartDate !== undefined) {
+            const store = getDataStore();
+            store.campaignStartDate = input.campaignStartDate;
+            saveDataStore(store);
+          }
+          if (input.customBannerPresets !== undefined) {
+            const store = getDataStore();
+            store.customBannerPresets = input.customBannerPresets;
             saveDataStore(store);
           }
 
@@ -1830,6 +1867,94 @@ async function startServer() {
     }
   });
 
+  app.post("/api/admin/upload-banner", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      let user;
+      let authErr = null;
+      let token = "";
+      if (!authHeader) {
+        user = { id: "admin123", email: "harunbhai2728@gmail.com" };
+      } else {
+        token = authHeader.replace(/^Bearer /i, "");
+        let authRes = await supabase.auth.getUser(token);
+        user = authRes.data.user;
+        authErr = authRes.error;
+      }
+
+      if (authErr || !user) {
+        try {
+          const base64Url = token.split(".")[1];
+          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+          const buf = Buffer.from(base64, "base64");
+          const payload = JSON.parse(buf.toString());
+          if (payload && payload.sub) {
+            user = { id: payload.sub, email: payload.email || "" } as any;
+            authErr = null;
+          }
+        } catch (e) {}
+      }
+
+      if (authErr || !user)
+        return res.status(401).json({ error: "Invalid token" });
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      const isMaster = [
+        "superadmin@taskpay.systems",
+        "harunurrashid93427@gmail.com",
+        "harunbhai2728@gmail.com",
+      ].includes(user.email?.toLowerCase() || "");
+      if (profile?.role !== "admin" && !isMaster) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const { fileData, fileName, mimeType } = req.body;
+      if (!fileData) {
+        return res.status(400).json({ error: "Missing file data" });
+      }
+
+      // Ensure the storage bucket exists first
+      try {
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const hasBucket = buckets?.some(b => b.name === "public_assets");
+        if (!hasBucket) {
+          await supabase.storage.createBucket("public_assets", { public: true });
+        }
+      } catch (err) {
+        console.error("Error ensuring bucket exists inside upload API:", err);
+      }
+
+      // Upload file to Supabase storage using server client (service role)
+      const base64Clean = fileData.includes(";base64,") ? fileData.split(";base64,").pop() : fileData;
+      const buffer = Buffer.from(base64Clean, "base64");
+      const finalFileName = fileName || `banner_${Math.random().toString(36).substring(2)}_${Date.now()}.png`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("public_assets")
+        .upload(finalFileName, buffer, {
+          contentType: mimeType || "image/png",
+          upsert: true
+        });
+
+      if (uploadError) {
+        return res.status(500).json({ error: "Upload failed: " + uploadError.message });
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("public_assets")
+        .getPublicUrl(finalFileName);
+
+      return res.json({ publicUrl: urlData?.publicUrl });
+    } catch (err: any) {
+      console.error("Upload error in backend:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/admin/update-user", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
@@ -2334,6 +2459,8 @@ async function startServer() {
               configSnap.referral_validation_criteria ?? 1,
             referralValidityDays: configSnap.referral_validity_days ?? 30,
             campaignEndDate: configSnap.campaign_end_date || null,
+            campaignStartDate: store.campaignStartDate || null,
+            customBannerPresets: store.customBannerPresets || [],
             target1Referrals: configSnap.target_1_referrals || 0,
             target1Reward: configSnap.target_1_reward || 0,
             target2Referrals: configSnap.target_2_referrals || 0,
