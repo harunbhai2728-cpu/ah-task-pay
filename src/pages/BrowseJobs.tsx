@@ -37,27 +37,12 @@ export function BrowseJobs() {
     };
   }, [searchTerm]);
 
-  const [vpnBlocked, setVpnBlocked] = useState(false);
-
   useEffect(() => {
     if (!user?.id) return;
     const fetchAllData = async () => {
       try {
         setLoading(true);
         setErrorMsg(null);
-        setVpnBlocked(false);
-
-        try {
-          const ipCheckRes = await fetch('/api/security/ip-check');
-          const ipCheckData = await ipCheckRes.json();
-          if (ipCheckData && ipCheckData.vpn) {
-            setVpnBlocked(true);
-            setLoading(false);
-            return;
-          }
-        } catch (e) {
-          console.warn("Could not check VPN status", e);
-        }
 
         let submitMap = new Map<string, string>();
         let jobIdsToExclude: string[] = [];
@@ -150,12 +135,6 @@ export function BrowseJobs() {
           <p className="text-gray-400 dark:text-slate-500 font-medium">Find tasks that match your skills and start earning BDT instantly.</p>
         </div>
 
-        {vpnBlocked ? (
-          <div className="relative z-10 p-6 bg-red-500/20 text-red-100 rounded-2xl border border-red-500/50">
-             <h3 className="text-xl font-bold mb-2">Security Alert</h3>
-             <p>VPN/Proxy usage is strictly prohibited on this platform. Please disable it to continue viewing jobs.</p>
-          </div>
-        ) : (
           <div className="relative z-10 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 dark:text-slate-500" />
@@ -180,10 +159,9 @@ export function BrowseJobs() {
               <Filter className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
             </div>
           </div>
-        )}
       </div>
 
-      {vpnBlocked ? null : loading ? (
+      {loading ? (
         <div className="flex justify-center py-24">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-600 dark:border-indigo-500"></div>
         </div>

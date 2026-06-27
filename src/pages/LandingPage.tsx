@@ -26,8 +26,6 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
   
-  const [vpnWarning, setVpnWarning] = useState(false);
-
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
@@ -64,7 +62,6 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
     e.preventDefault();
     setLoading(true);
     setError('');
-    setVpnWarning(false);
 
     try {
       let actualEmail = email.trim();
@@ -77,13 +74,9 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
       try {
         const ipCheckRes = await fetch('/api/security/ip-check');
         const ipCheckData = await ipCheckRes.json();
-        if (ipCheckData && ipCheckData.vpn) {
-          setVpnWarning(true);
-          return;
-        }
         ipAddress = ipCheckData.ip || '';
       } catch (e) {
-        console.warn("Could not check VPN status", e);
+        console.warn("Could not check IP status", e);
       }
 
       // 2. Device Fingerprint Capture
@@ -270,11 +263,6 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {vpnWarning && (
-                 <div className="p-4 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 text-sm rounded-2xl border border-orange-100 dark:border-orange-900/50 font-bold">
-                    Security Alert: VPN/Proxy usage is strictly prohibited on this platform. Please disable it to continue.
-                 </div>
-              )}
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-sm rounded-2xl border border-red-100 dark:border-red-900/50 font-bold">
                   {error}
