@@ -95,6 +95,18 @@ export function AdminPanel() {
   const [ticketSearchTerm, setTicketSearchTerm] = useState('');
   const [adsSearchTerm, setAdsSearchTerm] = useState('');
   const [userSortOrder, setUserSortOrder] = useState<'newest' | 'balance_high' | 'balance_low'>('newest');
+  const [showDuplicateIPs, setShowDuplicateIPs] = useState(false);
+
+  const duplicateIPCounts = React.useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    users.forEach(u => {
+      const ip = u.last_ip_address;
+      if (ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '') {
+        counts[ip] = (counts[ip] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [users]);
 
   // Redeem Codes management states
   const [redeemCodes, setRedeemCodes] = useState<any[]>([]);
@@ -106,6 +118,7 @@ export function AdminPanel() {
   const [redeemLoading, setRedeemLoading] = useState(false);
 
   // UI States for actions
+  const [processingSubmissionId, setProcessingSubmissionId] = useState<string | null>(null);
   const [rejectingSub, setRejectingSub] = useState<Submission | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [balanceAdjust, setBalanceAdjust] = useState<{[key: string]: string}>({});
@@ -417,9 +430,9 @@ export function AdminPanel() {
       if (!background) setLoading(false);
       setIsRefreshing(false);
     } catch (err: any) {
-      console.error("Admin Panel Initialization Failed:", err);
-      // Instead of just logging, we should probably show this to the user in a less fatal way if possible, 
-      // but the requirement is to fix the "Failed to fetch" which was likely a generic network error or crash.
+      if (err?.message !== "Failed to fetch" && !err?.message?.includes("Failed to fetch")) {
+        console.error("Admin Panel Initialization Failed:", err);
+      }
       if (!background) setLoading(false);
       setIsRefreshing(false);
     }
@@ -548,7 +561,8 @@ export function AdminPanel() {
   };
 
   const handleApproveSubmission = async (sub: Submission) => {
-    if (sub.status !== 'pending') return;
+    if (sub.status !== 'pending' || processingSubmissionId) return;
+    setProcessingSubmissionId(sub.id);
     
     const previousSubmissions = [...submissions];
     const previousUsers = [...users];
@@ -602,12 +616,14 @@ export function AdminPanel() {
       setSubmissions(previousSubmissions);
       setUsers(previousUsers);
       setJobs(previousJobs);
-      toast.error(err.message || 'Error approving submission', { id: loadingToast });
+      toast.error(err.message || `Error approving submission ${sub.id}`, { id: loadingToast });
+    } finally {
+      setProcessingSubmissionId(null);
     }
   };
 
   const handleRejectSubmission = (sub: Submission) => {
-    if (sub.status !== 'pending') return;
+    if (sub.status !== 'pending' || processingSubmissionId) return;
     setRejectingSub(sub);
     setRejectReason('');
   };
@@ -626,6 +642,8 @@ export function AdminPanel() {
     const subId = rejectingSub.id;
     const sub = rejectingSub;
     const reward = sub.reward || 0;
+    
+    setProcessingSubmissionId(subId);
     
     // Close modal immediately for snappy UI
     setRejectingSub(null);
@@ -680,7 +698,9 @@ export function AdminPanel() {
       setSubmissions(previousSubmissions);
       setUsers(previousUsers);
       setJobs(previousJobs);
-      toast.error(err.message || 'Error rejecting submission', { id: loadingToast });
+      toast.error(err.message || `Error rejecting submission ${subId}`, { id: loadingToast });
+    } finally {
+      setProcessingSubmissionId(null);
     }
   };
 
@@ -1343,15 +1363,29 @@ export function AdminPanel() {
   };
 
   const filteredUsers = React.useMemo(() => {
-    return users.filter(u => 
-      u.displayName?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-      u.username?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-      u.phone?.includes(searchTerm) ||
-      u.serialNumber?.toString()?.includes(searchTerm) ||
-      u.uid?.includes(searchTerm)
-    );
-  }, [users, searchTerm]);
+    let result = users;
+
+    if (showDuplicateIPs) {
+      result = users.filter(u => {
+        const ip = u.last_ip_address;
+        return ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '' && duplicateIPCounts[ip] > 1;
+      });
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase().trim();
+      result = result.filter(u => 
+        u.displayName?.toLowerCase()?.includes(term) ||
+        u.username?.toLowerCase()?.includes(term) ||
+        u.email?.toLowerCase()?.includes(term) ||
+        u.phone?.includes(term) ||
+        u.serialNumber?.toString()?.includes(term) ||
+        u.uid?.includes(term)
+      );
+    }
+    
+    return result;
+  }, [users, searchTerm, showDuplicateIPs, duplicateIPCounts]);
 
   const getMs = (dateVal: any) => {
     if (!dateVal) return 0;
@@ -1428,6 +1462,14 @@ export function AdminPanel() {
 
   const sortedUsers = React.useMemo(() => {
     return [...filteredUsers].sort((a, b) => {
+      if (showDuplicateIPs) {
+        const ipA = typeof a.last_ip_address === 'string' ? a.last_ip_address : '';
+        const ipB = typeof b.last_ip_address === 'string' ? b.last_ip_address : '';
+        if (ipA !== ipB) {
+          return ipA.localeCompare(ipB);
+        }
+      }
+
       if (userSortOrder === 'balance_high') {
         const balA = Number(a.earningBalance) || 0;
         const balB = Number(b.earningBalance) || 0;
@@ -1445,7 +1487,7 @@ export function AdminPanel() {
       }
       return (b.serialNumber || 0) - (a.serialNumber || 0);
     });
-  }, [filteredUsers, userSortOrder]);
+  }, [filteredUsers, userSortOrder, showDuplicateIPs]);
 
   const sortedJobs = React.useMemo(() => {
     let filtered = [...jobs];
@@ -1695,6 +1737,18 @@ export function AdminPanel() {
                 <option value="balance_low">Sort by Low Balance</option>
               </select>
             </div>
+            <button
+              onClick={() => setShowDuplicateIPs(!showDuplicateIPs)}
+              className={cn(
+                "px-6 py-5 rounded-[2.5rem] font-bold text-sm transition-colors border shadow-sm flex items-center justify-center gap-2",
+                showDuplicateIPs 
+                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800" 
+                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700"
+              )}
+            >
+              <AlertTriangle className="w-5 h-5" />
+              {showDuplicateIPs ? 'Hide Duplicate IPs' : 'Show Duplicate IPs'}
+            </button>
           </div>
         )}
 
@@ -1873,8 +1927,13 @@ export function AdminPanel() {
                             <p className="text-xs text-gray-400 dark:text-slate-500 font-bold" title={(u as any).username || 'nousername'}>
                               @{((u as any).username && (u as any).username.length > 14) ? `${(u as any).username.slice(0, 14)}...` : ((u as any).username || 'nousername')} • {(u as any).phone || u.email || 'No Phone'}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
                               IP: {u.last_ip_address || 'N/A'}
+                              {u.last_ip_address && u.last_ip_address !== 'N/A' && typeof u.last_ip_address === 'string' && u.last_ip_address.trim() !== '' && duplicateIPCounts[u.last_ip_address] > 1 && (
+                                <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
+                                  Matched: {duplicateIPCounts[u.last_ip_address]} Accounts
+                                </span>
+                              )}
                             </p>
                             {u.warning && (
                                <div className="mt-2 flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg text-orange-600 dark:text-orange-400 transition-colors">
@@ -2120,11 +2179,11 @@ export function AdminPanel() {
                     <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-slate-700 transition-colors">
                        <button 
                          onClick={() => handleApproveSubmission(sub)}
-                         disabled={adminActionLoading}
+                         disabled={adminActionLoading || processingSubmissionId !== null}
                          className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg dark:shadow-none shadow-green-100 hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                        >
-                          {adminActionLoading ? (
-                            "Processing..."
+                          {processingSubmissionId === sub.id ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                           ) : (
                             <>
                               <CheckCircle2 className="w-5 h-5" />
@@ -2134,11 +2193,11 @@ export function AdminPanel() {
                        </button>
                        <button 
                          onClick={() => handleRejectSubmission(sub)}
-                         disabled={adminActionLoading}
+                         disabled={adminActionLoading || processingSubmissionId !== null}
                          className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg dark:shadow-none shadow-red-100 hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                        >
-                          {adminActionLoading ? (
-                            "Processing..."
+                          {processingSubmissionId === sub.id ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                           ) : (
                             <>
                               <XCircle className="w-5 h-5" />

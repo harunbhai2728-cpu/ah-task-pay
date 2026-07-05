@@ -80,7 +80,7 @@ export function JobDetails() {
     }
 
     try {
-      const b64 = await compressImage(file, 300);
+      const b64 = await compressImage(file, 1080);
       setScreenshotUrls(prev => {
         const newUrls = [...prev];
         newUrls[index] = b64;

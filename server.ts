@@ -2640,6 +2640,150 @@ async function startServer() {
     }
   });
 
+  // Background task to clean up 7-day-old decided submissions and their images
+  const runSubmissionsCleanup = async () => {
+    console.log("Starting daily submission cleanup task...");
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+      const { data: submissions, error } = await supabase
+        .from("submissions")
+        .select("*")
+        .in("status", ["approved", "rejected"])
+        .lt("updated_at", sevenDaysAgoISO);
+
+      if (error) {
+        console.error("Error fetching old submissions for cleanup:", error.message);
+        return { success: false, error: error.message };
+      }
+
+      if (!submissions || submissions.length === 0) {
+        console.log("No old approved or rejected submissions found for cleanup.");
+        return { success: true, count: 0, filesCount: 0 };
+      }
+
+      console.log(`Found ${submissions.length} submissions to clean up.`);
+      let deletedFilesCount = 0;
+      let deletedSubmissionsCount = 0;
+
+      for (const sub of submissions) {
+        // Extract screenshot URLs/paths
+        let screenshots: string[] = [];
+        if (sub.screenshots) {
+          if (Array.isArray(sub.screenshots)) {
+            screenshots = sub.screenshots;
+          } else if (typeof sub.screenshots === "string") {
+            try {
+              screenshots = JSON.parse(sub.screenshots);
+            } catch (_) {}
+          }
+        }
+
+        if (sub.proof) {
+          try {
+            const parsedProof = JSON.parse(sub.proof);
+            if (parsedProof && Array.isArray(parsedProof.screenshots)) {
+              screenshots = [...screenshots, ...parsedProof.screenshots];
+            }
+          } catch (_) {}
+        }
+
+        // Filter unique screenshots
+        const uniqueScreenshots = Array.from(new Set(screenshots)).filter(Boolean);
+
+        // Delete from storage if matching the public_assets storage bucket URL or path
+        for (const url of uniqueScreenshots) {
+          const path = extractStoragePath(url);
+          if (path) {
+            const { error: deleteErr } = await supabase.storage
+              .from("public_assets")
+              .remove([path]);
+            if (deleteErr) {
+              console.error(`Failed to delete storage file ${path}:`, deleteErr.message);
+            } else {
+              console.log(`Successfully deleted storage file ${path} from bucket.`);
+              deletedFilesCount++;
+            }
+          }
+        }
+
+        // Delete submission from database
+        const { error: dbDeleteErr } = await supabase
+          .from("submissions")
+          .delete()
+          .eq("id", sub.id);
+
+        if (dbDeleteErr) {
+          console.error(`Failed to delete database submission ${sub.id}:`, dbDeleteErr.message);
+        } else {
+          deletedSubmissionsCount++;
+        }
+      }
+
+      console.log(`Submission cleanup complete. Deleted ${deletedSubmissionsCount} submissions and ${deletedFilesCount} storage files.`);
+      return { success: true, count: deletedSubmissionsCount, filesCount: deletedFilesCount };
+    } catch (err: any) {
+      console.error("Exception in submission cleanup task:", err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  function extractStoragePath(url: string): string | null {
+    if (!url || typeof url !== "string") return null;
+    if (url.startsWith("data:")) return null;
+
+    const marker = "/public_assets/";
+    const index = url.indexOf(marker);
+    if (index !== -1) {
+      return url.substring(index + marker.length);
+    }
+    
+    if (!url.startsWith("http") && !url.includes("/")) {
+      return url;
+    }
+    return null;
+  }
+
+  // Manual trigger for submission and screenshot cleanup (Admin Only)
+  app.post("/api/admin/cleanup-submissions", async (req, res) => {
+    try {
+      const user = await getRequestUser(req);
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      const isMaster = [
+        "superadmin@taskpay.systems",
+        "harunurrashid93427@gmail.com",
+        "harunbhai2728@gmail.com",
+      ].includes(user.email?.toLowerCase() || "");
+
+      if (profile?.role !== "admin" && !isMaster) {
+        return res.status(403).json({ error: "Forbidden. Admin access required." });
+      }
+
+      const result = await runSubmissionsCleanup();
+      if (!result.success) {
+        return res.status(500).json({ error: result.error });
+      }
+
+      return res.json({
+        message: "Submission cleanup executed successfully",
+        count: result.count,
+        filesCount: result.filesCount
+      });
+    } catch (err: any) {
+      console.error("Error in POST /api/admin/cleanup-submissions:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   // Helper to extract user from headers
   async function getRequestUser(req: express.Request) {
     const authHeader = req.headers.authorization;
@@ -3789,6 +3933,25 @@ async function startServer() {
       },
       1000 * 60 * 60,
     ); // Check every hour
+
+    // Background task to run submission cleanup every 24 hours
+    setInterval(
+      async () => {
+        try {
+          await runSubmissionsCleanup();
+        } catch (err) {
+          console.error("Interval error running submission cleanup:", err);
+        }
+      },
+      1000 * 60 * 60 * 24, // Check every 24 hours
+    );
+
+    // Also run it 10 seconds after server startup to clean up immediately
+    setTimeout(() => {
+      runSubmissionsCleanup().catch(err => {
+        console.error("Startup error running submission cleanup:", err);
+      });
+    }, 10000);
   });
 }
 startServer();
