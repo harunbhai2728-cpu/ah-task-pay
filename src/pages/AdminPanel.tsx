@@ -2167,12 +2167,18 @@ export function AdminPanel() {
                     </div>
                   )}
 
-                  {sub.screenshots && sub.screenshots.length > 0 && (
+                  {sub.screenshots && sub.screenshots.length > 0 && sub.screenshots[0] !== "This Picture Was Expired" && (
                     <div className="flex gap-4 overflow-x-auto pb-2">
                        {sub.screenshots.map((s, idx) => (
                          <img key={idx} src={s} className="h-48 w-auto rounded-2xl object-cover border border-gray-100 dark:border-slate-700 shadow-sm transition-colors" alt="proof" />
                        ))}
                     </div>
+                  )}
+                  {sub.screenshots && sub.screenshots[0] === "This Picture Was Expired" && (
+                     <div className="mt-2 text-sm font-bold text-gray-500 bg-gray-50 border border-gray-200 dark:bg-slate-800 dark:border-slate-700 p-3 rounded-xl flex items-center gap-2">
+                        <Image className="w-4 h-4" />
+                        (This Picture Was Expired)
+                     </div>
                   )}
 
                   {sub.status === 'pending' && (

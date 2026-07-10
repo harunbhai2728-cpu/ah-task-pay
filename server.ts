@@ -2666,7 +2666,7 @@ async function startServer() {
 
       console.log(`Found ${submissions.length} submissions to clean up.`);
       let deletedFilesCount = 0;
-      let deletedSubmissionsCount = 0;
+      let updatedSubmissionsCount = 0;
 
       for (const sub of submissions) {
         // Extract screenshot URLs/paths
@@ -2709,21 +2709,37 @@ async function startServer() {
           }
         }
 
-        // Delete submission from database
-        const { error: dbDeleteErr } = await supabase
+        // Update submission in database to mark image as deleted (DO NOT DELETE THE ROW)
+        const updatedProof = sub.proof ? (() => {
+            try {
+                let parsed = JSON.parse(sub.proof);
+                if (parsed && Array.isArray(parsed.screenshots)) {
+                    parsed.screenshots = ["This Picture Was Expired"];
+                    return JSON.stringify(parsed);
+                }
+                return sub.proof;
+            } catch (_) {
+                return sub.proof;
+            }
+        })() : sub.proof;
+
+        const { error: dbUpdateErr } = await supabase
           .from("submissions")
-          .delete()
+          .update({
+             screenshots: ["This Picture Was Expired"],
+             proof: updatedProof
+          })
           .eq("id", sub.id);
 
-        if (dbDeleteErr) {
-          console.error(`Failed to delete database submission ${sub.id}:`, dbDeleteErr.message);
+        if (dbUpdateErr) {
+          console.error(`Failed to update database submission ${sub.id}:`, dbUpdateErr.message);
         } else {
-          deletedSubmissionsCount++;
+          updatedSubmissionsCount++;
         }
       }
 
-      console.log(`Submission cleanup complete. Deleted ${deletedSubmissionsCount} submissions and ${deletedFilesCount} storage files.`);
-      return { success: true, count: deletedSubmissionsCount, filesCount: deletedFilesCount };
+      console.log(`Submission cleanup complete. Updated ${updatedSubmissionsCount} submissions and deleted ${deletedFilesCount} storage files.`);
+      return { success: true, count: updatedSubmissionsCount, filesCount: deletedFilesCount };
     } catch (err: any) {
       console.error("Exception in submission cleanup task:", err);
       return { success: false, error: err.message };
