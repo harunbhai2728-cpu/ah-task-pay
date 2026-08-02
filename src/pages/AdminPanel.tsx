@@ -28,7 +28,10 @@ import {
   Bell,
   Image,
   Upload,
-  Gift
+  Gift,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Transaction, UserProfile, Job, Submission, Ticket } from '../types';
@@ -97,16 +100,29 @@ export function AdminPanel() {
   const [userSortOrder, setUserSortOrder] = useState<'newest' | 'balance_high' | 'balance_low'>('newest');
   const [showDuplicateIPs, setShowDuplicateIPs] = useState(false);
 
-  const duplicateIPCounts = React.useMemo(() => {
-    const counts: { [key: string]: number } = {};
-    users.forEach(u => {
-      const ip = u.last_ip_address;
-      if (ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '') {
-        counts[ip] = (counts[ip] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [users]);
+  // Server-side pagination and error states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Global system statistics computed on backend
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [completedJobsCount, setCompletedJobsCount] = useState(0);
+  const [totalEarningBalance, setTotalEarningBalance] = useState(0);
+  const [totalDepositBalance, setTotalDepositBalance] = useState(0);
+  const [totalHeld, setTotalHeld] = useState(0);
+  const [totalDeposit, setTotalDeposit] = useState(0);
+  const [totalWithdraw, setTotalWithdraw] = useState(0);
+  const [pendingTransactionsCount, setPendingTransactionsCount] = useState(0);
+  const [pendingSubsCount, setPendingSubsCount] = useState(0);
+  const [hasPendingTickets, setHasPendingTickets] = useState(false);
+  const [hasPendingJobs, setHasPendingJobs] = useState(false);
+  const [hasPendingAds, setHasPendingAds] = useState(false);
+  const [hasPendingDeletions, setHasPendingDeletions] = useState(false);
+
+  const [duplicateIPCounts, setDuplicateIPCounts] = useState<{ [key: string]: number }>({});
 
   // Redeem Codes management states
   const [redeemCodes, setRedeemCodes] = useState<any[]>([]);
@@ -372,10 +388,41 @@ export function AdminPanel() {
 
   const { isAdmin: isSystemAdmin, refreshConfig } = useAuth();
 
-  const fetchAdminData = async (silent = false, background = false) => {
+  const fetchAdminData = async (silent = false, background = false, overrideTab?: string, overridePage?: number) => {
     if (!isSystemAdmin) return;
-    if (!silent && !background) setLoading(true);
+    
+    const currentTab = overrideTab || activeTab;
+    const targetPage = overridePage !== undefined ? overridePage : currentPage;
+    
+    let searchVal = '';
+    if (currentTab === 'users') searchVal = searchTerm;
+    else if (currentTab === 'transactions') searchVal = txSearchTerm;
+    else if (currentTab === 'jobs') searchVal = jobsSearchTerm;
+    else if (currentTab === 'submissions') searchVal = subSearchTerm;
+    else if (currentTab === 'tickets') searchVal = ticketSearchTerm;
+    else if (currentTab === 'ads') searchVal = adsSearchTerm;
+
+    const queryParams = new URLSearchParams({
+      tab: currentTab,
+      page: String(targetPage),
+      limit: '20',
+      search: searchVal,
+      type: txTypeFilter,
+      sort: userSortOrder,
+      duplicateIPs: String(showDuplicateIPs),
+      t: String(Date.now())
+    });
+
+    if (!silent && !background) {
+      if (transactions.length === 0 && users.length === 0) {
+        setLoading(true);
+      } else {
+        setTabLoading(true);
+      }
+    }
     if (silent) setIsRefreshing(true);
+    setFetchError(null);
+
     try {
       const sessionRes = await supabase.auth.getSession();
       const session = sessionRes.data?.session;
@@ -383,14 +430,15 @@ export function AdminPanel() {
       
       if (!token) {
         console.error("No active admin session found.");
-        if (!background) setLoading(false);
+        setLoading(false);
+        setTabLoading(false);
         return;
       }
       
       let res, codesRes;
       try {
         const results = await Promise.all([
-          fetch(`/api/admin/data?t=${Date.now()}`, {
+          fetch(`/api/admin/data?${queryParams.toString()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
           fetch(`/api/redeem-code/list?t=${Date.now()}`, {
@@ -400,7 +448,7 @@ export function AdminPanel() {
         res = results[0];
         codesRes = results[1];
       } catch (fetchErr: any) {
-        throw new Error(`Network Connectivity Error: ${fetchErr.message}. Make sure the server is healthy.`);
+        throw new Error(`Network Connection Error: ${fetchErr.message}. Please check your connection and retry.`);
       }
       
       if (!res.ok) {
@@ -413,39 +461,89 @@ export function AdminPanel() {
         throw new Error(json.error);
       }
       
+      // Update global configurations
       setConfig(prev => ({ ...prev, ...(json.config || {}) }));
-      setTransactions(json.transactions || []);
-      setUsers(json.users || []);
-      setJobs(json.jobs || []);
-      setSubmissions(json.submissions || []);
-      setTickets(json.tickets || []);
-      setAds(json.ads || []);
       setSupabaseServiceRoleReady(json.supabaseServiceRoleReady ?? true);
+      
+      // Update stats and totals
+      if (json.stats) {
+        setTotalUsers(json.stats.totalUsers);
+        setTotalJobs(json.stats.totalJobs);
+        setCompletedJobsCount(json.stats.completedJobsCount);
+        setTotalEarningBalance(json.stats.totalEarningBalance);
+        setTotalDepositBalance(json.stats.totalDepositBalance);
+        setTotalHeld(json.stats.totalHeld);
+        setTotalDeposit(json.stats.totalDeposit);
+        setTotalWithdraw(json.stats.totalWithdraw);
+        setPendingTransactionsCount(json.stats.pendingTransactionsCount);
+        setPendingSubsCount(json.stats.pendingSubsCount);
+        setHasPendingTickets(json.stats.hasPendingTickets);
+        setHasPendingJobs(json.stats.hasPendingJobs);
+        setHasPendingAds(json.stats.hasPendingAds);
+        setHasPendingDeletions(json.stats.hasPendingDeletions);
+      }
+
+      if (json.duplicateIPCounts) {
+        setDuplicateIPCounts(json.duplicateIPCounts);
+      }
+
+      // Update the active tab's specific paginated list
+      const fetchedData = json.data || [];
+      if (currentTab === 'transactions') setTransactions(fetchedData);
+      else if (currentTab === 'users') setUsers(fetchedData);
+      else if (currentTab === 'jobs') setJobs(fetchedData);
+      else if (currentTab === 'submissions') setSubmissions(fetchedData);
+      else if (currentTab === 'tickets') setTickets(fetchedData);
+      else if (currentTab === 'ads') setAds(fetchedData);
+      else if (currentTab === 'deletions') setUsers(fetchedData);
+
+      setTotalItems(json.totalItems || 0);
+      setCurrentPage(json.page || 1);
 
       if (codesRes && codesRes.ok) {
         const codesJson = await codesRes.json();
         setRedeemCodes(codesJson.codes || []);
       }
       
-      if (!background) setLoading(false);
+      setLoading(false);
+      setTabLoading(false);
       setIsRefreshing(false);
     } catch (err: any) {
-      if (err?.message !== "Failed to fetch" && !err?.message?.includes("Failed to fetch")) {
-        console.error("Admin Panel Initialization Failed:", err);
-      }
-      if (!background) setLoading(false);
+      console.error("Admin Panel Data Fetching Failed:", err);
+      setFetchError(err.message || 'Unknown network error. Please try again.');
+      setLoading(false);
+      setTabLoading(false);
       setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchAdminData();
     if (isSystemAdmin) {
       fetchDepositRulesData();
       fetchWithdrawRulesData();
       fetchAdPostRulesData();
     }
+    // Silent trigger for database image cleanup
+    fetch('/api/clear-db-images').catch(() => {});
   }, [isSystemAdmin]);
+
+  // Trigger paginated fetch when activeTab, currentPage, txTypeFilter, userSortOrder, showDuplicateIPs change
+  useEffect(() => {
+    if (isSystemAdmin) {
+      fetchAdminData(false, false, activeTab, currentPage);
+    }
+  }, [activeTab, currentPage, txTypeFilter, userSortOrder, showDuplicateIPs, isSystemAdmin]);
+
+  // Debounced search trigger to avoid API spam while typing
+  useEffect(() => {
+    if (!isSystemAdmin) return;
+    const delayDebounceFn = setTimeout(() => {
+      // Whenever search terms change, we reset to page 1 to start from the beginning of results
+      fetchAdminData(false, false, activeTab, 1);
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, txSearchTerm, jobsSearchTerm, subSearchTerm, ticketSearchTerm, adsSearchTerm, isSystemAdmin]);
 
   const handleUpdateConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1362,30 +1460,13 @@ export function AdminPanel() {
     }
   };
 
-  const filteredUsers = React.useMemo(() => {
-    let result = users;
-
-    if (showDuplicateIPs) {
-      result = users.filter(u => {
-        const ip = u.last_ip_address;
-        return ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '' && duplicateIPCounts[ip] > 1;
-      });
-    }
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase().trim();
-      result = result.filter(u => 
-        u.displayName?.toLowerCase()?.includes(term) ||
-        u.username?.toLowerCase()?.includes(term) ||
-        u.email?.toLowerCase()?.includes(term) ||
-        u.phone?.includes(term) ||
-        u.serialNumber?.toString()?.includes(term) ||
-        u.uid?.includes(term)
-      );
-    }
-    
-    return result;
-  }, [users, searchTerm, showDuplicateIPs, duplicateIPCounts]);
+  const filteredUsers = users;
+  const sortedUsers = users;
+  const sortedTransactions = transactions;
+  const sortedSubmissions = submissions;
+  const sortedJobs = jobs;
+  const sortedTickets = tickets;
+  const sortedAds = ads;
 
   const getMs = (dateVal: any) => {
     if (!dateVal) return 0;
@@ -1396,160 +1477,6 @@ export function AdminPanel() {
     const parsed = Date.parse(dateVal);
     return isNaN(parsed) ? (typeof dateVal === 'number' ? dateVal : 0) : parsed;
   };
-
-  const totalEarningBalance = React.useMemo(() => users.reduce((acc, u) => acc + (u.earningBalance || 0), 0), [users]);
-  const totalDepositBalance = React.useMemo(() => users.reduce((acc, u) => acc + (u.depositBalance || 0), 0), [users]);
-  const totalHeld = React.useMemo(() => users.reduce((acc, u) => acc + (u.heldBalance || 0), 0), [users]);
-  const pendingTransactionsCount = React.useMemo(() => transactions.filter(t => t.status === 'pending').length, [transactions]);
-  const pendingSubsCount = React.useMemo(() => submissions.filter(s => s.status === 'pending').length, [submissions]);
-  const completedJobsCount = React.useMemo(() => jobs.reduce((acc, j) => acc + (j.completedCount || 0), 0), [jobs]);
-
-  const totalDeposit = React.useMemo(() => {
-    return transactions
-      .filter(t => t.status === 'completed' && t.type === 'deposit')
-      .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
-
-  const totalWithdraw = React.useMemo(() => {
-    return transactions
-      .filter(t => t.status === 'completed' && t.type === 'withdrawal')
-      .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
-
-  const sortedTransactions = React.useMemo(() => {
-    let filtered = [...transactions];
-    if (txTypeFilter !== 'All') {
-      filtered = filtered.filter(t => t.type?.toLowerCase() === txTypeFilter.toLowerCase());
-    }
-    if (txSearchTerm.trim()) {
-      const term = txSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(t => 
-        t.userId?.toLowerCase()?.includes(term) ||
-        String(t.userSerial || '').includes(term) ||
-        (t as any).userName?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [transactions, txSearchTerm, txTypeFilter]);
-
-  const sortedSubmissions = React.useMemo(() => {
-    let filtered = [...submissions];
-    if (subSearchTerm.trim()) {
-      const term = subSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(s => 
-        s.workerId?.toLowerCase()?.includes(term) ||
-        String(s.workerSerial || '').includes(term) ||
-        s.workerName?.toLowerCase()?.includes(term) ||
-        s.id?.toLowerCase()?.includes(term) ||
-        s.jobId?.toLowerCase()?.includes(term) ||
-        s.proofText?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.submittedAt || a.created_at);
-      const bTime = getMs(b.submittedAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [submissions, subSearchTerm]);
-
-  const sortedUsers = React.useMemo(() => {
-    return [...filteredUsers].sort((a, b) => {
-      if (showDuplicateIPs) {
-        const ipA = typeof a.last_ip_address === 'string' ? a.last_ip_address : '';
-        const ipB = typeof b.last_ip_address === 'string' ? b.last_ip_address : '';
-        if (ipA !== ipB) {
-          return ipA.localeCompare(ipB);
-        }
-      }
-
-      if (userSortOrder === 'balance_high') {
-        const balA = Number(a.earningBalance) || 0;
-        const balB = Number(b.earningBalance) || 0;
-        if (balA !== balB) return balB - balA;
-      }
-      if (userSortOrder === 'balance_low') {
-        const balA = Number(a.earningBalance) || 0;
-        const balB = Number(b.earningBalance) || 0;
-        if (balA !== balB) return balA - balB;
-      }
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      if (aTime && bTime && aTime !== bTime) {
-        return bTime - aTime;
-      }
-      return (b.serialNumber || 0) - (a.serialNumber || 0);
-    });
-  }, [filteredUsers, userSortOrder, showDuplicateIPs]);
-
-  const sortedJobs = React.useMemo(() => {
-    let filtered = [...jobs];
-    if (jobsSearchTerm.trim()) {
-      const term = jobsSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(j => 
-        j.posterId?.toLowerCase()?.includes(term) ||
-        String(j.posterSerial || '').includes(term) ||
-        j.posterName?.toLowerCase()?.includes(term) ||
-        j.id?.toLowerCase()?.includes(term) ||
-        j.title?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [jobs, jobsSearchTerm]);
-
-  const sortedTickets = React.useMemo(() => {
-    let filtered = [...tickets];
-    if (ticketSearchTerm.trim()) {
-      const term = ticketSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(t => 
-        t.userId?.toLowerCase()?.includes(term) ||
-        String(t.userSerial || '').includes(term) ||
-        t.userName?.toLowerCase()?.includes(term) ||
-        t.id?.toLowerCase()?.includes(term) ||
-        t.subject?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'open' && b.status !== 'open') return -1;
-      if (b.status === 'open' && a.status !== 'open') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [tickets, ticketSearchTerm]);
-
-  const sortedAds = React.useMemo(() => {
-    let filtered = [...ads];
-    if (adsSearchTerm.trim()) {
-      const term = adsSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(ad => 
-        ad.userId?.toLowerCase()?.includes(term) ||
-        String(ad.userSerial || '').includes(term) ||
-        ad.id?.toLowerCase()?.includes(term) ||
-        ad.link?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [ads, adsSearchTerm]);
 
   if (loading) {
     return (
@@ -1588,7 +1515,7 @@ export function AdminPanel() {
               <Users className="w-5 h-5 text-gray-400" />
               <div>
                  <p className="text-[10px] font-black uppercase opacity-60 text-gray-500 dark:text-slate-400">Live Accounts</p>
-                 <p className="font-black text-xl">{users.length}</p>
+                 <p className="font-black text-xl">{totalUsers}</p>
               </div>
            </div>
         </div>
@@ -1601,7 +1528,7 @@ export function AdminPanel() {
           </div>
           <div>
             <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Users</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{users.length}</p>
+            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{totalUsers}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
@@ -1610,7 +1537,7 @@ export function AdminPanel() {
           </div>
           <div>
             <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Jobs</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{jobs.length}</p>
+            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{totalJobs}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
@@ -1752,7 +1679,33 @@ export function AdminPanel() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden transition-colors">
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden transition-colors relative">
+          {tabLoading && (
+            <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 z-50 flex items-center justify-center backdrop-blur-sm">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+            </div>
+          )}
+
+          {fetchError && (
+            <div className="m-6 p-5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0" />
+                <div>
+                  <h4 className="font-black text-red-800 dark:text-red-300 text-sm uppercase tracking-tight">Connection / Server Error</h4>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-bold">{fetchError}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchAdminData(false, false, activeTab, currentPage)}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-red-100 dark:shadow-none uppercase tracking-wider transition-all flex items-center gap-1.5 justify-center self-start sm:self-auto cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry Connection
+              </button>
+            </div>
+          )}
+
         {activeTab === 'transactions' && (
           <div className="space-y-4">
             <div className="p-6 pb-2 relative border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2167,18 +2120,12 @@ export function AdminPanel() {
                     </div>
                   )}
 
-                  {sub.screenshots && sub.screenshots.length > 0 && sub.screenshots[0] !== "This Picture Was Expired" && (
+                  {sub.screenshots && sub.screenshots.length > 0 && (
                     <div className="flex gap-4 overflow-x-auto pb-2">
                        {sub.screenshots.map((s, idx) => (
                          <img key={idx} src={s} className="h-48 w-auto rounded-2xl object-cover border border-gray-100 dark:border-slate-700 shadow-sm transition-colors" alt="proof" />
                        ))}
                     </div>
-                  )}
-                  {sub.screenshots && sub.screenshots[0] === "This Picture Was Expired" && (
-                     <div className="mt-2 text-sm font-bold text-gray-500 bg-gray-50 border border-gray-200 dark:bg-slate-800 dark:border-slate-700 p-3 rounded-xl flex items-center gap-2">
-                        <Image className="w-4 h-4" />
-                        (This Picture Was Expired)
-                     </div>
                   )}
 
                   {sub.status === 'pending' && (
@@ -3232,6 +3179,47 @@ export function AdminPanel() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {['transactions', 'users', 'jobs', 'submissions', 'tickets', 'ads', 'deletions'].includes(activeTab) && totalItems > 0 && (
+          <div className="p-6 border-t border-gray-100 dark:border-slate-700/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50 dark:bg-slate-900/10 transition-colors">
+            <div className="text-xs font-bold text-gray-500 dark:text-slate-400">
+              Showing <span className="font-black text-gray-900 dark:text-slate-100">{Math.min((currentPage - 1) * 20 + 1, totalItems)}</span> to{' '}
+              <span className="font-black text-gray-900 dark:text-slate-100">{Math.min(currentPage * 20, totalItems)}</span> of{' '}
+              <span className="font-black text-gray-900 dark:text-slate-100">{totalItems}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentPage > 1) {
+                    fetchAdminData(false, false, activeTab, currentPage - 1);
+                  }
+                }}
+                disabled={currentPage === 1 || tabLoading}
+                className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-xs rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <div className="text-xs font-black text-gray-400 dark:text-slate-500 px-2">
+                Page {currentPage} of {Math.max(1, Math.ceil(totalItems / 20))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentPage < Math.ceil(totalItems / 20)) {
+                    fetchAdminData(false, false, activeTab, currentPage + 1);
+                  }
+                }}
+                disabled={currentPage >= Math.ceil(totalItems / 20) || tabLoading}
+                className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-xs rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

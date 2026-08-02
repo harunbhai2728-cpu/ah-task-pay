@@ -95,7 +95,7 @@ export function Withdraw() {
       alert(`Minimum withdrawal is ${minWithdraw} BDT`);
       return;
     }
-    if (totalDeduction > (profile?.earningBalance || 0)) {
+    if (totalDeduction > (Number(profile?.earningBalance) || 0)) {
       alert("পর্যাপ্ত ব্যালেন্স নাই (Insufficient Earning Balance for amount + fee)");
       return;
     }
@@ -201,7 +201,7 @@ export function Withdraw() {
                    <Zap className="w-16 h-16" />
                  </div>
                  <p className="text-xs font-black text-indigo-300 uppercase tracking-widest leading-none mb-1">Withdrawable Balance</p>
-                 <h3 className="text-5xl font-black tracking-tighter tabular-nums">{formatCurrency(profile?.earningBalance || 0)}</h3>
+                 <h3 className="text-5xl font-black tracking-tighter tabular-nums">{formatCurrency(Number(profile?.earningBalance) || 0)}</h3>
               </div>
 
               <div className="space-y-6">

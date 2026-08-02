@@ -154,6 +154,58 @@ async function startServer() {
     }
   });
 
+  // Smart Optimization: Auto-delete images from database 24 hours after approve/reject to save database bandwidth
+  app.get("/api/clear-db-images", async (req, res) => {
+    try {
+      // Query the database for jobs where: status IN ('approved', 'rejected') AND updated_at < NOW() - INTERVAL '24 hours'
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data: submissions, error } = await supabase
+        .from('submissions')
+        .select('id, screenshots, proof')
+        .in('status', ['approved', 'rejected'])
+        .lt('updated_at', yesterday);
+        
+      if (error) throw error;
+      
+      let cleanedCount = 0;
+      
+      for (const sub of submissions || []) {
+        let proofObj: any = {};
+        try {
+          if (typeof sub.proof === 'string') {
+            proofObj = JSON.parse(sub.proof);
+          } else if (typeof sub.proof === 'object') {
+            proofObj = sub.proof;
+          }
+        } catch (e) {
+          proofObj = { proofText: sub.proof };
+        }
+        
+        // Skip if already marked as deleted
+        if (proofObj.image_deleted) continue;
+        
+        proofObj.image_deleted = true;
+        
+        // Clear massive Base64 strings from Database to save space!
+        // We replace with "deleted" to naturally trigger a broken image icon in the UI.
+        proofObj.screenshots = ['deleted'];
+
+        await supabase.from('submissions').update({
+          screenshots: ['deleted'],
+          proof: JSON.stringify(proofObj)
+        }).eq('id', sub.id);
+        
+        cleanedCount++;
+      }
+      
+      return res.json({ success: true, cleanedCount });
+    } catch (err: any) {
+      console.error("Clear DB images error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/proxy", async (req, res) => {
     let writeLockKey = "";
     try {
@@ -2393,45 +2445,518 @@ async function startServer() {
 
       const store = getDataStore();
 
-      const [txsSnap, usersSnap, jobsSnap, subSnap, ticketsSnap, adsSnap] =
-        await Promise.all([
-          supabase
-            .from("transactions")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(1000),
-          supabase
-            .from("profiles")
-            .select("*")
-            .order("createdAt", { ascending: false })
-            .limit(1000),
-          supabase
-            .from("jobs")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(1000),
-          supabase
-            .from("submissions")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(1000),
-          supabase
-            .from("tickets")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(1000),
-          supabase
-            .from("advertisements")
-            .select("*")
-            .order("created_at", { ascending: false })
-            .limit(1000),
+      // Parse pagination and filter query params
+      const tab = (req.query.tab as string) || "transactions";
+      const page = parseInt(req.query.page as string, 10) || 1;
+      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const search = (req.query.search as string) || "";
+      const typeFilter = (req.query.type as string) || "All";
+      const sortOrder = (req.query.sort as string) || "newest";
+      const duplicateIPs = req.query.duplicateIPs === "true";
+
+      const offset = (page - 1) * limit;
+      const fromIndex = offset;
+      const toIndex = offset + limit - 1;
+
+      const isInitialLoad = page === 1 && !search && typeFilter === "All" && !duplicateIPs;
+
+      // --- OPTIMIZATION 1: CALCULATE STATS EFFICIENTLY ---
+      let totalUsersCount, totalJobsCount, pendingTxsCount, pendingSubCount;
+      let pendingTicketsCount, pendingAdsCount, pendingDeletionsCount;
+      let profilesBalances, jobsCompleted, completedDeposits, completedWithdrawals;
+
+      if (isInitialLoad) {
+        const results = await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("jobs").select("*", { count: "exact", head: true }),
+          supabase.from("transactions").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("submissions").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("profiles").select("earningBalance, depositBalance, heldBalance"),
+          supabase.from("jobs").select("slots_filled"),
+          supabase.from("transactions").select("amount").eq("status", "completed").eq("type", "deposit"),
+          supabase.from("transactions").select("amount").eq("status", "completed").eq("type", "withdraw"),
+          supabase.from("tickets").select("*", { count: "exact", head: true }).eq("status", "open"),
+          supabase.from("advertisements").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "pending_deletion")
         ]);
+        totalUsersCount = results[0].count;
+        totalJobsCount = results[1].count;
+        pendingTxsCount = results[2].count;
+        pendingSubCount = results[3].count;
+        profilesBalances = results[4].data;
+        jobsCompleted = results[5].data;
+        completedDeposits = results[6].data;
+        completedWithdrawals = results[7].data;
+        pendingTicketsCount = results[8].count;
+        pendingAdsCount = results[9].count;
+        pendingDeletionsCount = results[10].count;
+      } else {
+        const results = await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("jobs").select("*", { count: "exact", head: true }),
+          supabase.from("transactions").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("submissions").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("tickets").select("*", { count: "exact", head: true }).eq("status", "open"),
+          supabase.from("advertisements").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "pending_deletion")
+        ]);
+        totalUsersCount = results[0].count;
+        totalJobsCount = results[1].count;
+        pendingTxsCount = results[2].count;
+        pendingSubCount = results[3].count;
+        pendingTicketsCount = results[4].count;
+        pendingAdsCount = results[5].count;
+        pendingDeletionsCount = results[6].count;
+      }
+
+      const totalUsers = totalUsersCount || 0;
+      const totalJobs = totalJobsCount || 0;
+      const pTxsCount = pendingTxsCount || 0;
+      const pSubCount = pendingSubCount || 0;
+
+      const totalEarningBalance = profilesBalances ? (profilesBalances || []).reduce((acc, u) => acc + (Number(u.earningBalance) || 0), 0) : undefined;
+      const totalDepositBalance = profilesBalances ? (profilesBalances || []).reduce((acc, u) => acc + (Number(u.depositBalance) || 0), 0) : undefined;
+      const totalHeld = profilesBalances ? (profilesBalances || []).reduce((acc, u) => acc + (Number(u.heldBalance) || 0), 0) : undefined;
+
+      const completedJobsCount = jobsCompleted ? (jobsCompleted || []).reduce((acc, j) => acc + (Number(j.slots_filled) || 0), 0) : undefined;
+
+      const totalDeposit = completedDeposits ? (completedDeposits || []).reduce((acc, t) => acc + (Number(t.amount) || 0), 0) : undefined;
+      const totalWithdraw = completedWithdrawals ? (completedWithdrawals || []).reduce((acc, t) => acc + (Number(t.amount) || 0), 0) : undefined;
+
+      const hasPendingTickets = (pendingTicketsCount || 0) > 0;
+      const hasPendingJobs = false; // Resolved below or calculated statically
+      const hasPendingAds = (pendingAdsCount || 0) > 0;
+      const hasPendingDeletions = (pendingDeletionsCount || 0) > 0;
+
+      // --- OPTIMIZATION 2: PAGINATED & FILTERED DATA FETCHING ---
+      let mappedData: any[] = [];
+      let totalItems = 0;
+
+      if (tab === "transactions") {
+        let txsQuery = supabase
+          .from("transactions")
+          .select("*", { count: "exact" });
+
+        if (typeFilter && typeFilter !== "All") {
+          let dbType = typeFilter;
+          if (dbType === "withdrawal") dbType = "withdraw";
+          if (dbType === "payment" || dbType === "ad_purchase") dbType = "spend";
+          txsQuery = txsQuery.eq("type", dbType);
+        }
+
+        if (search) {
+          const cleanSearch = search.trim();
+          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanSearch)) {
+            txsQuery = txsQuery.eq("user_id", cleanSearch);
+          } else {
+            const { data: matchedProfiles } = await supabase
+              .from("profiles")
+              .select("id")
+              .or(`username.ilike.%${cleanSearch}%,email.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+            
+            const profileIds = (matchedProfiles || []).map(p => p.id);
+            if (profileIds.length > 0) {
+              txsQuery = txsQuery.in("user_id", profileIds);
+            } else {
+              txsQuery = txsQuery.or(`payment_method.ilike.%${cleanSearch}%`);
+            }
+          }
+        }
+
+        txsQuery = txsQuery
+          .order("created_at", { ascending: false })
+          .range(fromIndex, toIndex);
+
+        const { data, count, error } = await txsQuery;
+        if (error) throw error;
+        
+        totalItems = count || 0;
+
+        const userIds = Array.from(new Set((data || []).map((t: any) => t.user_id).filter(Boolean)));
+        const profilesMap = new Map<string, any>();
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("id, username, email, serialNumber")
+            .in("id", userIds);
+          if (profilesData) {
+            for (const p of profilesData) {
+              profilesMap.set(p.id, p);
+            }
+          }
+        }
+
+        mappedData = (data || []).map((t: any) => {
+          const details = t.payment_details || {};
+          const userObj = profilesMap.get(t.user_id);
+          return {
+            ...t,
+            userId: t.user_id || t.userId,
+            type: t.type === "withdraw" ? "withdrawal" : t.type === "spend" ? "payment" : t.type,
+            method: t.payment_method || details.method || t.method,
+            phone: details.phone || t.phone,
+            transactionId: details.transactionId || t.transactionId,
+            fee: details.fee !== undefined ? details.fee : t.fee,
+            finalAmount: details.finalAmount !== undefined ? details.finalAmount : t.finalAmount,
+            userSerial: userObj?.serialNumber || details.userSerial || t.userSerial,
+            userName: userObj?.username || details.userName || t.userName,
+            approvedAt: details.approvedAt || t.approvedAt,
+            rejectedAt: details.rejectedAt || t.rejectedAt,
+            createdAt: t.created_at || t.createdAt,
+            updatedAt: t.updated_at || t.updatedAt,
+          };
+        });
+
+      } else if (tab === "users") {
+        let usersQuery = supabase
+          .from("profiles")
+          .select("*", { count: "exact" });
+
+        if (duplicateIPs) {
+          const { data: allIps } = await supabase.from("profiles").select("last_ip_address");
+          const counts: Record<string, number> = {};
+          (allIps || []).forEach(u => {
+            const ip = u.last_ip_address;
+            if (ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '') {
+              counts[ip] = (counts[ip] || 0) + 1;
+            }
+          });
+          const dupIps = Object.keys(counts).filter(ip => counts[ip] > 1);
+          if (dupIps.length > 0) {
+            usersQuery = usersQuery.in("last_ip_address", dupIps);
+          } else {
+            usersQuery = usersQuery.eq("last_ip_address", "non-existent-ip-force-empty");
+          }
+        }
+
+        if (search) {
+          const cleanSearch = search.trim();
+          const isNum = !isNaN(Number(cleanSearch));
+          if (isNum) {
+            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,serialNumber.eq.${cleanSearch}`);
+          } else {
+            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+          }
+        }
+
+        if (sortOrder === "balance_high") {
+          usersQuery = usersQuery.order("earningBalance", { ascending: false });
+        } else if (sortOrder === "balance_low") {
+          usersQuery = usersQuery.order("earningBalance", { ascending: true });
+        } else {
+          usersQuery = usersQuery.order("createdAt", { ascending: false });
+        }
+
+        usersQuery = usersQuery.range(fromIndex, toIndex);
+
+        const { data, count, error } = await usersQuery;
+        if (error) throw error;
+
+        totalItems = count || 0;
+        mappedData = (data || []).map((u) => ({ ...u, uid: u.id }));
+
+      } else if (tab === "jobs") {
+        let jobsQuery = supabase
+          .from("jobs")
+          .select("*", { count: "exact" });
+
+        if (search) {
+          const cleanSearch = search.trim();
+          jobsQuery = jobsQuery.or(`title.ilike.%${cleanSearch}%,description.ilike.%${cleanSearch}%`);
+        }
+
+        jobsQuery = jobsQuery
+          .order("created_at", { ascending: false })
+          .range(fromIndex, toIndex);
+
+        const { data, count, error } = await jobsQuery;
+        if (error) throw error;
+
+        totalItems = count || 0;
+
+        // Dynamic count resolution to avoid N+1 queries
+        let pendingMap = new Map<string, number>();
+        let approvedMap = new Map<string, number>();
+        const profilesMap = new Map<string, any>();
+        
+        try {
+          const jobIds = (data || []).map((j: any) => j.id);
+          const authorIds = Array.from(new Set((data || []).map((j: any) => j.author_id).filter(Boolean)));
+          
+          if (authorIds.length > 0) {
+            const { data: profilesData } = await supabase
+              .from("profiles")
+              .select("id, username, email, serialNumber")
+              .in("id", authorIds);
+            if (profilesData) {
+              for (const p of profilesData) {
+                profilesMap.set(p.id, p);
+              }
+            }
+          }
+
+          if (jobIds.length > 0) {
+            const { data: activeSubs } = await supabase
+              .from("submissions")
+              .select("job_id, status")
+              .in("status", ["pending", "approved"])
+              .in("job_id", jobIds);
+            if (activeSubs) {
+              for (const sub of activeSubs) {
+                const jId = sub.job_id;
+                if (sub.status === "pending") {
+                  pendingMap.set(jId, (pendingMap.get(jId) || 0) + 1);
+                } else if (sub.status === "approved") {
+                  approvedMap.set(jId, (approvedMap.get(jId) || 0) + 1);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error pre-fetching active submission counts or profiles:", e);
+        }
+
+        mappedData = (data || []).map((j: any) => {
+          let extra: any = {};
+          try {
+            if (j.category && (j.category.startsWith("{") || j.category.startsWith("["))) {
+              extra = JSON.parse(j.category);
+            }
+          } catch (e) {
+            extra = { category: j.category };
+          }
+
+          const dynamicPending = pendingMap.get(j.id) || 0;
+          const dynamicApproved = approvedMap.get(j.id) || 0;
+          const dynamicCompleted = dynamicPending + dynamicApproved;
+          const maxWorkersLimit = j.slots || extra.maxWorkers || 1;
+          const userObj = profilesMap.get(j.author_id);
+
+          return {
+            ...j,
+            posterId: j.author_id || extra.posterId,
+            posterName: userObj?.username || userObj?.email?.split('@')[0] || extra.posterName || "User",
+            posterSerial: userObj?.serialNumber || extra.posterSerial,
+            thumbnail: extra.thumbnail || "",
+            screenshotCount: extra.screenshotCount !== undefined ? extra.screenshotCount : 1,
+            textProofInstruction: extra.textProofInstruction || "",
+            screenshotProofInstruction: extra.screenshotProofInstruction || "",
+            screenshotProofInstructions: extra.screenshotProofInstructions || [],
+            requireTextProof: extra.requireTextProof !== undefined ? extra.requireTextProof : true,
+            autoApprove: extra.autoApprove !== undefined ? extra.autoApprove : false,
+            pinCode: extra.pinCode || "",
+            pricePerWork: j.reward || extra.pricePerWork || 0,
+            maxWorkers: maxWorkersLimit,
+            completedCount: dynamicCompleted,
+            pendingCount: dynamicPending,
+            approvedCount: dynamicApproved,
+            isFull: dynamicCompleted >= maxWorkersLimit,
+            createdAt: j.created_at || extra.createdAt,
+            status: extra.status || j.status || "open",
+            totalBudget: extra.totalBudget || (j.reward || 0) * (j.slots || 0),
+            serviceCharge: extra.serviceCharge || 0,
+            grandTotal: extra.grandTotal || 0,
+            category: extra.category || j.category || "",
+          };
+        });
+
+      } else if (tab === "submissions") {
+        let subsQuery = supabase
+          .from("submissions")
+          .select(`
+            *,
+            profiles:worker_id(username, email, serialNumber),
+            jobs:job_id(title, author_id)
+          `, { count: "exact" });
+
+        if (search) {
+          const cleanSearch = search.trim();
+          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanSearch)) {
+            subsQuery = subsQuery.or(`id.eq.${cleanSearch},worker_id.eq.${cleanSearch},job_id.eq.${cleanSearch}`);
+          } else {
+            const { data: matchedWorkers } = await supabase
+              .from("profiles")
+              .select("id")
+              .or(`username.ilike.%${cleanSearch}%,email.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+            
+            const workerIds = (matchedWorkers || []).map(p => p.id);
+            
+            const { data: matchedJobs } = await supabase
+              .from("jobs")
+              .select("id")
+              .ilike("title", `%${cleanSearch}%`);
+              
+            const jobIds = (matchedJobs || []).map(j => j.id);
+
+            const orClauses = [];
+            if (workerIds.length > 0) orClauses.push(`worker_id.in.(${workerIds.join(",")})`);
+            if (jobIds.length > 0) orClauses.push(`job_id.in.(${jobIds.join(",")})`);
+            orClauses.push(`proof.ilike.%${cleanSearch}%`);
+            
+            subsQuery = subsQuery.or(orClauses.join(","));
+          }
+        }
+
+        subsQuery = subsQuery
+          .order("created_at", { ascending: false })
+          .range(fromIndex, toIndex);
+
+        const { data, count, error } = await subsQuery;
+        if (error) throw error;
+
+        totalItems = count || 0;
+        mappedData = (data || []).map((s: any) => {
+          let extra: any = {};
+          try {
+            if (s.proof && (s.proof.startsWith("{") || s.proof.startsWith("["))) {
+              extra = JSON.parse(s.proof);
+            }
+          } catch (e) {
+            extra = { proofText: s.proof };
+          }
+
+          return {
+            ...s,
+            jobId: s.job_id || extra.jobId,
+            workerId: s.worker_id || extra.worker_id,
+            proofText: extra.proofText !== undefined && extra.proofText !== null ? extra.proofText : s.proof || "",
+            screenshots: extra.screenshots || [],
+            rejectionReason: extra.rejectionReason || "",
+            workerName: s.profiles?.username || extra.workerName || "Worker",
+            workerSerial: s.profiles?.serialNumber || extra.workerSerial || null,
+            posterId: s.jobs?.author_id || extra.posterId || "",
+            reward: Number(extra.reward || s.reward || 0),
+            submittedAt: s.created_at || extra.submittedAt,
+            reviewedAt: extra.reviewedAt || s.updated_at,
+            jobTitle: s.jobs?.title || extra.jobTitle || "Micro Job",
+            status: s.status || "pending",
+            pinCodeUsed: extra.pinCodeUsed || s.pinCodeUsed || "",
+          };
+        });
+
+      } else if (tab === "tickets") {
+        let ticketsQuery = supabase
+          .from("tickets")
+          .select("*", { count: "exact" });
+
+        if (search) {
+          const cleanSearch = search.trim();
+          ticketsQuery = ticketsQuery.or(`subject.ilike.%${cleanSearch}%,message.ilike.%${cleanSearch}%`);
+        }
+
+        ticketsQuery = ticketsQuery
+          .order("created_at", { ascending: false })
+          .range(fromIndex, toIndex);
+
+        const { data, count, error } = await ticketsQuery;
+        if (error) throw error;
+
+        totalItems = count || 0;
+
+        const userIds = Array.from(new Set((data || []).map((t: any) => t.user_id || t.userId).filter(Boolean)));
+        const profilesMap = new Map<string, any>();
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("id, username, email, serialNumber")
+            .in("id", userIds);
+          if (profilesData) {
+            for (const p of profilesData) {
+              profilesMap.set(p.id, p);
+            }
+          }
+        }
+
+        mappedData = (data || []).map((t) => {
+          const userObj = profilesMap.get(t.user_id || t.userId);
+          return {
+            ...t,
+            userId: t.user_id || t.userId,
+            userSerial: userObj?.serialNumber || t.user_serial || t.userSerial,
+            userName: userObj?.username || userObj?.email?.split('@')[0] || t.userName,
+            adminReply: t.admin_reply || t.adminReply,
+            createdAt: t.created_at || t.createdAt,
+            resolvedAt: t.resolved_at || t.resolvedAt,
+          };
+        });
+
+      } else if (tab === "ads") {
+        let adsQuery = supabase
+          .from("advertisements")
+          .select("*", { count: "exact" });
+
+        if (search) {
+          const cleanSearch = search.trim();
+          adsQuery = adsQuery.or(`link.ilike.%${cleanSearch}%`);
+        }
+
+        adsQuery = adsQuery
+          .order("created_at", { ascending: false })
+          .range(fromIndex, toIndex);
+
+        const { data, count, error } = await adsQuery;
+        if (error) throw error;
+
+        totalItems = count || 0;
+
+        const userIds = Array.from(new Set((data || []).map((a: any) => a.user_id || a.userId).filter(Boolean)));
+        const profilesMap = new Map<string, any>();
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("id, username, email, serialNumber")
+            .in("id", userIds);
+          if (profilesData) {
+            for (const p of profilesData) {
+              profilesMap.set(p.id, p);
+            }
+          }
+        }
+
+        mappedData = (data || []).map((a) => {
+          const userObj = profilesMap.get(a.user_id || a.userId);
+          return {
+            ...a,
+            userId: a.user_id || a.userId,
+            userSerial: userObj?.serialNumber || a.user_serial || a.userSerial,
+            userName: userObj?.username || userObj?.email?.split('@')[0] || a.userName,
+            durationDays: a.duration_days || a.durationDays,
+            transactionId: a.transaction_id || a.transactionId,
+            createdAt: a.created_at || a.createdAt,
+            expiresAt: a.expires_at || a.expiresAt,
+            approvedAt: a.approved_at || a.approvedAt,
+            rejectedAt: a.rejected_at || a.rejectedAt,
+          };
+        });
+
+      } else if (tab === "deletions") {
+        let deletionsQuery = supabase
+          .from("profiles")
+          .select("*", { count: "exact" })
+          .eq("account_status", "pending_deletion");
+
+        if (search) {
+          const cleanSearch = search.trim();
+          deletionsQuery = deletionsQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%`);
+        }
+
+        deletionsQuery = deletionsQuery
+          .order("createdAt", { ascending: false })
+          .range(fromIndex, toIndex);
+
+        const { data, count, error } = await deletionsQuery;
+        if (error) throw error;
+
+        totalItems = count || 0;
+        mappedData = (data || []).map((u) => ({ ...u, uid: u.id }));
+      }
 
       const { data: configSnap } = await supabase
         .from("system_configuration")
         .select("*")
         .eq("id", 1)
         .maybeSingle();
+
       const safeConfig = configSnap
         ? {
             id: "config",
@@ -2448,15 +2973,12 @@ async function startServer() {
             depositNagadEnabled: configSnap.deposit_nagad_enabled !== false,
             withdrawBkashEnabled: configSnap.withdraw_bkash_enabled !== false,
             withdrawNagadEnabled: configSnap.withdraw_nagad_enabled !== false,
-            transferEarningToDepositFee:
-              configSnap.transfer_earning_deposit_fee || 0,
-            transferDepositToEarningFee:
-              configSnap.transfer_deposit_earning_fee || 10,
+            transferEarningToDepositFee: configSnap.transfer_earning_deposit_fee || 0,
+            transferDepositToEarningFee: configSnap.transfer_deposit_earning_fee || 10,
             loginTitle: configSnap.login_title || "Welcome to TaskPay",
             loginBannerUrl: configSnap.login_banner_url || "",
             referralBonusAmount: configSnap.referral_bonus_amount ?? 5,
-            referralValidationCriteria:
-              configSnap.referral_validation_criteria ?? 1,
+            referralValidationCriteria: configSnap.referral_validation_criteria ?? 1,
             referralValidityDays: configSnap.referral_validity_days ?? 30,
             campaignEndDate: configSnap.campaign_end_date || null,
             campaignStartDate: store.campaignStartDate || null,
@@ -2465,338 +2987,56 @@ async function startServer() {
             target1Reward: configSnap.target_1_reward || 0,
             target2Referrals: configSnap.target_2_referrals || 0,
             target2Reward: configSnap.target_2_reward || 0,
-            referralDomainUrl:
-              store.referralDomainUrl || "https://ahtaskpay.onrender.com",
+            referralDomainUrl: store.referralDomainUrl || "https://ahtaskpay.onrender.com",
           }
         : null;
-      const safeUsers = usersSnap.error
-        ? []
-        : (usersSnap.data || []).map((u) => ({ ...u, uid: u.id }));
-
-      const rawTxs = txsSnap.data || [];
-      const mappedTxs = rawTxs.map((t: any) => {
-        if (!t || typeof t !== "object") return t;
-        const details = t.payment_details || {};
-        return {
-          ...t,
-          userId: t.user_id || t.userId,
-          type:
-            t.type === "withdraw"
-              ? "withdrawal"
-              : t.type === "spend"
-                ? "payment"
-                : t.type,
-          method: t.payment_method || details.method || t.method,
-          phone: details.phone || t.phone,
-          transactionId: details.transactionId || t.transactionId,
-          fee: details.fee !== undefined ? details.fee : t.fee,
-          finalAmount:
-            details.finalAmount !== undefined
-              ? details.finalAmount
-              : t.finalAmount,
-          userSerial: details.userSerial || t.userSerial,
-          userName: details.userName || t.userName,
-          approvedAt: details.approvedAt || t.approvedAt,
-          rejectedAt: details.rejectedAt || t.rejectedAt,
-          createdAt: t.created_at || t.createdAt,
-          updatedAt: t.updated_at || t.updatedAt,
-        };
-      });
-
-      const rawJobs = jobsSnap.data || [];
-      const mappedJobs = rawJobs.map((j: any) => {
-        if (!j || typeof j !== "object") return j;
-        let extra: any = {};
-        try {
-          if (
-            j.category &&
-            (j.category.startsWith("{") || j.category.startsWith("["))
-          ) {
-            extra = JSON.parse(j.category);
-          }
-        } catch (e) {
-          extra = { category: j.category };
-        }
-
-        return {
-          ...j,
-          posterId: j.author_id || extra.posterId,
-          posterName: extra.posterName || "User",
-          posterSerial: extra.posterSerial,
-          thumbnail: extra.thumbnail || "",
-          screenshotCount:
-            extra.screenshotCount !== undefined ? extra.screenshotCount : 1,
-          textProofInstruction: extra.textProofInstruction || "",
-          screenshotProofInstruction: extra.screenshotProofInstruction || "",
-          screenshotProofInstructions: extra.screenshotProofInstructions || [],
-          requireTextProof:
-            extra.requireTextProof !== undefined
-              ? extra.requireTextProof
-              : true,
-          autoApprove:
-            extra.autoApprove !== undefined ? extra.autoApprove : false,
-          pinCode: extra.pinCode || "",
-          pricePerWork: j.reward || extra.pricePerWork || 0,
-          maxWorkers: j.slots || extra.maxWorkers || 1,
-          completedCount: j.slots_filled || extra.completedCount || 0,
-          pendingCount: extra.pendingCount || 0,
-          approvedCount: j.slots_filled || extra.approvedCount || 0,
-          isFull: extra.isFull || j.slots_filled >= j.slots,
-          createdAt: j.created_at || extra.createdAt,
-          status: extra.status || j.status || "open",
-          totalBudget: extra.totalBudget || (j.reward || 0) * (j.slots || 0),
-          serviceCharge: extra.serviceCharge || 0,
-          grandTotal: extra.grandTotal || 0,
-          category: extra.category || j.category || "",
-        };
-      });
-
-      const rawSubs = subSnap.data || [];
-      const mappedSubs = rawSubs.map((s: any) => {
-        if (!s || typeof s !== "object") return s;
-        let extra: any = {};
-        try {
-          if (s.proof && (s.proof.startsWith("{") || s.proof.startsWith("["))) {
-            extra = JSON.parse(s.proof);
-          }
-        } catch (e) {
-          extra = { proofText: s.proof };
-        }
-
-        return {
-          ...s,
-          jobId: s.job_id || extra.jobId,
-          workerId: s.worker_id || extra.worker_id,
-          proofText:
-            extra.proofText !== undefined && extra.proofText !== null
-              ? extra.proofText
-              : s.proof || "",
-          screenshots: extra.screenshots || [],
-          rejectionReason: extra.rejectionReason || "",
-          workerName: extra.workerName || "Worker",
-          workerSerial: extra.workerSerial || null,
-          posterId: extra.posterId || "",
-          reward: Number(extra.reward || s.reward || 0),
-          submittedAt: s.created_at || extra.submittedAt,
-          reviewedAt: extra.reviewedAt || s.updated_at,
-          jobTitle: extra.jobTitle || "Micro Job",
-          status: s.status || "pending",
-          pinCodeUsed: extra.pinCodeUsed || s.pinCodeUsed || "",
-        };
-      });
 
       const isServiceRoleKeyReady =
-        !!(
-          process.env.SUPABASE_SERVICE_KEY ||
-          process.env.SUPABASE_SERVICE_ROLE_KEY
-        ) &&
-        (process.env.SUPABASE_SERVICE_KEY ||
-          process.env.SUPABASE_SERVICE_ROLE_KEY) !==
+        !!(process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) &&
+        (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) !==
           process.env.VITE_SUPABASE_ANON_KEY;
+
+      const { data: allIps } = await supabase.from("profiles").select("last_ip_address");
+      const duplicateIPCounts: Record<string, number> = {};
+      (allIps || []).forEach(u => {
+        const ip = u.last_ip_address;
+        if (ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '') {
+          duplicateIPCounts[ip] = (duplicateIPCounts[ip] || 0) + 1;
+        }
+      });
 
       res.json({
         config: safeConfig,
-        transactions: mappedTxs,
-        users: safeUsers,
-        jobs: mappedJobs,
-        submissions: mappedSubs,
-        tickets: ticketsSnap.data
-          ? ticketsSnap.data.map((t) => {
-              const mapOut = (t: any) => ({
-                ...t,
-                userId: t.user_id || t.userId,
-                userSerial: t.user_serial || t.userSerial,
-                adminReply: t.admin_reply || t.adminReply,
-                createdAt: t.created_at || t.createdAt,
-                resolvedAt: t.resolved_at || t.resolvedAt,
-              });
-              return mapOut(t);
-            })
-          : [],
-        ads: adsSnap.data
-          ? adsSnap.data.map((a) => {
-              const mapOut = (a: any) => ({
-                ...a,
-                userId: a.user_id || a.userId,
-                userSerial: a.user_serial || a.userSerial,
-                durationDays: a.duration_days || a.durationDays,
-                transactionId: a.transaction_id || a.transactionId,
-                createdAt: a.created_at || a.createdAt,
-                expiresAt: a.expires_at || a.expiresAt,
-                approvedAt: a.approved_at || a.approvedAt,
-                rejectedAt: a.rejected_at || a.rejectedAt,
-              });
-              return mapOut(a);
-            })
-          : [],
+        stats: {
+          totalUsers,
+          totalJobs,
+          completedJobsCount,
+          totalEarningBalance,
+          totalDepositBalance,
+          totalHeld,
+          totalDeposit,
+          totalWithdraw,
+          pendingTransactionsCount: pTxsCount,
+          pendingSubsCount: pSubCount,
+          hasPendingTickets,
+          hasPendingJobs,
+          hasPendingAds,
+          hasPendingDeletions,
+        },
+        activeTab: tab,
+        page,
+        limit,
+        totalItems,
+        duplicateIPCounts,
+        data: mappedData,
         supabaseServiceRoleReady: isServiceRoleKeyReady,
       });
+
     } catch (err: any) {
       console.error("CRITICAL BACKEND ERROR in /api/admin/data:", err);
       res.status(500).json({
         error: "Internal Server Error: " + err.message,
-        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
       });
-    }
-  });
-
-  // Background task to clean up 7-day-old decided submissions and their images
-  const runSubmissionsCleanup = async () => {
-    console.log("Starting daily submission cleanup task...");
-    try {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const sevenDaysAgoISO = sevenDaysAgo.toISOString();
-
-      const { data: submissions, error } = await supabase
-        .from("submissions")
-        .select("*")
-        .in("status", ["approved", "rejected"])
-        .lt("updated_at", sevenDaysAgoISO);
-
-      if (error) {
-        console.error("Error fetching old submissions for cleanup:", error.message);
-        return { success: false, error: error.message };
-      }
-
-      if (!submissions || submissions.length === 0) {
-        console.log("No old approved or rejected submissions found for cleanup.");
-        return { success: true, count: 0, filesCount: 0 };
-      }
-
-      console.log(`Found ${submissions.length} submissions to clean up.`);
-      let deletedFilesCount = 0;
-      let updatedSubmissionsCount = 0;
-
-      for (const sub of submissions) {
-        // Extract screenshot URLs/paths
-        let screenshots: string[] = [];
-        if (sub.screenshots) {
-          if (Array.isArray(sub.screenshots)) {
-            screenshots = sub.screenshots;
-          } else if (typeof sub.screenshots === "string") {
-            try {
-              screenshots = JSON.parse(sub.screenshots);
-            } catch (_) {}
-          }
-        }
-
-        if (sub.proof) {
-          try {
-            const parsedProof = JSON.parse(sub.proof);
-            if (parsedProof && Array.isArray(parsedProof.screenshots)) {
-              screenshots = [...screenshots, ...parsedProof.screenshots];
-            }
-          } catch (_) {}
-        }
-
-        // Filter unique screenshots
-        const uniqueScreenshots = Array.from(new Set(screenshots)).filter(Boolean);
-
-        // Delete from storage if matching the public_assets storage bucket URL or path
-        for (const url of uniqueScreenshots) {
-          const path = extractStoragePath(url);
-          if (path) {
-            const { error: deleteErr } = await supabase.storage
-              .from("public_assets")
-              .remove([path]);
-            if (deleteErr) {
-              console.error(`Failed to delete storage file ${path}:`, deleteErr.message);
-            } else {
-              console.log(`Successfully deleted storage file ${path} from bucket.`);
-              deletedFilesCount++;
-            }
-          }
-        }
-
-        // Update submission in database to mark image as deleted (DO NOT DELETE THE ROW)
-        const updatedProof = sub.proof ? (() => {
-            try {
-                let parsed = JSON.parse(sub.proof);
-                if (parsed && Array.isArray(parsed.screenshots)) {
-                    parsed.screenshots = ["This Picture Was Expired"];
-                    return JSON.stringify(parsed);
-                }
-                return sub.proof;
-            } catch (_) {
-                return sub.proof;
-            }
-        })() : sub.proof;
-
-        const { error: dbUpdateErr } = await supabase
-          .from("submissions")
-          .update({
-             screenshots: ["This Picture Was Expired"],
-             proof: updatedProof
-          })
-          .eq("id", sub.id);
-
-        if (dbUpdateErr) {
-          console.error(`Failed to update database submission ${sub.id}:`, dbUpdateErr.message);
-        } else {
-          updatedSubmissionsCount++;
-        }
-      }
-
-      console.log(`Submission cleanup complete. Updated ${updatedSubmissionsCount} submissions and deleted ${deletedFilesCount} storage files.`);
-      return { success: true, count: updatedSubmissionsCount, filesCount: deletedFilesCount };
-    } catch (err: any) {
-      console.error("Exception in submission cleanup task:", err);
-      return { success: false, error: err.message };
-    }
-  };
-
-  function extractStoragePath(url: string): string | null {
-    if (!url || typeof url !== "string") return null;
-    if (url.startsWith("data:")) return null;
-
-    const marker = "/public_assets/";
-    const index = url.indexOf(marker);
-    if (index !== -1) {
-      return url.substring(index + marker.length);
-    }
-    
-    if (!url.startsWith("http") && !url.includes("/")) {
-      return url;
-    }
-    return null;
-  }
-
-  // Manual trigger for submission and screenshot cleanup (Admin Only)
-  app.post("/api/admin/cleanup-submissions", async (req, res) => {
-    try {
-      const user = await getRequestUser(req);
-      if (!user) return res.status(401).json({ error: "Unauthorized" });
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      const isMaster = [
-        "superadmin@taskpay.systems",
-        "harunurrashid93427@gmail.com",
-        "harunbhai2728@gmail.com",
-      ].includes(user.email?.toLowerCase() || "");
-
-      if (profile?.role !== "admin" && !isMaster) {
-        return res.status(403).json({ error: "Forbidden. Admin access required." });
-      }
-
-      const result = await runSubmissionsCleanup();
-      if (!result.success) {
-        return res.status(500).json({ error: result.error });
-      }
-
-      return res.json({
-        message: "Submission cleanup executed successfully",
-        count: result.count,
-        filesCount: result.filesCount
-      });
-    } catch (err: any) {
-      console.error("Error in POST /api/admin/cleanup-submissions:", err);
-      return res.status(500).json({ error: err.message });
     }
   });
 
@@ -3949,25 +4189,6 @@ async function startServer() {
       },
       1000 * 60 * 60,
     ); // Check every hour
-
-    // Background task to run submission cleanup every 24 hours
-    setInterval(
-      async () => {
-        try {
-          await runSubmissionsCleanup();
-        } catch (err) {
-          console.error("Interval error running submission cleanup:", err);
-        }
-      },
-      1000 * 60 * 60 * 24, // Check every 24 hours
-    );
-
-    // Also run it 10 seconds after server startup to clean up immediately
-    setTimeout(() => {
-      runSubmissionsCleanup().catch(err => {
-        console.error("Startup error running submission cleanup:", err);
-      });
-    }, 10000);
   });
 }
 startServer();

@@ -470,7 +470,7 @@ export function ManageJobs() {
                            </div>
 
                            {/* Screenshot Proofs */}
-                           {sub.screenshots && sub.screenshots.length > 0 && sub.screenshots[0] !== "This Picture Was Expired" && (
+                           {sub.screenshots && sub.screenshots.length > 0 && (
                              <div className="space-y-1.5 pl-1">
                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Screenshots Proof (Click to expand):</p>
                                <div className="flex flex-wrap gap-3">
@@ -493,12 +493,6 @@ export function ManageJobs() {
                                  ))}
                                </div>
                              </div>
-                           )}
-                           {sub.screenshots && sub.screenshots[0] === "This Picture Was Expired" && (
-                              <div className="mt-2 text-sm font-bold text-gray-500 bg-gray-50 border border-gray-200 dark:bg-slate-800 dark:border-slate-700 p-3 rounded-xl flex items-center gap-2">
-                                <ImageIcon className="w-4 h-4" />
-                                (This Picture Was Expired)
-                              </div>
                            )}
                          </div>
 

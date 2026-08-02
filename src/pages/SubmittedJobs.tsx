@@ -33,6 +33,9 @@ export function SubmittedJobs() {
 
   useEffect(() => {
     fetchSubmissions();
+    
+    // Silent trigger for smart optimization image cleanup
+    fetch('/api/cleanup-images', { method: 'POST' }).catch(() => {});
   }, [user?.id]);
 
   const handleClaimAutoApprove = async (sub: Submission) => {
@@ -140,13 +143,8 @@ export function SubmittedJobs() {
               <div className="text-left md:text-right flex flex-col items-start md:items-end gap-2 shrink-0">
                 <p className="text-xl font-black text-gray-900">{formatCurrency(sub.reward)}</p>
                 <div className="flex gap-2">
-                   {sub.screenshots && sub.screenshots.length > 0 && sub.screenshots[0] !== "This Picture Was Expired" && (
+                   {sub.screenshots && sub.screenshots.length > 0 && (
                       <span className="text-[10px] font-bold text-gray-400">{sub.screenshots.length} Screens</span>
-                   )}
-                   {sub.screenshots && sub.screenshots[0] === "This Picture Was Expired" && (
-                      <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-slate-800 dark:text-gray-400 px-2 py-0.5 rounded border border-gray-200 dark:border-slate-700">
-                        (This Picture Was Expired)
-                      </span>
                    )}
                    {sub.proofText && (
                       <span className="text-[10px] font-bold text-gray-400">Text Proof</span>

@@ -56,8 +56,8 @@ export function PostAd() {
     e.preventDefault();
     if (!profile || !user) return;
 
-    if (profile.depositBalance < grandTotal) {
-      setError(`Insufficient deposit balance. You need ${formatCurrency(grandTotal)} but have ${formatCurrency(profile.depositBalance)}.`);
+    if ((Number(profile.depositBalance) || 0) < grandTotal) {
+      setError(`Insufficient deposit balance. You need ${formatCurrency(grandTotal)} but have ${formatCurrency(Number(profile.depositBalance) || 0)}.`);
       return;
     }
 

@@ -217,11 +217,11 @@ export function Layout() {
         <div className="p-4 border-t border-gray-100 dark:border-slate-700 space-y-4">
           <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/50 transition-colors">
             <p className="text-[10px] text-orange-600 dark:text-orange-400 font-bold uppercase tracking-widest mb-1">Earning Balance</p>
-            <p className="text-xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(profile?.earningBalance || 0)}</p>
+            <p className="text-xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(Number(profile?.earningBalance) || 0)}</p>
           </div>
           <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/50 transition-colors">
             <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest mb-1">Deposit Balance</p>
-            <p className="text-xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(profile?.depositBalance || 0)}</p>
+            <p className="text-xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(Number(profile?.depositBalance) || 0)}</p>
           </div>
 
           <Link 

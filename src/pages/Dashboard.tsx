@@ -29,7 +29,7 @@ import { Submission } from '../types';
 import { BrandLogo } from '../components/BrandLogo';
 
 export function Dashboard() {
-  const { profile, user, systemConfig, refreshProfile } = useAuth();
+  const { profile, user, systemConfig, refreshProfile, loading } = useAuth();
   const navigate = useNavigate();
 
   const [dashboardStats, setDashboardStats] = useState({ jobsCompleted: 0, totalRevenue: 0, auditPending: 0, activeQueues: 0 });
@@ -288,7 +288,7 @@ export function Dashboard() {
     setConverting(false);
   };
 
-  if (systemConfig === null || !profile) {
+  if (loading || systemConfig === null || !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
         <div className="relative">
@@ -456,7 +456,7 @@ export function Dashboard() {
             <div className="flex items-baseline gap-1 sm:gap-2 relative z-10">
               <span className="text-primary-500 font-black text-xl sm:text-2xl tracking-tighter">৳</span>
               <p className="text-3xl sm:text-5xl font-black text-white tracking-tighter tabular-nums leading-none truncate">
-                {(profile?.earningBalance || 0).toFixed(2)}
+                {(Number(profile?.earningBalance) || 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -466,7 +466,7 @@ export function Dashboard() {
              <div className="flex items-baseline gap-1 sm:gap-2">
                 <span className="text-gray-400 dark:text-slate-500 font-black text-xl">৳</span>
                 <p className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400 tracking-tighter tabular-nums leading-none truncate">
-                  {(profile?.depositBalance || 0).toFixed(2)}
+                  {(Number(profile?.depositBalance) || 0).toFixed(2)}
                 </p>
              </div>
           </div>
@@ -776,7 +776,7 @@ export function Dashboard() {
                                        <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mt-2 px-1">
                        <span className="text-gray-400">Available:</span>
                        <span className="text-indigo-600">
-                          {formatCurrency(convertType === 'EarningToDeposit' ? (profile?.earningBalance || 0) : (profile?.depositBalance || 0))}
+                          {formatCurrency(convertType === 'EarningToDeposit' ? (Number(profile?.earningBalance) || 0) : (Number(profile?.depositBalance) || 0))}
                        </span>
                     </div>
 
