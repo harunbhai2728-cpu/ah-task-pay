@@ -55,7 +55,7 @@ export function ManageJobs() {
         .from('jobs')
         .select('*')
         .eq('posterId', user.id)
-        .order('created_at', { ascending: false });
+        .order('createdAt', { ascending: false });
 
       if (jobErr) throw jobErr;
       const activeJobs = (jobList as Job[] || []).filter(j => j.status !== 'deleted' && j.status !== 'rejected');
@@ -269,7 +269,7 @@ export function ManageJobs() {
 
       {/* Jobs List Full-Width layout */}
       <div className="w-full space-y-4">
-        {loading || (systemConfig === null) ? (
+        {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
           </div>
@@ -627,7 +627,7 @@ export function ManageJobs() {
                      const oldTotal = editJobData.job.pricePerWork * editJobData.job.maxWorkers;
                      const newTotal = editJobData.pricePerWork * editJobData.maxWorkers;
                      const diff = newTotal - oldTotal;
-                     const fee = diff * (Number(systemConfig?.jobPostingFee) / 100);
+                     const fee = diff * ((systemConfig?.jobPostingFee || 10) / 100);
                      const extraGrandTotal = diff + fee;
                      
                      if (extraGrandTotal > 0) {
@@ -639,7 +639,7 @@ export function ManageJobs() {
                                  <span>{diff.toFixed(2)} BDT</span>
                               </div>
                               <div className="flex justify-between items-center text-sm font-bold text-indigo-900 mb-4 pb-4 border-b border-indigo-200/50">
-                                 <span>Additional Fee ({systemConfig?.jobPostingFee}%):</span>
+                                 <span>Additional Fee ({systemConfig?.jobPostingFee || 10}%):</span>
                                  <span>{fee.toFixed(2)} BDT</span>
                               </div>
                               <div className="flex justify-between items-center">

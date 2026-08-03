@@ -24,26 +24,12 @@ export function BrowseJobs() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
-
-  // Debouncing the Search Term Input gracefully
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 400);
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm]);
 
   useEffect(() => {
     if (!user?.id) return;
     const fetchAllData = async () => {
       try {
-        setLoading(true);
-        setErrorMsg(null);
-
         let submitMap = new Map<string, string>();
         let jobIdsToExclude: string[] = [];
 
@@ -67,19 +53,13 @@ export function BrowseJobs() {
           .from('jobs')
           .select('*')
           .eq('status', 'open');
-
-        // Apply db-level search constraint via .ilike() as specified
-        if (debouncedSearch.trim()) {
-          query = query.ilike('title', `%${debouncedSearch.trim()}%`);
-        }
           
-        // Apply db-level sort order matching specified layout options
         if (sortOrder === 'price_asc') {
-          query = query.order('reward', { ascending: true });
+          query = query.order('pricePerWork', { ascending: true });
         } else if (sortOrder === 'price_desc') {
-          query = query.order('reward', { ascending: false });
+          query = query.order('pricePerWork', { ascending: false });
         } else {
-          query = query.order('created_at', { ascending: false });
+          query = query.order('createdAt', { ascending: false });
         }
 
         if (jobIdsToExclude.length > 0) {
@@ -104,7 +84,7 @@ export function BrowseJobs() {
       }
     };
     fetchAllData();
-  }, [user?.id, debouncedSearch, sortOrder]);
+  }, [user?.id, sortOrder]);
 
   const filteredJobs = jobs.filter(job => {
     // Hide user's own self-posted jobs
@@ -119,7 +99,10 @@ export function BrowseJobs() {
     if (job.isFull) {
       return false;
     }
-    return true; // Match is fully handled at database level via query!
+    return (
+      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   return (
@@ -135,30 +118,30 @@ export function BrowseJobs() {
           <p className="text-gray-400 dark:text-slate-500 font-medium">Find tasks that match your skills and start earning BDT instantly.</p>
         </div>
 
-          <div className="relative z-10 flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 dark:text-slate-500" />
-              <input
-                type="text"
-                placeholder="Search tasks (e.g. YouTube, Like, Comment)"
-                className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all placeholder:text-gray-500 dark:placeholder:text-slate-600 text-lg font-medium"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="relative min-w-[240px]">
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as any)}
-                className="w-full h-full px-6 py-4 appearance-none rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all text-lg font-bold text-white cursor-pointer"
-              >
-                <option value="newest" className="bg-gray-900 text-white">Newest First</option>
-                <option value="price_asc" className="bg-gray-900 text-white">Low Price To High Price</option>
-                <option value="price_desc" className="bg-gray-900 text-white">High Price To Low Price</option>
-              </select>
-              <Filter className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
-            </div>
+        <div className="relative z-10 flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search tasks (e.g. YouTube, Like, Comment)"
+              className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all placeholder:text-gray-500 dark:placeholder:text-slate-600 text-lg font-medium"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
           </div>
+          <div className="relative min-w-[240px]">
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as any)}
+              className="w-full h-full px-6 py-4 appearance-none rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all text-lg font-bold text-white cursor-pointer"
+            >
+              <option value="newest" className="bg-gray-900 text-white">Newest First</option>
+              <option value="price_asc" className="bg-gray-900 text-white">Low Price To High Price</option>
+              <option value="price_desc" className="bg-gray-900 text-white">High Price To Low Price</option>
+            </select>
+            <Filter className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
+          </div>
+        </div>
       </div>
 
       {loading ? (

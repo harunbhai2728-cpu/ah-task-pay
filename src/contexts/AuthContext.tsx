@@ -36,14 +36,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   const fetchConfig = async () => {
-    try {
-      const { data } = await supabase.from('system_config').select('*').eq('id', 'config').single();
-      if (data) setSystemConfig(data);
-      else setSystemConfig({});
-    } catch (err) {
-      console.warn("Failed to fetch system config", err);
-      setSystemConfig({});
-    }
+    const { data } = await supabase.from('system_config').select('*').eq('id', 'config').single();
+    if (data) setSystemConfig(data);
   };
 
   const fetchProfile = async (sessionUser: any) => {
@@ -55,20 +49,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isSuper = sessionUser.email?.toLowerCase() === 'superadmin@taskpay.systems';
 
     try {
-      let data = null;
+      const sessionData = await supabase.auth.getSession();
+      const token = sessionData?.data?.session?.access_token;
+      if (!token) {
+        throw new Error("No active authentication session token found. Please try logging in again.");
+      }
+
+      let res;
       let retries = 3;
       while (retries > 0) {
         try {
-          const { data: dbData, error: profileErr } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', sessionUser.id)
-            .single();
-            
-          if (profileErr && profileErr.code !== 'PGRST116') { // PGRST116 is 'not found'
-            throw profileErr;
-          }
-          data = dbData;
+          res = await fetch('/api/proxy', {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+                   'Authorization': 'Bearer ' + token
+               },
+               body: JSON.stringify({
+                   table: 'profiles',
+                   method: 'select',
+                   args: ['*'],
+                   eq: ['id', sessionUser.id],
+                   single: true
+               })
+          });
           break; // successfully fetched
         } catch (fetchErr: any) {
           retries--;
@@ -79,18 +83,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
+      if (!res || !res.ok) {
+          const errMsg = res ? await res.text() : "Network error";
+          throw new Error(`Profile load failed: ${res?.status || 'Unknown'} - ${errMsg}`);
+      }
+
+      const { data, error: profileErr } = await res.json();
+      if (profileErr) {
+          throw new Error(profileErr.message || profileErr);
+      }
+
       if (data) {
         if (isMasterEmail && data.isBlocked) {
             try {
-                const sessionData = await supabase.auth.getSession();
-                const token = sessionData?.data?.session?.access_token;
-                if (token) {
-                  await fetch('/api/proxy', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                     body: JSON.stringify({ table: 'profiles', method: 'update', args: [{ isBlocked: false }], eq: ['id', sessionUser.id] })
-                  });
-                }
+                await fetch('/api/proxy', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                   body: JSON.stringify({ table: 'profiles', method: 'update', args: [{ isBlocked: false }], eq: ['id', sessionUser.id] })
+                });
             } catch (err) {
                 console.error("Failed to unblock master user", err);
             }
@@ -99,15 +109,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!data.serialNumber) {
             const randomSerial = Math.floor(100000 + Math.random() * 900000);
             try {
-                const sessionData = await supabase.auth.getSession();
-                const token = sessionData?.data?.session?.access_token;
-                if (token) {
-                  await fetch('/api/proxy', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                     body: JSON.stringify({ table: 'profiles', method: 'update', args: [{ serialNumber: randomSerial }], eq: ['id', sessionUser.id] })
-                  });
-                }
+                await fetch('/api/proxy', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                   body: JSON.stringify({ table: 'profiles', method: 'update', args: [{ serialNumber: randomSerial }], eq: ['id', sessionUser.id] })
+                });
             } catch (err) {
                 console.error("Failed to generate and assign serial number", err);
             }
@@ -155,7 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user);
-        fetchConfig();
       } else {
         setLoading(false);
       }
@@ -168,7 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user);
-        fetchConfig();
       } else {
         setProfile(null);
         setIsAdmin(false);
@@ -179,46 +183,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
-
-  useEffect(() => {
-    // Subscribe to realtime updates for system config
-    const configChannel = supabase.channel('public:system_configuration')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'system_configuration' },
-        (payload) => {
-          fetchConfig(); // Re-fetch through API to ensure consistent data mapping
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(configChannel);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    
-    // Subscribe to realtime updates for this user's profile
-    const channel = supabase.channel(`public:profiles:id=eq.${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
-        (payload) => {
-          // Update profile state directly or re-fetch
-          setProfile(prev => {
-            if (!prev) return null;
-            return { ...prev, ...payload.new };
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, profile, systemConfig, loading, isAdmin, isSuperAdmin, error, refreshProfile, refreshConfig }}>

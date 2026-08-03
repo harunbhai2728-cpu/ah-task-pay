@@ -43,7 +43,7 @@ export function Deposit() {
     }
   };
   
-  const minDeposit = Number(systemConfig?.minDeposit);
+  const minDeposit = systemConfig?.minDeposit || 100;
   
   const [formData, setFormData] = useState({
     amount: '',
@@ -149,23 +149,6 @@ export function Deposit() {
     navigator.clipboard.writeText(defaultNum);
     alert("Number copied to clipboard!");
   };
-
-  if (systemConfig === null || loading || rulesLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-fadeIn">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Plus className="w-6 h-6 text-indigo-600 animate-pulse" />
-          </div>
-        </div>
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Preparing Deposit Gateway</h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest animate-pulse">Fetching official payment accounts...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-10 pb-20">

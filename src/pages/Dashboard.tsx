@@ -9,7 +9,6 @@ import {
   UserCheck,
   LayoutDashboard,
   AlertTriangle,
-  AlertCircle,
   Plus,
   Minus,
   DollarSign,
@@ -29,22 +28,10 @@ import { Submission } from '../types';
 import { BrandLogo } from '../components/BrandLogo';
 
 export function Dashboard() {
-  const { profile, user, systemConfig, refreshProfile, loading } = useAuth();
+  const { profile, user, systemConfig, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   const [dashboardStats, setDashboardStats] = useState({ jobsCompleted: 0, totalRevenue: 0, auditPending: 0, activeQueues: 0 });
-
-  // Notice popup state
-  const [showNoticeModal, setShowNoticeModal] = useState(false);
-
-  useEffect(() => {
-    if (systemConfig?.notice && systemConfig.notice.trim() !== '') {
-      const dismissed = sessionStorage.getItem(`notice_dismissed_${systemConfig.notice}`);
-      if (!dismissed) {
-        setShowNoticeModal(true);
-      }
-    }
-  }, [systemConfig?.notice]);
 
   // ONE-TIME FIX for User 640424 (removes stuck 100 Taka pending deposit)
   useEffect(() => {
@@ -64,8 +51,8 @@ export function Dashboard() {
   const [converting, setConverting] = useState(false);
   const [convertError, setConvertError] = useState<string|null>(null);
 
-  const earningToDepositFeePercent = Number(systemConfig?.transferEarningToDepositFee);
-  const depositToEarningFeePercent = Number(systemConfig?.transferDepositToEarningFee);
+  const earningToDepositFeePercent = systemConfig?.transferEarningToDepositFee !== undefined ? systemConfig.transferEarningToDepositFee : 20;
+  const depositToEarningFeePercent = systemConfig?.transferDepositToEarningFee !== undefined ? systemConfig.transferDepositToEarningFee : 30;
   const currentFeePercent = convertType === 'EarningToDeposit' ? earningToDepositFeePercent : depositToEarningFeePercent;
   const parsedConvertAmount = parseFloat(convertAmount);
   const isValidConvertAmount = !isNaN(parsedConvertAmount) && parsedConvertAmount > 0;
@@ -288,80 +275,8 @@ export function Dashboard() {
     setConverting(false);
   };
 
-  if (loading || systemConfig === null || !profile) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <LayoutDashboard className="w-6 h-6 text-indigo-600 animate-pulse" />
-          </div>
-        </div>
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Securing Session</h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest animate-pulse">Loading system settings & wallet balances...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-10 pb-20">
-      {/* Dynamic Instant Notice Modal */}
-      {showNoticeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-md animate-fadeIn">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-lg w-full shadow-2xl relative border border-gray-150 dark:border-slate-700/80 transition-colors text-left"
-          >
-            <button 
-              type="button"
-              onClick={() => {
-                setShowNoticeModal(false);
-                if (systemConfig?.notice) {
-                  sessionStorage.setItem(`notice_dismissed_${systemConfig.notice}`, 'true');
-                }
-              }}
-              className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-slate-700 p-2 rounded-full transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="mb-6 flex items-center gap-3">
-              <div className="p-3 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-2xl">
-                <AlertCircle className="w-6 h-6 animate-bounce" />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">Important Notice</h3>
-                <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Announcement from the Administrator</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl border border-gray-100 dark:border-slate-700/60 text-left mb-6 max-h-[250px] overflow-y-auto">
-              <p className="text-sm text-gray-700 dark:text-slate-200 font-bold leading-relaxed whitespace-pre-wrap">
-                {systemConfig.notice}
-              </p>
-            </div>
-
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowNoticeModal(false);
-                  if (systemConfig?.notice) {
-                    sessionStorage.setItem(`notice_dismissed_${systemConfig.notice}`, 'true');
-                  }
-                }}
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-100 dark:shadow-none"
-              >
-                I Understand & Continue
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
       {systemConfig?.notice && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
@@ -456,7 +371,7 @@ export function Dashboard() {
             <div className="flex items-baseline gap-1 sm:gap-2 relative z-10">
               <span className="text-primary-500 font-black text-xl sm:text-2xl tracking-tighter">৳</span>
               <p className="text-3xl sm:text-5xl font-black text-white tracking-tighter tabular-nums leading-none truncate">
-                {(Number(profile?.earningBalance) || 0).toFixed(2)}
+                {(profile?.earningBalance || 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -466,7 +381,7 @@ export function Dashboard() {
              <div className="flex items-baseline gap-1 sm:gap-2">
                 <span className="text-gray-400 dark:text-slate-500 font-black text-xl">৳</span>
                 <p className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400 tracking-tighter tabular-nums leading-none truncate">
-                  {(Number(profile?.depositBalance) || 0).toFixed(2)}
+                  {(profile?.depositBalance || 0).toFixed(2)}
                 </p>
              </div>
           </div>
@@ -776,7 +691,7 @@ export function Dashboard() {
                                        <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mt-2 px-1">
                        <span className="text-gray-400">Available:</span>
                        <span className="text-indigo-600">
-                          {formatCurrency(convertType === 'EarningToDeposit' ? (Number(profile?.earningBalance) || 0) : (Number(profile?.depositBalance) || 0))}
+                          {formatCurrency(convertType === 'EarningToDeposit' ? (profile?.earningBalance || 0) : (profile?.depositBalance || 0))}
                        </span>
                     </div>
 

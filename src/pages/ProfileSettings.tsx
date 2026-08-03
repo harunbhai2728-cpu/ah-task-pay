@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -16,9 +16,6 @@ export default function ProfileSettings() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showDeletionModal, setShowDeletionModal] = useState(false);
-  const [deletionReason, setDeletionReason] = useState('');
-  const [deletionLoading, setDeletionLoading] = useState(false);
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,30 +31,6 @@ export default function ProfileSettings() {
       setError(err.message || 'Failed to update name');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRequestDeletion = async () => {
-    if (!user) return;
-    if (!deletionReason.trim()) {
-       setError('Please provide a reason for deletion');
-       return;
-    }
-    setDeletionLoading(true);
-    setError('');
-    
-    try {
-       await supabase.from('profiles').update({
-          account_status: 'pending_deletion',
-          deletion_reason: deletionReason
-       }).eq('id', user.id);
-       
-       setSuccess('Your account deletion request has been submitted and is pending admin approval.');
-       setShowDeletionModal(false);
-    } catch(err: any) {
-       setError(err.message || 'Failed to request deletion');
-    } finally {
-       setDeletionLoading(false);
     }
   };
 
@@ -193,7 +166,7 @@ export default function ProfileSettings() {
         </section>
       </div>
 
-      <div className="mt-8 bg-primary-600 p-8 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="bg-primary-600 p-8 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6">
          <div className="flex items-center gap-4">
             <div className="bg-white/20 p-4 rounded-2xl">
                <ShieldCheck className="w-10 h-10" />
@@ -205,75 +178,6 @@ export default function ProfileSettings() {
          </div>
          <div className="bg-white/10 px-6 py-3 rounded-full font-bold text-sm">Verified User</div>
       </div>
-
-      {/* Account Deletion Section */}
-      <section className="mt-8 bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-red-100 dark:border-red-900/50 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-colors">
-         <div className="flex items-center gap-4">
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl text-red-600 dark:text-red-400">
-               <AlertTriangle className="w-10 h-10" />
-            </div>
-            <div>
-               <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Danger Zone</h3>
-               <p className="text-gray-500 dark:text-slate-400 font-medium text-sm mt-1">Once deleted, your account data and balances are permanently lost.</p>
-            </div>
-         </div>
-         <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowDeletionModal(true)}
-            className="px-6 py-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors whitespace-nowrap"
-         >
-            Request Account Deletion
-         </motion.button>
-      </section>
-
-      {/* Deletion Modal */}
-      {showDeletionModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-slate-900 rounded-[2rem] w-full max-w-md p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-slate-800"
-          >
-            <div className="flex justify-between items-center mb-6">
-               <h3 className="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                 <AlertTriangle className="w-6 h-6 text-red-500" />
-                 Delete Account
-               </h3>
-               <button onClick={() => setShowDeletionModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                 <X className="w-5 h-5" />
-               </button>
-            </div>
-            
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6 font-medium">
-              Please enter the reason for requesting account deletion. An administrator will review your request.
-            </p>
-            
-            <textarea
-               value={deletionReason}
-               onChange={(e) => setDeletionReason(e.target.value)}
-               placeholder="Why are you leaving?"
-               rows={4}
-               className="w-full p-4 mb-6 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-2 focus:ring-red-500 font-medium text-sm text-gray-900 dark:text-white resize-none"
-            ></textarea>
-            
-            <div className="flex gap-4">
-               <button
-                  onClick={() => setShowDeletionModal(false)}
-                  className="flex-1 py-3 text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
-               >
-                  Cancel
-               </button>
-               <button
-                  onClick={handleRequestDeletion}
-                  disabled={deletionLoading || !deletionReason.trim()}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
-               >
-                  {deletionLoading ? 'Submitting...' : 'Submit Request'}
-               </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 }

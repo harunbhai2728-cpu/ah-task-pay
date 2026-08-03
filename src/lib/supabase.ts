@@ -11,16 +11,11 @@ const createProxyBuilder = (table: string) => {
     const execute = async () => {
         const { data: { session } } = await realSupabase.auth.getSession();
         const token = session?.access_token;
-        const isPublic = chain.table === 'system_config' && chain.method === 'select';
-        
-        if (!token && !isPublic) return { data: null, error: new Error('No auth token') };
-
-        const headers: any = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
+        if (!token) return { data: null, error: new Error('No auth token') };
 
         const res = await fetchWithRetry('/api/proxy', {
            method: 'POST',
-           headers,
+           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
            body: JSON.stringify(chain)
         });
         const json = await res.json();
@@ -48,10 +43,6 @@ const createProxyBuilder = (table: string) => {
             chain.neqs = [...(chain.neqs || []), args]; 
             return builder; 
         },
-        ilike: (...args: any[]) => {
-            chain.ilike = args;
-            return builder;
-        },
         or: (...args: any[]) => { chain.or = args[0]; return builder; },
         order: (...args: any[]) => { chain.order = args; return builder; },
         limit: (...args: any[]) => { chain.limit = args[0]; return builder; },
@@ -65,8 +56,6 @@ const createProxyBuilder = (table: string) => {
 // Global interceptor for relations experiencing infinite recursion due to RLS bugs or schema differences
 export const supabase = {
     ...realSupabase,
-    channel: realSupabase.channel.bind(realSupabase),
-    removeChannel: realSupabase.removeChannel.bind(realSupabase),
     from: (table: string) => {
         if (table === 'profiles' || table === 'transactions' || table === 'system_config' || table === 'tickets' || table === 'advertisements' || table === 'jobs' || table === 'submissions') {
              return createProxyBuilder(table);

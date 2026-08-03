@@ -27,7 +27,7 @@ export function PostJob() {
     maxWorkers: 10
   });
 
-  const jobFeePercent = Number(systemConfig?.jobPostingFee);
+  const jobFeePercent = systemConfig?.jobPostingFee || 10;
   const totalCost = (formData.pricePerWork * formData.maxWorkers);
   const serviceCharge = totalCost * (jobFeePercent / 100);
   const grandTotal = totalCost + serviceCharge;
@@ -36,8 +36,8 @@ export function PostJob() {
     e.preventDefault();
     if (!profile || !user) return;
 
-    if ((Number(profile.depositBalance) || 0) < grandTotal) {
-      setError(`Insufficient deposit balance. You need ${formatCurrency(grandTotal)} but have ${formatCurrency(Number(profile.depositBalance) || 0)}.`);
+    if (profile.depositBalance < grandTotal) {
+      setError(`Insufficient deposit balance. You need ${formatCurrency(grandTotal)} but have ${formatCurrency(profile.depositBalance)}.`);
       return;
     }
 
@@ -84,23 +84,6 @@ export function PostJob() {
       setLoading(false);
     }
   };
-
-  if (systemConfig === null) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <PlusCircle className="w-6 h-6 text-indigo-600 animate-pulse" />
-          </div>
-        </div>
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Preparing Job Gateway</h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest animate-pulse">Checking service fees & rules...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-12">

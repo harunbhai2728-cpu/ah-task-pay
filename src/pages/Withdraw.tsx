@@ -42,8 +42,8 @@ export function Withdraw() {
     }
   };
 
-  const minWithdraw = Number(systemConfig?.minWithdraw);
-  const withdrawalFeePercent = Number(systemConfig?.withdrawalFee);
+  const minWithdraw = systemConfig?.minWithdraw || 20;
+  const withdrawalFeePercent = systemConfig?.withdrawalFee || 10;
   
   const [formData, setFormData] = useState({
     amount: '',
@@ -95,7 +95,7 @@ export function Withdraw() {
       alert(`Minimum withdrawal is ${minWithdraw} BDT`);
       return;
     }
-    if (totalDeduction > (Number(profile?.earningBalance) || 0)) {
+    if (totalDeduction > (profile?.earningBalance || 0)) {
       alert("পর্যাপ্ত ব্যালেন্স নাই (Insufficient Earning Balance for amount + fee)");
       return;
     }
@@ -155,23 +155,6 @@ export function Withdraw() {
     }
   };
 
-  if (systemConfig === null || loading || rulesLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-fadeIn">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-orange-600 animate-pulse" />
-          </div>
-        </div>
-        <div className="text-center space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Preparing Withdrawal Gateway</h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest animate-pulse">Checking withdrawal limits & fees...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-10 pb-20">
       <div className="flex items-center gap-4">
@@ -201,7 +184,7 @@ export function Withdraw() {
                    <Zap className="w-16 h-16" />
                  </div>
                  <p className="text-xs font-black text-indigo-300 uppercase tracking-widest leading-none mb-1">Withdrawable Balance</p>
-                 <h3 className="text-5xl font-black tracking-tighter tabular-nums">{formatCurrency(Number(profile?.earningBalance) || 0)}</h3>
+                 <h3 className="text-5xl font-black tracking-tighter tabular-nums">{formatCurrency(profile?.earningBalance || 0)}</h3>
               </div>
 
               <div className="space-y-6">
