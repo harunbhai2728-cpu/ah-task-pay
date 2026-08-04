@@ -4,6 +4,23 @@ import App from './App.tsx';
 import './index.css';
 import toast from 'react-hot-toast';
 
+// Suppress benign Supabase refresh token errors
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason && typeof event.reason.message === 'string' && event.reason.message.includes('Refresh Token Not Found')) {
+    event.preventDefault();
+  }
+});
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('Refresh Token Not Found')) {
+    return;
+  }
+  if (args[0] && args[0].message && args[0].message.includes('Refresh Token Not Found')) {
+    return;
+  }
+  originalConsoleError(...args);
+};
+
 // 1. Replace Native Alert with non-blocking UI Toast
 const originalAlert = window.alert;
 window.alert = (msg: any) => {
@@ -62,6 +79,21 @@ Object.defineProperty(window, 'fetch', {
     
     throw new Error("Maximum retries reached");
   }
+});
+
+import { registerSW } from 'virtual:pwa-register';
+
+// Register PWA service worker via vite-plugin-pwa with automatic hot-update notifications
+const updateSW = registerSW({
+  onNeedRefresh() {
+    toast('New update available! Refreshing to update...', { icon: '🔄' });
+    setTimeout(() => {
+      updateSW(true);
+    }, 1500);
+  },
+  onOfflineReady() {
+    console.log('AH Task Pay is now ready for offline use.');
+  },
 });
 
 createRoot(document.getElementById('root')!).render(

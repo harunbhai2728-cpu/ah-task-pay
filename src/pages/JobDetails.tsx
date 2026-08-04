@@ -80,7 +80,7 @@ export function JobDetails() {
     }
 
     try {
-      const b64 = await compressImage(file, 300);
+      const b64 = await compressImage(file, 1080, 0.03);
       setScreenshotUrls(prev => {
         const newUrls = [...prev];
         newUrls[index] = b64;
@@ -137,6 +137,17 @@ export function JobDetails() {
         pinCodeUsed: pinCode
       }]);
       if (insertErr) throw insertErr;
+
+      // Telegram Notification
+      import('../lib/telegram').then(({ sendTelegramNotification }) => {
+        sendTelegramNotification(
+          `📝 <b>New Job Submission</b>\n\n` +
+          `<b>Job ID:</b> ${job.id}\n` +
+          `<b>Job Title:</b> ${job.title}\n` +
+          `<b>Worker:</b> ${profile?.displayName || user.user_metadata?.name || 'User'} (ID: ${profile?.serialNumber || user.id})`
+        );
+      });
+
 
       setSuccess(true);
       if (isAutoApprove) {

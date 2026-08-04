@@ -5,9 +5,10 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 import { AppNotification } from '../types';
+import { askNotificationPermission } from '../lib/pushNotifications';
 
 export function NotificationBell() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +24,17 @@ export function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleBellClick = async () => {
+    if (user && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        askNotificationPermission(user.id);
+      } else if (Notification.permission === 'granted') {
+        askNotificationPermission(user.id); // Re-sync subscription if needed
+      }
+    }
+    setIsOpen(!isOpen);
+  };
 
   const markAsRead = async (id: string) => {
     if (!profile) return;
@@ -52,7 +64,7 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleBellClick}
         className="relative p-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
       >
         <Bell className="w-6 h-6" />

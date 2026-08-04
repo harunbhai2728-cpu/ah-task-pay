@@ -1,0 +1,11 @@
+{
+  "system_config": [
+    {
+      "id": "config",
+      "test_val": "successful_test",
+      "notice": "Test notice alert"
+    }
+  ],
+  "tickets": [],
+  "advertisements": []
+}

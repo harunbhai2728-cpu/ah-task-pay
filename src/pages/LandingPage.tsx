@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 import { BrandLogo } from '../components/BrandLogo';
 
+import fpPromise from '@fingerprintjs/fingerprintjs';
+
 export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }) {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading, systemConfig } = useAuth();
@@ -14,6 +16,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [refCode, setRefCode] = useState('');
+  const [bannerError, setBannerError] = useState(false);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -22,7 +25,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [username, setUsername] = useState('');
-
+  
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('ref');
@@ -46,6 +49,15 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
     }
   }, [user, isAdmin, authLoading, navigate]);
 
+  if (authLoading || (systemConfig === null)) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 transition-colors">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary-600 mb-4"></div>
+        <p className="text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest text-sm animate-pulse">Initializing Environment...</p>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -57,27 +69,75 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
       const formData = new FormData(formEl);
       const referredBy = formData.get('referred_by') as string || '';
       
+      // 1. IP & VPN Security Check
+      let ipAddress = '';
+      try {
+        const ipCheckRes = await fetch('/api/security/ip-check');
+        const ipCheckData = await ipCheckRes.json();
+        ipAddress = ipCheckData.ip || '';
+      } catch (e) {
+        console.warn("Could not check IP status", e);
+      }
+
+      // 2. Device Fingerprint Capture
+      let visitorId = '';
+      try {
+        const fp = await fpPromise.load();
+        const result = await fp.get();
+        visitorId = result.visitorId;
+      } catch (e) {
+        console.warn("Could not capture device fingerprint", e);
+      }
+      
       if (isLogin) {
         if (!actualEmail.includes('@')) {
            throw new Error('Please enter a valid email address.');
         }
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: actualEmail,
           password
         });
         
-        if (error) {
-           if (error.message.includes('Invalid login credentials')) {
+        if (signInError) {
+           if (signInError.message.includes('Invalid login credentials')) {
                throw new Error('invalid email/password');
-           } else if (error.message.includes('Email not confirmed')) {
+           } else if (signInError.message.includes('Email not confirmed')) {
                throw new Error('Please check your inbox and confirm your email address before logging in.');
            } else {
-              throw error;
+              throw signInError;
            }
         }
+        
+        // Update footprint on successful login
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+           const { data: profile } = await supabase.from('profiles').select('account_status').eq('id', user.id).single();
+           if (profile && profile.account_status === 'deleted') {
+              await supabase.auth.signOut();
+              throw new Error('This account has been permanently deleted.');
+           }
+           await supabase.from('profiles').update({
+             last_ip_address: ipAddress || null,
+             device_fingerprint: visitorId || null
+           }).eq('id', user.id);
+        }
+
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        // Prevent Duplicate Fingerprints
+        if (visitorId) {
+          const { data: existingAccounts, error: checkError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('device_fingerprint', visitorId)
+            .limit(1);
+          
+          if (existingAccounts && existingAccounts.length > 0) {
+             throw new Error("Registration failed: Multiple accounts are strictly prohibited from the same device or IP.");
+          }
+        }
+
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email: actualEmail,
           password,
           options: {
@@ -89,7 +149,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             }
           }
         });
-        if (error) throw error;
+        if (signUpError) throw signUpError;
         
         if (data.user) {
           const generatedCode = `AH${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -105,6 +165,8 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             heldBalance: 0,
             referral_code: generatedCode,
             referred_by: referredBy,
+            last_ip_address: ipAddress || null,
+            device_fingerprint: visitorId || null,
             createdAt: new Date().toISOString()
           }, { onConflict: 'id' });
           
@@ -153,7 +215,7 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
             <div className="space-y-4">
               <h2 className="text-5xl lg:text-6xl font-black text-gray-900 dark:text-white tracking-tight leading-tight">
                 {systemConfig?.loginTitle ? (
-                  <span dangerouslySetInnerHTML={{ __html: systemConfig.loginTitle.replace(/\n/g, '<br/>') }} />
+                  <span dangerouslySetInnerHTML={{ __html: systemConfig.loginTitle }} />
                 ) : (
                   <>Marketplace for <br/><span className="text-primary-600 dark:text-primary-400">Micro Jobs</span></>
                 )}
@@ -163,16 +225,17 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
               </p>
             </div>
             
-            {systemConfig?.loginBannerUrl && (
+            {systemConfig?.loginBannerUrl && !bannerError && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="mt-8 rounded-3xl overflow-hidden shadow-xl"
               >
                 <img 
-                  src={systemConfig.loginBannerUrl} 
+                  src={systemConfig.loginBannerUrl + '?t=' + new Date().getTime()} 
                   alt="Promo Banner" 
                   referrerPolicy="no-referrer"
+                  onError={() => setBannerError(true)}
                   className="w-full object-cover max-h-64"
                 />
               </motion.div>

@@ -24,6 +24,10 @@ export interface UserProfile {
   warning?: string;
   warningCount?: number;
   notifications?: AppNotification[];
+  last_ip_address?: string | null;
+  device_fingerprint?: string | null;
+  account_status?: 'active' | 'pending_deletion' | 'deleted';
+  deletion_reason?: string | null;
   createdAt: any;
 }
 
@@ -96,10 +100,8 @@ export type TicketStatus = 'open' | 'resolved';
 export interface Ticket {
   id: string;
   userId: string;
-  userName: string;
   userSerial?: number | null;
   subject: string;
-  description: string;
   status: TicketStatus;
   createdAt: any;
   resolvedAt?: any;

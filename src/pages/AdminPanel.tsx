@@ -28,7 +28,10 @@ import {
   Bell,
   Image,
   Upload,
-  Gift
+  Gift,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Transaction, UserProfile, Job, Submission, Ticket } from '../types';
@@ -77,7 +80,7 @@ const createAdminDb = (supabaseClient: any) => {
 export function AdminPanel() {
   const adminDb = createAdminDb(supabase);
   const { isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'transactions' | 'users' | 'jobs' | 'submissions' | 'settings' | 'tickets' | 'ads' | 'redeem_codes'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'users' | 'jobs' | 'submissions' | 'settings' | 'tickets' | 'ads' | 'redeem_codes' | 'deletions'>('transactions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -94,6 +97,32 @@ export function AdminPanel() {
   const [subSearchTerm, setSubSearchTerm] = useState('');
   const [ticketSearchTerm, setTicketSearchTerm] = useState('');
   const [adsSearchTerm, setAdsSearchTerm] = useState('');
+  const [userSortOrder, setUserSortOrder] = useState<'newest' | 'balance_high' | 'balance_low'>('newest');
+  const [showDuplicateIPs, setShowDuplicateIPs] = useState(false);
+
+  // Server-side pagination and error states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Global system statistics computed on backend
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [completedJobsCount, setCompletedJobsCount] = useState(0);
+  const [totalEarningBalance, setTotalEarningBalance] = useState(0);
+  const [totalDepositBalance, setTotalDepositBalance] = useState(0);
+  const [totalHeld, setTotalHeld] = useState(0);
+  const [totalDeposit, setTotalDeposit] = useState(0);
+  const [totalWithdraw, setTotalWithdraw] = useState(0);
+  const [pendingTransactionsCount, setPendingTransactionsCount] = useState(0);
+  const [pendingSubsCount, setPendingSubsCount] = useState(0);
+  const [hasPendingTickets, setHasPendingTickets] = useState(false);
+  const [hasPendingJobs, setHasPendingJobs] = useState(false);
+  const [hasPendingAds, setHasPendingAds] = useState(false);
+  const [hasPendingDeletions, setHasPendingDeletions] = useState(false);
+
+  const [duplicateIPCounts, setDuplicateIPCounts] = useState<{ [key: string]: number }>({});
 
   // Redeem Codes management states
   const [redeemCodes, setRedeemCodes] = useState<any[]>([]);
@@ -105,6 +134,7 @@ export function AdminPanel() {
   const [redeemLoading, setRedeemLoading] = useState(false);
 
   // UI States for actions
+  const [processingSubmissionId, setProcessingSubmissionId] = useState<string | null>(null);
   const [rejectingSub, setRejectingSub] = useState<Submission | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [balanceAdjust, setBalanceAdjust] = useState<{[key: string]: string}>({});
@@ -131,6 +161,54 @@ export function AdminPanel() {
   
   const [deleteAdConfirm, setDeleteAdConfirm] = useState<any | null>(null);
   const [deleteJobConfirm, setDeleteJobConfirm] = useState<string | null>(null);
+  const [deleteUserConfirmUser, setDeleteUserConfirmUser] = useState<UserProfile | null>(null);
+  const [deleteUserPassword, setDeleteUserPassword] = useState('');
+
+  const handleForceDeleteUser = async () => {
+    if (!deleteUserConfirmUser) return;
+    if (deleteUserPassword !== 'ah2781') {
+      alert("ভুল পাসওয়ার্ড! (Incorrect Password)");
+      return;
+    }
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'deleted' }).eq('id', deleteUserConfirmUser.uid || deleteUserConfirmUser.id);
+      setDeleteUserConfirmUser(null);
+      setDeleteUserPassword('');
+      setEditingUser(null);
+      alert("একাউন্ট ডিলিট করা হয়েছে। (Account deleted successfully)");
+      await fetchAdminData();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete account");
+    } finally {
+      setAdminActionLoading(false);
+    }
+  };
+
+  const handleApproveDeletion = async (userId: string) => {
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'deleted' }).eq('id', userId);
+      await fetchAdminData();
+    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+  };
+
+  const handleRejectDeletion = async (userId: string) => {
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null }).eq('id', userId);
+      await fetchAdminData();
+    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+  };
+
+  const handleRecoverAccount = async (userId: string) => {
+    setAdminActionLoading(true);
+    try {
+      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null }).eq('id', userId);
+      await fetchAdminData();
+    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+  };
 
   // Deposit Rules states
   const [depositRules, setDepositRules] = useState('');
@@ -140,7 +218,7 @@ export function AdminPanel() {
 
   const fetchDepositRulesData = async () => {
     try {
-      const res = await fetch('/api/settings/deposit-rules');
+      const res = await fetch(`/api/settings/deposit-rules?t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         setDepositRules(json.setting_value || '');
@@ -190,7 +268,7 @@ export function AdminPanel() {
 
   const fetchWithdrawRulesData = async () => {
     try {
-      const res = await fetch('/api/settings/withdraw-rules');
+      const res = await fetch(`/api/settings/withdraw-rules?t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         setWithdrawRules(json.setting_value || '');
@@ -240,7 +318,7 @@ export function AdminPanel() {
 
   const fetchAdPostRulesData = async () => {
     try {
-      const res = await fetch('/api/settings/ad-post-rules');
+      const res = await fetch(`/api/settings/ad-post-rules?t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         setAdPostRules(json.setting_value || '');
@@ -294,7 +372,8 @@ export function AdminPanel() {
     transferEarningToDepositFee: 0,
     transferDepositToEarningFee: 10,
     loginTitle: 'Welcome to TaskPay',
-    loginBannerUrl: ''
+    loginBannerUrl: '',
+    customBannerPresets: [] as string[]
   });
 
   const getUserSerial = (uid: string) => {
@@ -302,12 +381,48 @@ export function AdminPanel() {
     return u?.serialNumber || uid.slice(0, 6).toUpperCase();
   };
 
+  const getUserName = (uid: string) => {
+    const u = users.find(user => user.uid === uid);
+    return u?.displayName || 'Unknown User';
+  };
+
   const { isAdmin: isSystemAdmin, refreshConfig } = useAuth();
 
-  const fetchAdminData = async (silent = false, background = false) => {
+  const fetchAdminData = async (silent = false, background = false, overrideTab?: string, overridePage?: number) => {
     if (!isSystemAdmin) return;
-    if (!silent && !background) setLoading(true);
+    
+    const currentTab = overrideTab || activeTab;
+    const targetPage = overridePage !== undefined ? overridePage : currentPage;
+    
+    let searchVal = '';
+    if (currentTab === 'users') searchVal = searchTerm;
+    else if (currentTab === 'transactions') searchVal = txSearchTerm;
+    else if (currentTab === 'jobs') searchVal = jobsSearchTerm;
+    else if (currentTab === 'submissions') searchVal = subSearchTerm;
+    else if (currentTab === 'tickets') searchVal = ticketSearchTerm;
+    else if (currentTab === 'ads') searchVal = adsSearchTerm;
+
+    const queryParams = new URLSearchParams({
+      tab: currentTab,
+      page: String(targetPage),
+      limit: '20',
+      search: searchVal,
+      type: txTypeFilter,
+      sort: userSortOrder,
+      duplicateIPs: String(showDuplicateIPs),
+      t: String(Date.now())
+    });
+
+    if (!silent && !background) {
+      if (transactions.length === 0 && users.length === 0) {
+        setLoading(true);
+      } else {
+        setTabLoading(true);
+      }
+    }
     if (silent) setIsRefreshing(true);
+    setFetchError(null);
+
     try {
       const sessionRes = await supabase.auth.getSession();
       const session = sessionRes.data?.session;
@@ -315,24 +430,25 @@ export function AdminPanel() {
       
       if (!token) {
         console.error("No active admin session found.");
-        if (!background) setLoading(false);
+        setLoading(false);
+        setTabLoading(false);
         return;
       }
       
       let res, codesRes;
       try {
         const results = await Promise.all([
-          fetch('/api/admin/data', {
+          fetch(`/api/admin/data?${queryParams.toString()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
-          fetch('/api/redeem-code/list', {
+          fetch(`/api/redeem-code/list?t=${Date.now()}`, {
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);
         res = results[0];
         codesRes = results[1];
       } catch (fetchErr: any) {
-        throw new Error(`Network Connectivity Error: ${fetchErr.message}. Make sure the server is healthy.`);
+        throw new Error(`Network Connection Error: ${fetchErr.message}. Please check your connection and retry.`);
       }
       
       if (!res.ok) {
@@ -345,39 +461,89 @@ export function AdminPanel() {
         throw new Error(json.error);
       }
       
+      // Update global configurations
       setConfig(prev => ({ ...prev, ...(json.config || {}) }));
-      setTransactions(json.transactions || []);
-      setUsers(json.users || []);
-      setJobs(json.jobs || []);
-      setSubmissions(json.submissions || []);
-      setTickets(json.tickets || []);
-      setAds(json.ads || []);
       setSupabaseServiceRoleReady(json.supabaseServiceRoleReady ?? true);
+      
+      // Update stats and totals
+      if (json.stats) {
+        setTotalUsers(json.stats.totalUsers);
+        setTotalJobs(json.stats.totalJobs);
+        setCompletedJobsCount(json.stats.completedJobsCount);
+        setTotalEarningBalance(json.stats.totalEarningBalance);
+        setTotalDepositBalance(json.stats.totalDepositBalance);
+        setTotalHeld(json.stats.totalHeld);
+        setTotalDeposit(json.stats.totalDeposit);
+        setTotalWithdraw(json.stats.totalWithdraw);
+        setPendingTransactionsCount(json.stats.pendingTransactionsCount);
+        setPendingSubsCount(json.stats.pendingSubsCount);
+        setHasPendingTickets(json.stats.hasPendingTickets);
+        setHasPendingJobs(json.stats.hasPendingJobs);
+        setHasPendingAds(json.stats.hasPendingAds);
+        setHasPendingDeletions(json.stats.hasPendingDeletions);
+      }
+
+      if (json.duplicateIPCounts) {
+        setDuplicateIPCounts(json.duplicateIPCounts);
+      }
+
+      // Update the active tab's specific paginated list
+      const fetchedData = json.data || [];
+      if (currentTab === 'transactions') setTransactions(fetchedData);
+      else if (currentTab === 'users') setUsers(fetchedData);
+      else if (currentTab === 'jobs') setJobs(fetchedData);
+      else if (currentTab === 'submissions') setSubmissions(fetchedData);
+      else if (currentTab === 'tickets') setTickets(fetchedData);
+      else if (currentTab === 'ads') setAds(fetchedData);
+      else if (currentTab === 'deletions') setUsers(fetchedData);
+
+      setTotalItems(json.totalItems || 0);
+      setCurrentPage(json.page || 1);
 
       if (codesRes && codesRes.ok) {
         const codesJson = await codesRes.json();
         setRedeemCodes(codesJson.codes || []);
       }
       
-      if (!background) setLoading(false);
+      setLoading(false);
+      setTabLoading(false);
       setIsRefreshing(false);
     } catch (err: any) {
-      console.error("Admin Panel Initialization Failed:", err);
-      // Instead of just logging, we should probably show this to the user in a less fatal way if possible, 
-      // but the requirement is to fix the "Failed to fetch" which was likely a generic network error or crash.
-      if (!background) setLoading(false);
+      console.error("Admin Panel Data Fetching Failed:", err);
+      setFetchError(err.message || 'Unknown network error. Please try again.');
+      setLoading(false);
+      setTabLoading(false);
       setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchAdminData();
     if (isSystemAdmin) {
       fetchDepositRulesData();
       fetchWithdrawRulesData();
       fetchAdPostRulesData();
     }
+    // Silent trigger for database image cleanup
+    fetch('/api/clear-db-images').catch(() => {});
   }, [isSystemAdmin]);
+
+  // Trigger paginated fetch when activeTab, currentPage, txTypeFilter, userSortOrder, showDuplicateIPs change
+  useEffect(() => {
+    if (isSystemAdmin) {
+      fetchAdminData(false, false, activeTab, currentPage);
+    }
+  }, [activeTab, currentPage, txTypeFilter, userSortOrder, showDuplicateIPs, isSystemAdmin]);
+
+  // Debounced search trigger to avoid API spam while typing
+  useEffect(() => {
+    if (!isSystemAdmin) return;
+    const delayDebounceFn = setTimeout(() => {
+      // Whenever search terms change, we reset to page 1 to start from the beginning of results
+      fetchAdminData(false, false, activeTab, 1);
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, txSearchTerm, jobsSearchTerm, subSearchTerm, ticketSearchTerm, adsSearchTerm, isSystemAdmin]);
 
   const handleUpdateConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -493,7 +659,8 @@ export function AdminPanel() {
   };
 
   const handleApproveSubmission = async (sub: Submission) => {
-    if (sub.status !== 'pending') return;
+    if (sub.status !== 'pending' || processingSubmissionId) return;
+    setProcessingSubmissionId(sub.id);
     
     const previousSubmissions = [...submissions];
     const previousUsers = [...users];
@@ -547,12 +714,14 @@ export function AdminPanel() {
       setSubmissions(previousSubmissions);
       setUsers(previousUsers);
       setJobs(previousJobs);
-      toast.error(err.message || 'Error approving submission', { id: loadingToast });
+      toast.error(err.message || `Error approving submission ${sub.id}`, { id: loadingToast });
+    } finally {
+      setProcessingSubmissionId(null);
     }
   };
 
   const handleRejectSubmission = (sub: Submission) => {
-    if (sub.status !== 'pending') return;
+    if (sub.status !== 'pending' || processingSubmissionId) return;
     setRejectingSub(sub);
     setRejectReason('');
   };
@@ -571,6 +740,8 @@ export function AdminPanel() {
     const subId = rejectingSub.id;
     const sub = rejectingSub;
     const reward = sub.reward || 0;
+    
+    setProcessingSubmissionId(subId);
     
     // Close modal immediately for snappy UI
     setRejectingSub(null);
@@ -625,7 +796,9 @@ export function AdminPanel() {
       setSubmissions(previousSubmissions);
       setUsers(previousUsers);
       setJobs(previousJobs);
-      toast.error(err.message || 'Error rejecting submission', { id: loadingToast });
+      toast.error(err.message || `Error rejecting submission ${subId}`, { id: loadingToast });
+    } finally {
+      setProcessingSubmissionId(null);
     }
   };
 
@@ -830,7 +1003,12 @@ export function AdminPanel() {
     if (!text) return;
 
     const previousTickets = [...tickets];
-    const newReplies = [...(ticket.replies || []), { 
+    
+    let parsedReplies = ticket.replies;
+    if (typeof parsedReplies === 'string') {
+      try { parsedReplies = JSON.parse(parsedReplies); } catch (e) { parsedReplies = []; }
+    }
+    const newReplies = [...(Array.isArray(parsedReplies) ? parsedReplies : []), { 
       sender: 'admin' as const, 
       text, 
       createdAt: Date.now() 
@@ -1282,16 +1460,13 @@ export function AdminPanel() {
     }
   };
 
-  const filteredUsers = React.useMemo(() => {
-    return users.filter(u => 
-      u.displayName?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-      u.username?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
-      u.phone?.includes(searchTerm) ||
-      u.serialNumber?.toString()?.includes(searchTerm) ||
-      u.uid?.includes(searchTerm)
-    );
-  }, [users, searchTerm]);
+  const filteredUsers = users;
+  const sortedUsers = users;
+  const sortedTransactions = transactions;
+  const sortedSubmissions = submissions;
+  const sortedJobs = jobs;
+  const sortedTickets = tickets;
+  const sortedAds = ads;
 
   const getMs = (dateVal: any) => {
     if (!dateVal) return 0;
@@ -1302,141 +1477,6 @@ export function AdminPanel() {
     const parsed = Date.parse(dateVal);
     return isNaN(parsed) ? (typeof dateVal === 'number' ? dateVal : 0) : parsed;
   };
-
-  const totalEarningBalance = React.useMemo(() => users.reduce((acc, u) => acc + (u.earningBalance || 0), 0), [users]);
-  const totalDepositBalance = React.useMemo(() => users.reduce((acc, u) => acc + (u.depositBalance || 0), 0), [users]);
-  const totalHeld = React.useMemo(() => users.reduce((acc, u) => acc + (u.heldBalance || 0), 0), [users]);
-  const pendingTransactionsCount = React.useMemo(() => transactions.filter(t => t.status === 'pending').length, [transactions]);
-  const pendingSubsCount = React.useMemo(() => submissions.filter(s => s.status === 'pending').length, [submissions]);
-  const completedJobsCount = React.useMemo(() => jobs.reduce((acc, j) => acc + (j.completedCount || 0), 0), [jobs]);
-
-  const totalDeposit = React.useMemo(() => {
-    return transactions
-      .filter(t => t.status === 'completed' && t.type === 'deposit')
-      .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
-
-  const totalWithdraw = React.useMemo(() => {
-    return transactions
-      .filter(t => t.status === 'completed' && t.type === 'withdrawal')
-      .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
-
-  const sortedTransactions = React.useMemo(() => {
-    let filtered = [...transactions];
-    if (txTypeFilter !== 'All') {
-      filtered = filtered.filter(t => t.type?.toLowerCase() === txTypeFilter.toLowerCase());
-    }
-    if (txSearchTerm.trim()) {
-      const term = txSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(t => 
-        t.userId?.toLowerCase()?.includes(term) ||
-        String(t.userSerial || '').includes(term) ||
-        (t as any).userName?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [transactions, txSearchTerm, txTypeFilter]);
-
-  const sortedSubmissions = React.useMemo(() => {
-    let filtered = [...submissions];
-    if (subSearchTerm.trim()) {
-      const term = subSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(s => 
-        s.workerId?.toLowerCase()?.includes(term) ||
-        String(s.workerSerial || '').includes(term) ||
-        s.workerName?.toLowerCase()?.includes(term) ||
-        s.id?.toLowerCase()?.includes(term) ||
-        s.jobId?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.submittedAt || a.created_at);
-      const bTime = getMs(b.submittedAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [submissions, subSearchTerm]);
-
-  const sortedUsers = React.useMemo(() => {
-    return [...filteredUsers].sort((a, b) => {
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      if (aTime && bTime && aTime !== bTime) {
-        return bTime - aTime;
-      }
-      return (b.serialNumber || 0) - (a.serialNumber || 0);
-    });
-  }, [filteredUsers]);
-
-  const sortedJobs = React.useMemo(() => {
-    let filtered = [...jobs];
-    if (jobsSearchTerm.trim()) {
-      const term = jobsSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(j => 
-        j.posterId?.toLowerCase()?.includes(term) ||
-        String(j.posterSerial || '').includes(term) ||
-        j.posterName?.toLowerCase()?.includes(term) ||
-        j.id?.toLowerCase()?.includes(term) ||
-        j.title?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [jobs, jobsSearchTerm]);
-
-  const sortedTickets = React.useMemo(() => {
-    let filtered = [...tickets];
-    if (ticketSearchTerm.trim()) {
-      const term = ticketSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(t => 
-        t.userId?.toLowerCase()?.includes(term) ||
-        String(t.userSerial || '').includes(term) ||
-        t.userName?.toLowerCase()?.includes(term) ||
-        t.id?.toLowerCase()?.includes(term) ||
-        t.subject?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'open' && b.status !== 'open') return -1;
-      if (b.status === 'open' && a.status !== 'open') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [tickets, ticketSearchTerm]);
-
-  const sortedAds = React.useMemo(() => {
-    let filtered = [...ads];
-    if (adsSearchTerm.trim()) {
-      const term = adsSearchTerm.toLowerCase().trim();
-      filtered = filtered.filter(ad => 
-        ad.userId?.toLowerCase()?.includes(term) ||
-        String(ad.userSerial || '').includes(term) ||
-        ad.id?.toLowerCase()?.includes(term) ||
-        ad.link?.toLowerCase()?.includes(term)
-      );
-    }
-    return filtered.sort((a, b) => {
-      if (a.status === 'pending' && b.status !== 'pending') return -1;
-      if (b.status === 'pending' && a.status !== 'pending') return 1;
-      const aTime = getMs(a.createdAt || a.created_at);
-      const bTime = getMs(b.createdAt || b.created_at);
-      return bTime - aTime;
-    });
-  }, [ads, adsSearchTerm]);
 
   if (loading) {
     return (
@@ -1475,7 +1515,7 @@ export function AdminPanel() {
               <Users className="w-5 h-5 text-gray-400" />
               <div>
                  <p className="text-[10px] font-black uppercase opacity-60 text-gray-500 dark:text-slate-400">Live Accounts</p>
-                 <p className="font-black text-xl">{users.length}</p>
+                 <p className="font-black text-xl">{totalUsers}</p>
               </div>
            </div>
         </div>
@@ -1488,7 +1528,7 @@ export function AdminPanel() {
           </div>
           <div>
             <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Users</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{users.length}</p>
+            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{totalUsers}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
@@ -1497,7 +1537,7 @@ export function AdminPanel() {
           </div>
           <div>
             <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Jobs</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{jobs.length}</p>
+            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{totalJobs}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
@@ -1566,7 +1606,7 @@ export function AdminPanel() {
       </div>
 
       <div className="flex bg-white dark:bg-slate-800 p-2 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-x-auto gap-2 transition-colors">
-        {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'settings'] as const).map(tab => {
+        {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'deletions', 'settings'] as const).map(tab => {
           let hasPending = false;
           if (tab === 'transactions') {
             hasPending = transactions.some(t => t.status === 'pending');
@@ -1578,6 +1618,8 @@ export function AdminPanel() {
             hasPending = jobs.some(j => j.status === 'pending' || j.status === 'delete_requested');
           } else if (tab === 'ads') {
             hasPending = ads.some(a => a.status === 'pending');
+          } else if (tab === 'deletions') {
+            hasPending = users.some(u => u.account_status === 'pending_deletion');
           }
 
           return (
@@ -1589,7 +1631,7 @@ export function AdminPanel() {
                 activeTab === tab ? "bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg" : "text-gray-400 dark:text-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-600 dark:hover:text-slate-300"
               )}
             >
-              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab}</span>
+              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab === 'deletions' ? 'Deletions' : tab}</span>
               {hasPending && (
                 <span className="w-2.5 h-2.5 bg-red-600 border-2 border-white dark:border-slate-800 rounded-full animate-pulse shrink-0" />
               )}
@@ -1599,19 +1641,71 @@ export function AdminPanel() {
       </div>
 
         {activeTab === 'users' && (
-          <div className="relative mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input 
-              type="text"
-              placeholder="Search by ID, Phone, Email or Name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-red-50 dark:focus:ring-red-900/10 outline-none font-bold placeholder:text-gray-300 dark:placeholder:text-slate-600 text-gray-900 dark:text-slate-100 transition-colors"
-            />
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input 
+                type="text"
+                placeholder="Search by ID, Phone, Email or Name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-red-50 dark:focus:ring-red-900/10 outline-none font-bold placeholder:text-gray-300 dark:placeholder:text-slate-600 text-gray-900 dark:text-slate-100 transition-colors"
+              />
+            </div>
+            <div className="sm:w-64">
+              <select
+                value={userSortOrder}
+                onChange={(e) => setUserSortOrder(e.target.value as any)}
+                className="w-full px-6 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/10 outline-none font-bold text-gray-900 dark:text-slate-100 transition-colors cursor-pointer appearance-none"
+                style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.5rem top 50%', backgroundSize: '0.65rem auto' }}
+              >
+                <option value="newest">Sort by Newest Users</option>
+                <option value="balance_high">Sort by High Balance</option>
+                <option value="balance_low">Sort by Low Balance</option>
+              </select>
+            </div>
+            <button
+              onClick={() => setShowDuplicateIPs(!showDuplicateIPs)}
+              className={cn(
+                "px-6 py-5 rounded-[2.5rem] font-bold text-sm transition-colors border shadow-sm flex items-center justify-center gap-2",
+                showDuplicateIPs 
+                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800" 
+                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700"
+              )}
+            >
+              <AlertTriangle className="w-5 h-5" />
+              {showDuplicateIPs ? 'Hide Duplicate IPs' : 'Show Duplicate IPs'}
+            </button>
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden transition-colors">
+        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden transition-colors relative">
+          {tabLoading && (
+            <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 z-50 flex items-center justify-center backdrop-blur-sm">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+            </div>
+          )}
+
+          {fetchError && (
+            <div className="m-6 p-5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0" />
+                <div>
+                  <h4 className="font-black text-red-800 dark:text-red-300 text-sm uppercase tracking-tight">Connection / Server Error</h4>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-bold">{fetchError}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchAdminData(false, false, activeTab, currentPage)}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-red-100 dark:shadow-none uppercase tracking-wider transition-all flex items-center gap-1.5 justify-center self-start sm:self-auto cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry Connection
+              </button>
+            </div>
+          )}
+
         {activeTab === 'transactions' && (
           <div className="space-y-4">
             <div className="p-6 pb-2 relative border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1676,6 +1770,9 @@ export function AdminPanel() {
                         {tx.type === 'deposit' ? <ArrowDownLeft className="text-green-500 w-4 h-4" /> : <ArrowUpRight className="text-orange-500 w-4 h-4" />}
                         <span className="font-bold capitalize">{tx.type} ({tx.method})</span>
                       </div>
+                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+                        {tx.createdAt ? new Date(tx.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
+                      </p>
                     </td>
                     <td className="p-6">
                       {tx.type === 'withdrawal' ? (
@@ -1782,6 +1879,14 @@ export function AdminPanel() {
                             </p>
                             <p className="text-xs text-gray-400 dark:text-slate-500 font-bold" title={(u as any).username || 'nousername'}>
                               @{((u as any).username && (u as any).username.length > 14) ? `${(u as any).username.slice(0, 14)}...` : ((u as any).username || 'nousername')} • {(u as any).phone || u.email || 'No Phone'}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
+                              IP: {u.last_ip_address || 'N/A'}
+                              {u.last_ip_address && u.last_ip_address !== 'N/A' && typeof u.last_ip_address === 'string' && u.last_ip_address.trim() !== '' && duplicateIPCounts[u.last_ip_address] > 1 && (
+                                <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
+                                  Matched: {duplicateIPCounts[u.last_ip_address]} Accounts
+                                </span>
+                              )}
                             </p>
                             {u.warning && (
                                <div className="mt-2 flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg text-orange-600 dark:text-orange-400 transition-colors">
@@ -2027,11 +2132,11 @@ export function AdminPanel() {
                     <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-slate-700 transition-colors">
                        <button 
                          onClick={() => handleApproveSubmission(sub)}
-                         disabled={adminActionLoading}
+                         disabled={adminActionLoading || processingSubmissionId !== null}
                          className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg dark:shadow-none shadow-green-100 hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                        >
-                          {adminActionLoading ? (
-                            "Processing..."
+                          {processingSubmissionId === sub.id ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                           ) : (
                             <>
                               <CheckCircle2 className="w-5 h-5" />
@@ -2041,11 +2146,11 @@ export function AdminPanel() {
                        </button>
                        <button 
                          onClick={() => handleRejectSubmission(sub)}
-                         disabled={adminActionLoading}
+                         disabled={adminActionLoading || processingSubmissionId !== null}
                          className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg dark:shadow-none shadow-red-100 hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                        >
-                          {adminActionLoading ? (
-                            "Processing..."
+                          {processingSubmissionId === sub.id ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                           ) : (
                             <>
                               <XCircle className="w-5 h-5" />
@@ -2081,7 +2186,7 @@ export function AdminPanel() {
                        <div>
                           <h4 className="font-black text-gray-900 dark:text-slate-100 uppercase text-lg">{ticket.subject}</h4>
                           <p className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest">
-                            User: {(ticket.userName && ticket.userName.length > 14) ? `${ticket.userName.slice(0, 14)}...` : ticket.userName} <span className="text-indigo-600 dark:text-indigo-400">#{ticket.userSerial || getUserSerial(ticket.userId)}</span>
+                            User: {(getUserName(ticket.userId) && getUserName(ticket.userId).length > 14) ? `${getUserName(ticket.userId).slice(0, 14)}...` : getUserName(ticket.userId)} <span className="text-indigo-600 dark:text-indigo-400">#{ticket.userSerial || getUserSerial(ticket.userId)}</span>
                           </p>
                           <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest transition-colors">Submitted: {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : ''}</p>
                        </div>
@@ -2094,12 +2199,12 @@ export function AdminPanel() {
                     </div>
 
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl text-gray-700 dark:text-slate-300 text-sm whitespace-pre-wrap border border-gray-100 dark:border-slate-700 transition-colors">
-                      {ticket.description}
+                      {Array.isArray(ticket.replies) && ticket.replies.length > 0 ? ticket.replies[0].text : 'No description'}
                     </div>
 
-                    {ticket.replies && ticket.replies.length > 0 && (
+                    {Array.isArray(ticket.replies) && ticket.replies.length > 1 && (
                       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl space-y-3 transition-colors">
-                        {ticket.replies.map((reply, i) => (
+                        {ticket.replies.slice(1).map((reply: any, i: number) => (
                            <div key={i} className={cn(
                              "p-3 rounded-xl text-sm font-medium transition-colors",
                              reply.sender === 'admin' ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 mr-8 text-blue-900 dark:text-blue-100" : "bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 ml-8 text-gray-700 dark:text-slate-300"
@@ -2143,7 +2248,7 @@ export function AdminPanel() {
                         </button>
                       </div>
                     )}
-                    {ticket.status === 'resolved' && ticket.adminReply && (!ticket.replies || ticket.replies.length === 0) && (
+                    {ticket.status === 'resolved' && ticket.adminReply && (!Array.isArray(ticket.replies) || ticket.replies.length === 0) && (
                       <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm font-medium text-blue-900">
                         <span className="font-bold text-blue-600 mr-2">Resolution:</span>
                         {ticket.adminReply}
@@ -2375,6 +2480,70 @@ export function AdminPanel() {
           </div>
         )}
 
+        {activeTab === 'deletions' && (
+          <div className="p-6 md:p-8 space-y-8">
+            <div className="flex items-center gap-3 mb-6 transition-colors">
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+              <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase">Account Deletions</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Pending Requests */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
+                 <h3 className="text-lg font-black text-amber-600 dark:text-amber-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Pending Requests</h3>
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {users.filter(u => u.account_status === 'pending_deletion').length === 0 ? (
+                       <p className="text-gray-400 text-sm font-medium">No pending deletion requests.</p>
+                    ) : (
+                       users.filter(u => u.account_status === 'pending_deletion').map(u => (
+                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                             <div className="flex justify-between items-start mb-2">
+                               <div>
+                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-gray-500 font-mono">UID: {u.uid}</p>
+                               </div>
+                               <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold">Pending</span>
+                             </div>
+                             <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 p-3 rounded-xl mb-4 italic">"{u.deletion_reason || 'No reason provided'}"</p>
+                             <div className="flex gap-2">
+                                <button onClick={() => handleRejectDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs hover:bg-gray-300 dark:hover:bg-slate-600">Reject</button>
+                                <button onClick={() => handleApproveDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700">Approve Deletion</button>
+                             </div>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+
+              {/* Deleted Accounts */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
+                 <h3 className="text-lg font-black text-red-600 dark:text-red-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Deleted Accounts</h3>
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {users.filter(u => u.account_status === 'deleted').length === 0 ? (
+                       <p className="text-gray-400 text-sm font-medium">No deleted accounts.</p>
+                    ) : (
+                       users.filter(u => u.account_status === 'deleted').map(u => (
+                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-red-100 dark:border-red-900/30">
+                             <div className="flex justify-between items-start mb-2">
+                               <div>
+                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-gray-500 font-mono">UID: {u.uid}</p>
+                               </div>
+                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold">Deleted</span>
+                             </div>
+                             {u.deletion_reason && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 px-2">Reason: {u.deletion_reason}</p>
+                             )}
+                             <button onClick={() => handleRecoverAccount(u.id)} disabled={adminActionLoading} className="w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="p-8 space-y-8">
             <div className="flex items-center gap-3 mb-6 transition-colors">
@@ -2582,7 +2751,37 @@ export function AdminPanel() {
                </div>
 
                <div className="md:col-span-2 space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
-                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Dynamic Referral Campaign</h3>
+                  <div className="flex items-center justify-between">
+                     <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Dynamic Referral Campaign</h3>
+                     <button
+                        type="button"
+                        onClick={async () => {
+                           if (!confirm('Are you sure you want to reset all users\' claim progress for a new campaign?')) return;
+                           try {
+                              setAdminActionLoading(true);
+                              await adminDb.from('profiles').update({ target_1_claimed: false, target_2_claimed: false }).neq('id', 'placeholder');
+                              alert('All users campaign claims reset successfully!');
+                           } catch (err: any) {
+                              alert('Reset failed: ' + err.message);
+                           } finally {
+                              setAdminActionLoading(false);
+                           }
+                        }}
+                        className="px-4 py-2 bg-red-100 text-red-600 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-red-200 transition-colors"
+                     >
+                        Reset All User Claims
+                     </button>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Campaign Start Date</label>
+                  <input 
+                    type="datetime-local"
+                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    value={config.campaignStartDate ? new Date(config.campaignStartDate).toISOString().slice(0, 16) : ''}
+                    onChange={e => setConfig({...config, campaignStartDate: e.target.value})}
+                  />
                </div>
 
                <div className="space-y-4">
@@ -2594,8 +2793,6 @@ export function AdminPanel() {
                     onChange={e => setConfig({...config, campaignEndDate: e.target.value})}
                   />
                </div>
-               
-               <div className="space-y-4"></div>
 
                <div className="space-y-4">
                   <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Target 1: Req. Referrals</label>
@@ -2649,6 +2846,7 @@ export function AdminPanel() {
                     value={config.loginTitle || ''}
                     onChange={e => setConfig({...config, loginTitle: e.target.value})}
                   />
+                  <span className="text-xs text-gray-500 block mt-2">Use &lt;br&gt; for a new line. Use &lt;span style='color: #FF5733;'&gt;Word&lt;/span&gt; to color a specific word.</span>
                </div>
 
                <div className="md:col-span-2 space-y-4">
@@ -2666,13 +2864,30 @@ export function AdminPanel() {
                         className="w-full h-full object-cover" 
                         referrerPolicy="no-referrer"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setConfig({ ...config, loginBannerUrl: '' })}
-                        className="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
-                      >
-                        Remove Image
-                      </button>
+                      <div className="absolute top-3 right-3 flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfig({ ...config, loginBannerUrl: '' })}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
+                        >
+                          Remove Image
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentPresets = config.customBannerPresets || [];
+                            if (!currentPresets.includes(config.loginBannerUrl)) {
+                                setConfig({ ...config, customBannerPresets: [...currentPresets, config.loginBannerUrl] });
+                                toast.success("Saved as preset!");
+                            } else {
+                                toast.error("Already saved as preset");
+                            }
+                          }}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
+                        >
+                          Save as Preset
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="w-full h-24 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 flex items-center justify-center text-gray-400 dark:text-slate-600 font-bold bg-gray-50/50 dark:bg-slate-700/20 text-sm transition-colors">
@@ -2690,18 +2905,56 @@ export function AdminPanel() {
                           type="file" 
                           accept="image/*" 
                           className="hidden" 
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (file.size > 3 * 1024 * 1024) {
                                 alert("Image is too large. Please select an image under 3MB.");
                                 return;
                               }
-                              const r = new FileReader();
-                              r.onload = (ev) => {
-                                setConfig({ ...config, loginBannerUrl: ev.target?.result as string });
-                              };
-                              r.readAsDataURL(file);
+                              const loadingToast = toast.loading('Uploading image...');
+                              try {
+                                const fileExt = file.name.split('.').pop();
+                                const fileName = `banner_${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+
+                                const base64Data = await new Promise<string>((resolve, reject) => {
+                                  const reader = new FileReader();
+                                  reader.onload = () => resolve(reader.result as string);
+                                  reader.onerror = () => reject(new Error("Failed to read file"));
+                                  reader.readAsDataURL(file);
+                                });
+
+                                const { data: { session } } = await supabase.auth.getSession();
+                                const token = session?.access_token;
+
+                                const res = await fetch('/api/admin/upload-banner', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': token ? `Bearer ${token}` : ''
+                                  },
+                                  body: JSON.stringify({
+                                    fileData: base64Data,
+                                    fileName,
+                                    mimeType: file.type
+                                  })
+                                });
+
+                                const json = await res.json();
+                                if (!res.ok || json.error) {
+                                  throw new Error(json.error || 'Upload failed');
+                                }
+
+                                if (json.publicUrl) {
+                                  setConfig({ ...config, loginBannerUrl: json.publicUrl });
+                                  toast.success('Image uploaded successfully', { id: loadingToast });
+                                } else {
+                                  throw new Error("Could not get public URL");
+                                }
+                              } catch (err: any) {
+                                console.error('Upload Error:', err);
+                                toast.error('Failed to upload image: ' + err.message, { id: loadingToast });
+                              }
                             }
                           }}
                         />
@@ -2721,31 +2974,40 @@ export function AdminPanel() {
 
                   {/* Curated Preset Banners Gallery */}
                   <div className="space-y-4 pt-2">
-                     <span className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest pl-1">Quick Select Presets Gallery</span>
+                     <span className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest pl-1">My Presets Gallery</span>
                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                        {[
-                          { name: 'Bangladesh Freelancing', url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Desk Working', url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Modern Office', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Digital Marketplace', url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop' },
-                          { name: 'Business Growth', url: 'https://images.unsplash.com/photo-1542744094-3a31f103e35a?q=80&w=600&auto=format&fit=crop' }
-                        ].map((preset, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={() => setConfig({ ...config, loginBannerUrl: preset.url })}
-                            className={cn(
-                              "relative aspect-video rounded-xl overflow-hidden border-2 transition-all hover:scale-105",
-                              config.loginBannerUrl === preset.url ? "border-primary-600 ring-2 ring-primary-100" : "border-transparent"
-                            )}
-                            title={preset.name}
-                          >
-                             <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                             <div className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center">
-                                <span className="text-[9px] font-black tracking-tight text-white uppercase">{preset.name.split(' ')[0]}</span>
-                             </div>
-                          </button>
-                        ))}
+                        {config.customBannerPresets && config.customBannerPresets.length > 0 ? (
+                          config.customBannerPresets.map((presetUrl, idx) => (
+                            <div key={idx} className="relative group aspect-video rounded-xl overflow-hidden transition-all hover:scale-105 border-transparent">
+                              <button
+                                type="button"
+                                onClick={() => setConfig({ ...config, loginBannerUrl: presetUrl })}
+                                className={cn(
+                                  "w-full h-full rounded-xl border-2 overflow-hidden",
+                                  config.loginBannerUrl === presetUrl ? "border-primary-600 ring-2 ring-primary-100" : "border-transparent"
+                                )}
+                              >
+                                <img src={presetUrl} alt="Preset" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updated = config.customBannerPresets.filter((p: string) => p !== presetUrl);
+                                  setConfig({ ...config, customBannerPresets: updated });
+                                  toast.success("Preset removed");
+                                }}
+                                className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-full text-center p-4 text-xs font-bold text-gray-500 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                            No presets saved yet. Upload an image and click "Save as Preset".
+                          </div>
+                        )}
                      </div>
                   </div>
                </div>
@@ -2919,6 +3181,47 @@ export function AdminPanel() {
             )}
           </div>
         )}
+
+        {['transactions', 'users', 'jobs', 'submissions', 'tickets', 'ads', 'deletions'].includes(activeTab) && totalItems > 0 && (
+          <div className="p-6 border-t border-gray-100 dark:border-slate-700/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50 dark:bg-slate-900/10 transition-colors">
+            <div className="text-xs font-bold text-gray-500 dark:text-slate-400">
+              Showing <span className="font-black text-gray-900 dark:text-slate-100">{Math.min((currentPage - 1) * 20 + 1, totalItems)}</span> to{' '}
+              <span className="font-black text-gray-900 dark:text-slate-100">{Math.min(currentPage * 20, totalItems)}</span> of{' '}
+              <span className="font-black text-gray-900 dark:text-slate-100">{totalItems}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentPage > 1) {
+                    fetchAdminData(false, false, activeTab, currentPage - 1);
+                  }
+                }}
+                disabled={currentPage === 1 || tabLoading}
+                className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-xs rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <div className="text-xs font-black text-gray-400 dark:text-slate-500 px-2">
+                Page {currentPage} of {Math.max(1, Math.ceil(totalItems / 20))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentPage < Math.ceil(totalItems / 20)) {
+                    fetchAdminData(false, false, activeTab, currentPage + 1);
+                  }
+                }}
+                disabled={currentPage >= Math.ceil(totalItems / 20) || tabLoading}
+                className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-xs rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {blockConfirmUser && (
@@ -3041,6 +3344,17 @@ export function AdminPanel() {
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Last Known IP (আইপি অ্যাড্রেস)</label>
+                <input
+                  type="text"
+                  value={editingUser.last_ip_address || 'Not Recorded Yet'}
+                  disabled
+                  readOnly
+                  className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none text-gray-500 dark:text-slate-400 opacity-80 cursor-not-allowed transition-colors"
+                />
+              </div>
+
               <div className="space-y-1.5 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 transition-colors">
                 <label className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest block mb-1">নতুন পাসওয়ার্ড সেট করুন (New Password)</label>
                 <input
@@ -3089,6 +3403,46 @@ export function AdminPanel() {
                   সংরক্ষণ করুন (Save Changes)
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={() => setDeleteUserConfirmUser(editingUser)}
+                className="w-full py-3.5 mt-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-2xl font-black uppercase tracking-widest hover:bg-red-200 dark:hover:bg-red-900/50 transition-all text-xs border border-red-200 dark:border-red-900/50"
+              >
+                Delete Account (একাউন্ট ডিলিট)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteUserConfirmUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl space-y-6">
+            <h3 className="text-xl font-black text-gray-900 dark:text-slate-100">একাউন্ট ডিলিট নিশ্চিত করুন</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 font-bold leading-relaxed">
+              আপনি {deleteUserConfirmUser.displayName || 'এই ব্যবহারকারী'}-এর একাউন্ট পার্মানেন্টলি ডিলিট করতে যাচ্ছেন। অনুগ্রহ করে এডমিন পাসওয়ার্ড দিন।
+            </p>
+            <input
+              type="password"
+              placeholder="Admin Password (ah2781)"
+              value={deleteUserPassword}
+              onChange={(e) => setDeleteUserPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-slate-100"
+            />
+            <div className="flex gap-4">
+              <button
+                onClick={() => { setDeleteUserConfirmUser(null); setDeleteUserPassword(''); }}
+                className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs"
+              >
+                বাতিল
+              </button>
+              <button
+                onClick={handleForceDeleteUser}
+                disabled={adminActionLoading}
+                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-red-700 transition-all text-xs shadow-lg shadow-red-200 dark:shadow-none"
+              >
+                {adminActionLoading ? 'লোড হচ্ছে...' : 'ডিলিট করুন'}
+              </button>
             </div>
           </div>
         </div>

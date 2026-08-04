@@ -33,6 +33,9 @@ export function SubmittedJobs() {
 
   useEffect(() => {
     fetchSubmissions();
+    
+    // Silent trigger for smart optimization image cleanup
+    fetch('/api/cleanup-images', { method: 'POST' }).catch(() => {});
   }, [user?.id]);
 
   const handleClaimAutoApprove = async (sub: Submission) => {

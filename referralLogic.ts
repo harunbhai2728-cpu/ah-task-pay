@@ -17,6 +17,19 @@ function getReferralDomainUrl() {
     return 'https://ahtaskpay.onrender.com';
 }
 
+function getCampaignStartDate() {
+    try {
+        const p = path.join(process.cwd(), 'data-store.json');
+        if (fs.existsSync(p)) {
+            const data = JSON.parse(fs.readFileSync(p, 'utf-8'));
+            return data.campaignStartDate || null;
+        }
+    } catch (e) {
+        console.error("Error reading data-store.json for campaignStartDate:", e);
+    }
+    return null;
+}
+
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'placeholder_key';
 console.log("referralLogic Supabase URL used:", supabaseUrl);
@@ -117,7 +130,20 @@ export async function getReferralStatus(req: any, res: any) {
 
         let validCount = 0;
         let pendingCount = 0;
+        let campaignValidCount = 0;
         let joinedUsers: any[] = [];
+
+        let isExpired = false;
+        let campaignEndDate = config?.campaign_end_date || null;
+        let campaignStartDate = getCampaignStartDate();
+        
+        if (campaignEndDate) {
+            const end = new Date(campaignEndDate).getTime();
+            const now = new Date().getTime();
+            if (now >= end) {
+                isExpired = true;
+            }
+        }
 
         try {
             // STEP 2: Fetch all users where referred_by matches this user's referral code
@@ -175,8 +201,19 @@ export async function getReferralStatus(req: any, res: any) {
 
                 joinedUsers = referredProfiles.map(p => {
                     let status = referralStatusMap.get(p.id) || dynamicStatusMap.get(p.id) || 'pending';
-                    if (status === 'valid') validCount++;
-                    else pendingCount++;
+                    if (status === 'valid') {
+                        validCount++;
+                        if (!isExpired && campaignStartDate && campaignEndDate) {
+                            const pTime = new Date(p.createdAt || new Date()).getTime();
+                            const sTime = new Date(campaignStartDate).getTime();
+                            const eTime = new Date(campaignEndDate).getTime();
+                            if (pTime >= sTime && pTime <= eTime) {
+                                campaignValidCount++;
+                            }
+                        }
+                    } else {
+                        pendingCount++;
+                    }
                     
                     return {
                         id: p.id,
@@ -191,29 +228,21 @@ export async function getReferralStatus(req: any, res: any) {
         } catch (refE: any) {
             console.error("Error fetching referrals info:", refE);
         }
-        
-        let isExpired = false;
-        let campaignEndDate = config?.campaign_end_date || null;
-        
-        if (campaignEndDate) {
-            const end = new Date(campaignEndDate).getTime();
-            const now = new Date().getTime();
-            if (now >= end) {
-                isExpired = true;
-            }
-        }
 
         res.json({
             validCount,
+            campaignValidCount,
             pendingCount,
             target1Claimed: profile?.target_1_claimed || false,
             target2Claimed: profile?.target_2_claimed || false,
             campaignEndDate,
+            campaignStartDate,
             target1Referrals: config?.target_1_referrals || 0,
             target1Reward: config?.target_1_reward || 0,
             target2Referrals: config?.target_2_referrals || 0,
             target2Reward: config?.target_2_reward || 0,
             referralValidationCriteria: config?.referral_validation_criteria || 1,
+            referralBonusAmount: config?.referral_bonus_amount || 0,
             referralCode: code,
             isExpired,
             joinedUsers,
@@ -274,12 +303,23 @@ export async function claimReferralReward(req: any, res: any) {
         if (target === 1 && profile.target_1_claimed) return res.status(400).json({ error: 'Target 1 already claimed.' });
         if (target === 2 && profile.target_2_claimed) return res.status(400).json({ error: 'Target 2 already claimed.' });
 
+        const campaignStartDate = getCampaignStartDate();
+
         // Count valid referrals
-        const { count: validCount, error: refErr } = await supabase
+        let query = supabase
             .from('referrals')
             .select('*', { count: 'exact', head: true })
             .eq('referrer_id', user.id)
             .eq('status', 'valid');
+
+        if (campaignStartDate) {
+            query = query.gte('created_at', new Date(campaignStartDate).toISOString());
+        }
+        if (config.campaign_end_date) {
+            query = query.lte('created_at', new Date(config.campaign_end_date).toISOString());
+        }
+
+        const { count: validCount, error: refErr } = await query;
 
         const totalValid = validCount || 0;
 

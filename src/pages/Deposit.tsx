@@ -43,7 +43,7 @@ export function Deposit() {
     }
   };
   
-  const minDeposit = systemConfig?.minDeposit || 100;
+  const minDeposit = Number(systemConfig?.minDeposit);
   
   const [formData, setFormData] = useState({
     amount: '',
@@ -117,6 +117,18 @@ export function Deposit() {
 
       if (insertErr) throw new Error(insertErr);
       
+      // Telegram Notification
+      import('../lib/telegram').then(({ sendTelegramNotification }) => {
+        sendTelegramNotification(
+          `💰 <b>New Deposit Request</b>\n\n` +
+          `<b>User:</b> ${profile?.displayName || user.user_metadata?.name || 'User'} (ID: ${profile?.serialNumber || user.id})\n` +
+          `<b>Amount:</b> ${formData.amount} BDT\n` +
+          `<b>Method:</b> ${formData.method}\n` +
+          `<b>Phone:</b> ${formData.phone}\n` +
+          `<b>TrxID:</b> ${formData.transactionId}`
+        );
+      });
+      
       const { data: userRef } = await fetch('/api/proxy', {
            method: 'POST', headers: authArgs,
            body: JSON.stringify({ table: 'profiles', method: 'select', args: ['*'], eq: ['id', user.id], single: true })
@@ -149,6 +161,23 @@ export function Deposit() {
     navigator.clipboard.writeText(defaultNum);
     alert("Number copied to clipboard!");
   };
+
+  if (systemConfig === null || loading || rulesLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-fadeIn">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Plus className="w-6 h-6 text-indigo-600 animate-pulse" />
+          </div>
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Preparing Deposit Gateway</h3>
+          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest animate-pulse">Fetching official payment accounts...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10 pb-20">
