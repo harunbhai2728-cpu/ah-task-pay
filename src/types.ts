@@ -28,6 +28,7 @@ export interface UserProfile {
   device_fingerprint?: string | null;
   account_status?: 'active' | 'pending_deletion' | 'deleted';
   deletion_reason?: string | null;
+  deleted_by?: 'user' | 'admin' | null;
   createdAt: any;
 }
 

@@ -62,6 +62,56 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
   }
   
   if (!user) return <Navigate to="/" />;
+
+  if (profile?.account_status === 'deleted') {
+    const isByAdmin = profile.deleted_by === 'admin';
+    const heading = isByAdmin ? 'Your account has been deleted by Admin' : 'Your account has been deleted by You';
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
+        <div className="bg-white p-12 rounded-[3rem] shadow-2xl text-center space-y-6 max-w-md border border-red-100">
+           <div className="bg-red-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-200">
+              <LogOut className="w-12 h-12" />
+           </div>
+           <div className="space-y-4">
+             <h2 className="text-2xl font-black text-red-600 uppercase tracking-tight">{heading}</h2>
+             {profile.deletion_reason && (
+               <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-left">
+                 <p className="text-red-800 font-bold text-sm leading-relaxed whitespace-pre-wrap">
+                   Reason: {profile.deletion_reason}
+                 </p>
+               </div>
+             )}
+             <p className="text-gray-500 font-medium text-sm">
+               If you have any questions, please contact our support team.
+             </p>
+           </div>
+           <a
+               href="https://wa.me/8801870866189"
+               target="_blank"
+               rel="noopener noreferrer"
+              className="w-full inline-block py-4 bg-green-500 text-white rounded-2xl font-black hover:bg-green-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-green-200"
+            >
+              Contact WhatsApp Support
+            </a>
+           <a
+               href="https://t.me/ahtaskpay"
+               target="_blank"
+               rel="noopener noreferrer"
+              className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
+            >
+              Join Telegram Support
+            </a>
+           <button
+              onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
+             className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all uppercase tracking-widest text-sm mt-4"
+           >
+             Log Out
+           </button>
+        </div>
+      </div>
+    );
+  }
   
   if (profile?.isBlocked) {
     return (
@@ -157,20 +207,20 @@ export default function App() {
             <Route path="/register" element={<LandingPage defaultIsLogin={false} />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/terms-privacy" element={<TermsPrivacy />} />
-            <Route element={<Layout />}>
-              <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-              <Route path="/post-job" element={<PrivateRoute><PostJob /></PrivateRoute>} />
-              <Route path="/post-ad" element={<PrivateRoute><PostAd /></PrivateRoute>} />
-              <Route path="/manage-ads" element={<PrivateRoute><ManageAds /></PrivateRoute>} />
-              <Route path="/manage-jobs" element={<PrivateRoute><ManageJobs /></PrivateRoute>} />
-              <Route path="/browse-jobs" element={<PrivateRoute><BrowseJobs /></PrivateRoute>} />
-              <Route path="/submitted-jobs" element={<PrivateRoute><SubmittedJobs /></PrivateRoute>} />
-              <Route path="/profile-settings" element={<PrivateRoute><ProfileSettings /></PrivateRoute>} />
-              <Route path="/job/:id" element={<PrivateRoute><JobDetails /></PrivateRoute>} />
-              <Route path="/deposit" element={<PrivateRoute><Deposit /></PrivateRoute>} />
-              <Route path="/withdraw" element={<PrivateRoute><Withdraw /></PrivateRoute>} />
-              <Route path="/referral" element={<PrivateRoute><ReferralDashboard /></PrivateRoute>} />
-              <Route path="/support" element={<PrivateRoute><SupportTickets /></PrivateRoute>} />
+            <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/post-job" element={<PostJob />} />
+              <Route path="/post-ad" element={<PostAd />} />
+              <Route path="/manage-ads" element={<ManageAds />} />
+              <Route path="/manage-jobs" element={<ManageJobs />} />
+              <Route path="/browse-jobs" element={<BrowseJobs />} />
+              <Route path="/submitted-jobs" element={<SubmittedJobs />} />
+              <Route path="/profile-settings" element={<ProfileSettings />} />
+              <Route path="/job/:id" element={<JobDetails />} />
+              <Route path="/deposit" element={<Deposit />} />
+              <Route path="/withdraw" element={<Withdraw />} />
+              <Route path="/referral" element={<ReferralDashboard />} />
+              <Route path="/support" element={<SupportTickets />} />
               <Route path="/admin" element={<PrivateRoute requiredAdmin><AdminPanel /></PrivateRoute>} />
             </Route>
             <Route path="*" element={<Navigate to="/" />} />

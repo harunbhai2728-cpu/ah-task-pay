@@ -1,0 +1,83 @@
+          </div>
+        )}
+
+        {activeTab === 'deletions' && (
+          <div className="p-6 md:p-8 space-y-8">
+            <div className="flex items-center gap-3 mb-6 transition-colors">
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+              <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase">Account Deletions</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Pending Requests */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
+                 <h3 className="text-lg font-black text-amber-600 dark:text-amber-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Pending Requests</h3>
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {users.filter(u => u.account_status === 'pending_deletion').length === 0 ? (
+                       <p className="text-gray-400 text-sm font-medium">No pending deletion requests.</p>
+                    ) : (
+                       users.filter(u => u.account_status === 'pending_deletion').map(u => (
+                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                             <div className="flex justify-between items-start mb-2">
+                               <div>
+                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-gray-500 font-mono">UID: {u.uid}</p>
+                               </div>
+                               <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold">Pending</span>
+                             </div>
+                             <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 p-3 rounded-xl mb-4 italic">"{u.deletion_reason || 'No reason provided'}"</p>
+                             <div className="flex gap-2">
+                                <button onClick={() => handleRejectDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs hover:bg-gray-300 dark:hover:bg-slate-600">Reject</button>
+                                <button onClick={() => handleApproveDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700">Approve Deletion</button>
+                             </div>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+
+              {/* Deleted Accounts */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
+                 <h3 className="text-lg font-black text-red-600 dark:text-red-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Deleted Accounts</h3>
+                 <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                    {users.filter(u => u.account_status === 'deleted' || u.isBlocked === true).length === 0 ? (
+                       <p className="text-gray-400 text-sm font-medium">No deleted or blocked accounts.</p>
+                    ) : (
+                       users.filter(u => u.account_status === 'deleted' || u.isBlocked === true).map(u => (
+                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-red-100 dark:border-red-900/30">
+                             <div className="flex justify-between items-start mb-2">
+                               <div>
+                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-gray-500 font-mono mb-1">UID: {u.uid}</p>
+                                  <p className="text-[10px] text-gray-500 dark:text-slate-400 flex items-center gap-2">
+                                    IP: {u.last_ip_address || 'N/A'}
+                                    {(() => {
+                                      const count = duplicateIPCounts[u.last_ip_address!] || 0;
+                                      return u.last_ip_address && u.last_ip_address !== 'N/A' && count > 1 ? (
+                                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
+                                          Matched: {count} Accounts
+                                        </span>
+                                      ) : null;
+                                    })()}
+                                  </p>
+                               </div>
+                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold">
+                                 {u.isBlocked ? 'Blocked' : 'Deleted'}
+                               </span>
+                             </div>
+                             {u.deletion_reason && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 px-2">Reason: {u.deletion_reason}</p>
+                             )}
+                             <button onClick={() => handleRecoverAccount(u.id)} disabled={adminActionLoading} className="mt-4 w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="p-8 space-y-8">
+            <div className="flex items-center gap-3 mb-6 transition-colors">

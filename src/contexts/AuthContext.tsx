@@ -37,9 +37,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchConfig = async () => {
     try {
-      const { data } = await supabase.from('system_config').select('*').eq('id', 'config').single();
-      if (data) setSystemConfig(data);
-      else setSystemConfig({});
+      const { data } = await supabase.from('system_configuration').select('*').eq('id', 1).maybeSingle();
+      if (data) {
+        setSystemConfig({
+            id: "config",
+            notice: data.global_notice || "",
+            minDeposit: data.min_deposit || 100,
+            minWithdraw: data.min_withdraw || 20,
+            withdrawalFee: data.withdrawal_fee || 10,
+            jobPostingFee: data.job_service_charge || 10,
+            bkashNumber: data.official_bkash || "",
+            bkashMethod: data.bkash_method || "Personal",
+            nagadNumber: data.official_nagad || "",
+            nagadMethod: data.nagad_method || "Personal",
+            depositBkashEnabled: data.deposit_bkash_enabled !== false,
+            depositNagadEnabled: data.deposit_nagad_enabled !== false,
+            withdrawBkashEnabled: data.withdraw_bkash_enabled !== false,
+            withdrawNagadEnabled: data.withdraw_nagad_enabled !== false,
+            transferEarningToDepositFee: data.transfer_earning_deposit_fee || 0,
+            transferDepositToEarningFee: data.transfer_deposit_earning_fee || 10,
+            loginTitle: data.login_title || "Welcome to TaskPay",
+            loginBannerUrl: data.login_banner_url || "",
+            referralBonusAmount: data.referral_bonus_amount ?? 5,
+            referralValidationCriteria: data.referral_validation_criteria ?? 1,
+            referralValidityDays: data.referral_validity_days ?? 30,
+            campaignEndDate: data.campaign_end_date || null
+        });
+      } else {
+        setSystemConfig({});
+      }
     } catch (err) {
       console.warn("Failed to fetch system config", err);
       setSystemConfig({});

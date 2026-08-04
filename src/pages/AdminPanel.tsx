@@ -44,7 +44,7 @@ import toast from 'react-hot-toast';
 const createAdminDb = (supabaseClient: any) => {
   return {
     from: (table: string) => {
-      let chain: any = { method: '', table, args: [], single: false, eq: null, match: null };
+      let chain: any = { method: '', table, args: [], single: false, eq: null, neq: null, gt: null, gte: null, lt: null, lte: null, match: null };
       const execute = async () => {
         const { data: { session } } = await supabaseClient.auth.getSession();
         const token = session?.access_token;
@@ -67,6 +67,11 @@ const createAdminDb = (supabaseClient: any) => {
         delete: () => { chain.method = 'delete'; return builder; },
         upsert: (...args: any[]) => { chain.method = 'upsert'; chain.args = args; return builder; },
         eq: (...args: any[]) => { chain.eq = args; return builder; },
+        neq: (...args: any[]) => { chain.neq = args; return builder; },
+        gt: (...args: any[]) => { chain.gt = args; return builder; },
+        gte: (...args: any[]) => { chain.gte = args; return builder; },
+        lt: (...args: any[]) => { chain.lt = args; return builder; },
+        lte: (...args: any[]) => { chain.lte = args; return builder; },
         match: (...args: any[]) => { chain.match = args[0]; return builder; },
         single: () => { chain.single = true; return builder; },
         then: (resolve: any, reject: any) => execute().then(resolve, reject),
@@ -103,6 +108,8 @@ export function AdminPanel() {
   // Server-side pagination and error states
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [restrictedSearchTerm, setRestrictedSearchTerm] = useState('');
+  const [restrictedFilter, setRestrictedFilter] = useState<'all' | 'blocked' | 'deleted'>('all');
   const [tabLoading, setTabLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -123,6 +130,7 @@ export function AdminPanel() {
   const [hasPendingDeletions, setHasPendingDeletions] = useState(false);
 
   const [duplicateIPCounts, setDuplicateIPCounts] = useState<{ [key: string]: number }>({});
+  const [activeIPCounts, setActiveIPCounts] = useState<{ [key: string]: number }>({});
 
   // Redeem Codes management states
   const [redeemCodes, setRedeemCodes] = useState<any[]>([]);
@@ -172,7 +180,7 @@ export function AdminPanel() {
     }
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'deleted' }).eq('id', deleteUserConfirmUser.uid || deleteUserConfirmUser.id);
+      await adminDb.from('profiles').update({ account_status: 'deleted', deleted_by: 'admin', deletion_reason: 'Account removed by Administrator.' }).eq('id', deleteUserConfirmUser.uid || deleteUserConfirmUser.id);
       setDeleteUserConfirmUser(null);
       setDeleteUserPassword('');
       setEditingUser(null);
@@ -189,7 +197,7 @@ export function AdminPanel() {
   const handleApproveDeletion = async (userId: string) => {
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'deleted' }).eq('id', userId);
+      await adminDb.from('profiles').update({ account_status: 'deleted', deleted_by: 'user' }).eq('id', userId);
       await fetchAdminData();
     } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
   };
@@ -197,7 +205,7 @@ export function AdminPanel() {
   const handleRejectDeletion = async (userId: string) => {
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null }).eq('id', userId);
+      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null, deleted_by: null }).eq('id', userId);
       await fetchAdminData();
     } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
   };
@@ -205,7 +213,7 @@ export function AdminPanel() {
   const handleRecoverAccount = async (userId: string) => {
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null }).eq('id', userId);
+      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null, deleted_by: null, isBlocked: false }).eq('id', userId);
       await fetchAdminData();
     } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
   };
@@ -401,6 +409,7 @@ export function AdminPanel() {
     else if (currentTab === 'submissions') searchVal = subSearchTerm;
     else if (currentTab === 'tickets') searchVal = ticketSearchTerm;
     else if (currentTab === 'ads') searchVal = adsSearchTerm;
+    else if (currentTab === 'deletions') searchVal = restrictedSearchTerm;
 
     const queryParams = new URLSearchParams({
       tab: currentTab,
@@ -485,6 +494,9 @@ export function AdminPanel() {
 
       if (json.duplicateIPCounts) {
         setDuplicateIPCounts(json.duplicateIPCounts);
+      }
+      if (json.activeIPCounts) {
+        setActiveIPCounts(json.activeIPCounts);
       }
 
       // Update the active tab's specific paginated list
@@ -1631,7 +1643,7 @@ export function AdminPanel() {
                 activeTab === tab ? "bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg" : "text-gray-400 dark:text-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-600 dark:hover:text-slate-300"
               )}
             >
-              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab === 'deletions' ? 'Deletions' : tab}</span>
+              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab === 'deletions' ? 'Restricted' : tab}</span>
               {hasPending && (
                 <span className="w-2.5 h-2.5 bg-red-600 border-2 border-white dark:border-slate-800 rounded-full animate-pulse shrink-0" />
               )}
@@ -1882,11 +1894,15 @@ export function AdminPanel() {
                             </p>
                             <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
                               IP: {u.last_ip_address || 'N/A'}
-                              {u.last_ip_address && u.last_ip_address !== 'N/A' && typeof u.last_ip_address === 'string' && u.last_ip_address.trim() !== '' && duplicateIPCounts[u.last_ip_address] > 1 && (
-                                <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
-                                  Matched: {duplicateIPCounts[u.last_ip_address]} Accounts
-                                </span>
-                              )}
+                              {(() => {
+                                const isActive = !u.isBlocked && u.account_status !== 'deleted';
+                                const count = isActive ? (activeIPCounts[u.last_ip_address!] || 0) : (duplicateIPCounts[u.last_ip_address!] || 0);
+                                return u.last_ip_address && u.last_ip_address !== 'N/A' && typeof u.last_ip_address === 'string' && u.last_ip_address.trim() !== '' && count > 1 ? (
+                                  <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
+                                    Matched: {count} Accounts
+                                  </span>
+                                ) : null;
+                              })()}
                             </p>
                             {u.warning && (
                                <div className="mt-2 flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg text-orange-600 dark:text-orange-400 transition-colors">
@@ -2484,9 +2500,39 @@ export function AdminPanel() {
           <div className="p-6 md:p-8 space-y-8">
             <div className="flex items-center gap-3 mb-6 transition-colors">
               <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
-              <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase">Account Deletions</h2>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase">Restricted Accounts</h2>
             </div>
             
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Name, Email, Phone..."
+                  value={restrictedSearchTerm}
+                  onChange={(e) => setRestrictedSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl font-medium text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={restrictedFilter}
+                  onChange={(e: any) => setRestrictedFilter(e.target.value)}
+                  className="px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl font-bold text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="all">All Accounts</option>
+                  <option value="blocked">Blocked Only</option>
+                  <option value="deleted">Deleted Only</option>
+                </select>
+                <button
+                  onClick={fetchAdminData}
+                  className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-sm transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Pending Requests */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
@@ -2517,24 +2563,50 @@ export function AdminPanel() {
 
               {/* Deleted Accounts */}
               <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
-                 <h3 className="text-lg font-black text-red-600 dark:text-red-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Deleted Accounts</h3>
+                 <h3 className="text-lg font-black text-red-600 dark:text-red-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Restricted List</h3>
                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                    {users.filter(u => u.account_status === 'deleted').length === 0 ? (
-                       <p className="text-gray-400 text-sm font-medium">No deleted accounts.</p>
+                    {users.filter(u => {
+                       const isRestricted = u.account_status === 'deleted' || u.isBlocked === true;
+                       if (!isRestricted) return false;
+                       if (restrictedFilter === 'blocked') return u.isBlocked === true;
+                       if (restrictedFilter === 'deleted') return u.account_status === 'deleted';
+                       return true;
+                    }).length === 0 ? (
+                       <p className="text-gray-400 text-sm font-medium">No accounts found.</p>
                     ) : (
-                       users.filter(u => u.account_status === 'deleted').map(u => (
+                       users.filter(u => {
+                          const isRestricted = u.account_status === 'deleted' || u.isBlocked === true;
+                          if (!isRestricted) return false;
+                          if (restrictedFilter === 'blocked') return u.isBlocked === true;
+                          if (restrictedFilter === 'deleted') return u.account_status === 'deleted';
+                          return true;
+                       }).map(u => (
                           <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-red-100 dark:border-red-900/30">
                              <div className="flex justify-between items-start mb-2">
                                <div>
                                   <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
-                                  <p className="text-xs text-gray-500 font-mono">UID: {u.uid}</p>
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{u.email} • {u.phoneNumber || u.phone || 'No Phone'}</p>
+                                  <p className="text-xs text-gray-500 font-mono mb-1">UID: {u.uid}</p>
+                                  <p className="text-[10px] text-gray-500 dark:text-slate-400 flex items-center gap-2">
+                                    IP: {u.last_ip_address || 'N/A'}
+                                    {(() => {
+                                      const count = duplicateIPCounts[u.last_ip_address!] || 0;
+                                      return u.last_ip_address && u.last_ip_address !== 'N/A' && count > 1 ? (
+                                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
+                                          Matched: {count} Accounts
+                                        </span>
+                                      ) : null;
+                                    })()}
+                                  </p>
                                </div>
-                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold">Deleted</span>
+                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold">
+                                 {u.isBlocked ? 'Blocked' : 'Deleted'}
+                               </span>
                              </div>
                              {u.deletion_reason && (
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 px-2">Reason: {u.deletion_reason}</p>
                              )}
-                             <button onClick={() => handleRecoverAccount(u.id)} disabled={adminActionLoading} className="w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
+                             <button onClick={() => handleRecoverAccount(u.id)} disabled={adminActionLoading} className="mt-4 w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
                           </div>
                        ))
                     )}
@@ -2756,20 +2828,39 @@ export function AdminPanel() {
                      <button
                         type="button"
                         onClick={async () => {
-                           if (!confirm('Are you sure you want to reset all users\' claim progress for a new campaign?')) return;
+                           if (!confirm('Are you sure you want to reset all referral campaign claims for all users?')) return;
                            try {
                               setAdminActionLoading(true);
-                              await adminDb.from('profiles').update({ target_1_claimed: false, target_2_claimed: false }).neq('id', 'placeholder');
-                              alert('All users campaign claims reset successfully!');
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const token = session?.access_token;
+                              if (!token) {
+                                 alert('Admin authentication token missing or expired. Please sign in again.');
+                                 return;
+                              }
+                              const res = await fetch('/api/admin/reset-referral-claims', {
+                                 method: 'POST',
+                                 headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                 }
+                              });
+                              const json = await res.json();
+                              if (!res.ok || json.error) {
+                                 alert('Reset failed: ' + (json.error || 'Request failed'));
+                              } else {
+                                 toast.success('All users referral campaign claims reset successfully!');
+                                 alert('All users referral campaign claims reset successfully!');
+                              }
                            } catch (err: any) {
                               alert('Reset failed: ' + err.message);
                            } finally {
                               setAdminActionLoading(false);
                            }
                         }}
-                        className="px-4 py-2 bg-red-100 text-red-600 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-red-200 transition-colors"
+                        disabled={adminActionLoading}
+                        className="px-4 py-2 bg-red-100 text-red-600 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-red-200 transition-colors disabled:opacity-50 cursor-pointer"
                      >
-                        Reset All User Claims
+                        {adminActionLoading ? 'Resetting...' : 'Reset All User Claims'}
                      </button>
                   </div>
                </div>

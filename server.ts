@@ -11,6 +11,7 @@ import {
   getReferralStatus,
   claimReferralReward,
   validateReferral,
+  resetAllReferralClaims,
 } from "./referralLogic.js";
 
 async function startServer() {
@@ -250,19 +251,22 @@ async function startServer() {
             });
         }
       }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
+      let profile = null;
+      if (user) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        profile = data;
+      }
       const isMaster = [
         "superadmin@taskpay.systems",
         "harunurrashid93427@gmail.com",
         "harunbhai2728@gmail.com",
-      ].includes(user.email?.toLowerCase() || "");
-      const isAdmin = profile?.role === "admin" || isMaster;
+      ].includes(user?.email?.toLowerCase() || "");
 
+      const isAdmin = profile?.role === "admin" || isMaster;
       const {
         method,
         table,
@@ -2610,15 +2614,20 @@ async function startServer() {
       } else if (tab === "users") {
         let usersQuery = supabase
           .from("profiles")
-          .select("*", { count: "exact" });
+          .select("*", { count: "exact" })
+          .neq("account_status", "deleted")
+          .neq("account_status", "pending_deletion")
+          .or("isBlocked.is.null,isBlocked.eq.false");
 
         if (duplicateIPs) {
-          const { data: allIps } = await supabase.from("profiles").select("last_ip_address");
+          const { data: allIps } = await supabase.from("profiles").select("last_ip_address, isBlocked, account_status");
           const counts: Record<string, number> = {};
           (allIps || []).forEach(u => {
             const ip = u.last_ip_address;
             if (ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '') {
-              counts[ip] = (counts[ip] || 0) + 1;
+              if (u.isBlocked !== true && u.account_status !== 'deleted') {
+                counts[ip] = (counts[ip] || 0) + 1;
+              }
             }
           });
           const dupIps = Object.keys(counts).filter(ip => counts[ip] > 1);
@@ -2633,9 +2642,9 @@ async function startServer() {
           const cleanSearch = search.trim();
           const isNum = !isNaN(Number(cleanSearch));
           if (isNum) {
-            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,serialNumber.eq.${cleanSearch}`);
+            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phoneNumber.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,serialNumber.eq.${cleanSearch}`);
           } else {
-            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phoneNumber.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
           }
         }
 
@@ -2933,11 +2942,11 @@ async function startServer() {
         let deletionsQuery = supabase
           .from("profiles")
           .select("*", { count: "exact" })
-          .eq("account_status", "pending_deletion");
+          .or("account_status.eq.deleted,account_status.eq.pending_deletion,isBlocked.eq.true");
 
         if (search) {
           const cleanSearch = search.trim();
-          deletionsQuery = deletionsQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%`);
+          deletionsQuery = deletionsQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phoneNumber.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
         }
 
         deletionsQuery = deletionsQuery
@@ -2996,12 +3005,16 @@ async function startServer() {
         (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY) !==
           process.env.VITE_SUPABASE_ANON_KEY;
 
-      const { data: allIps } = await supabase.from("profiles").select("last_ip_address");
+      const { data: allIps } = await supabase.from("profiles").select("last_ip_address, isBlocked, account_status");
       const duplicateIPCounts: Record<string, number> = {};
+      const activeIPCounts: Record<string, number> = {};
       (allIps || []).forEach(u => {
         const ip = u.last_ip_address;
         if (ip && typeof ip === 'string' && ip !== 'N/A' && ip.trim() !== '') {
           duplicateIPCounts[ip] = (duplicateIPCounts[ip] || 0) + 1;
+          if (u.isBlocked !== true && u.account_status !== 'deleted') {
+            activeIPCounts[ip] = (activeIPCounts[ip] || 0) + 1;
+          }
         }
       });
 
@@ -3028,6 +3041,7 @@ async function startServer() {
         limit,
         totalItems,
         duplicateIPCounts,
+        activeIPCounts,
         data: mappedData,
         supabaseServiceRoleReady: isServiceRoleKeyReady,
       });
@@ -4148,6 +4162,12 @@ async function startServer() {
   );
   app.post("/api/referral/claim", async (req, res) =>
     claimReferralReward(req, res),
+  );
+  app.post("/api/admin/reset-referral-claims", async (req, res) =>
+    resetAllReferralClaims(req, res),
+  );
+  app.post("/api/referral/reset-claims", async (req, res) =>
+    resetAllReferralClaims(req, res),
   );
 
   app.get("/api/ping", (req, res) => {

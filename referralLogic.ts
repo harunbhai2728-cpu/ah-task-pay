@@ -203,13 +203,11 @@ export async function getReferralStatus(req: any, res: any) {
                     let status = referralStatusMap.get(p.id) || dynamicStatusMap.get(p.id) || 'pending';
                     if (status === 'valid') {
                         validCount++;
-                        if (!isExpired && campaignStartDate && campaignEndDate) {
-                            const pTime = new Date(p.createdAt || new Date()).getTime();
-                            const sTime = new Date(campaignStartDate).getTime();
-                            const eTime = new Date(campaignEndDate).getTime();
-                            if (pTime >= sTime && pTime <= eTime) {
-                                campaignValidCount++;
-                            }
+                        const pTime = new Date(p.createdAt || new Date()).getTime();
+                        const sTime = campaignStartDate ? new Date(campaignStartDate).getTime() : 0;
+                        const eTime = campaignEndDate ? new Date(campaignEndDate).getTime() : Infinity;
+                        if (pTime >= sTime && pTime <= eTime) {
+                            campaignValidCount++;
                         }
                     } else {
                         pendingCount++;
@@ -424,5 +422,80 @@ export async function validateReferral(workerId: string) {
         }
     } catch (e) {
         console.error("Referral validation error:", e);
+    }
+}
+
+export async function resetAllReferralClaims(req: any, res: any) {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) return res.status(401).json({ error: 'No auth header' });
+        const token = authHeader.replace(/^Bearer /i, '');
+        let { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+        if (authErr || !user) {
+            try {
+                const jwtPayload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                if (jwtPayload && jwtPayload.sub) {
+                    user = { id: jwtPayload.sub, email: jwtPayload.email || '' } as any;
+                    authErr = null;
+                } else {
+                    return res.status(401).json({ error: 'Invalid token' });
+                }
+            } catch(e) {
+                return res.status(401).json({ error: 'Invalid token' });
+            }
+        }
+
+        // Verify Admin permission
+        const { data: profile } = await supabase.from('profiles').select('role, email').eq('id', user.id).maybeSingle();
+        const isMaster = user.email === 'ahtaskpay@gmail.com' || user.email === 'admin@taskpay.com' || profile?.email === 'ahtaskpay@gmail.com';
+        const isAdmin = profile?.role === 'admin' || isMaster;
+
+        if (!isAdmin) {
+            return res.status(403).json({ error: 'Forbidden: Admin access required to reset claims.' });
+        }
+
+        // 1. Reset target_1_claimed and target_2_claimed on all user profiles
+        const { error: profileResetErr } = await supabase
+            .from('profiles')
+            .update({ target_1_claimed: false, target_2_claimed: false })
+            .not('id', 'is', null);
+
+        if (profileResetErr) {
+            console.error("Error resetting profile claims with .not():", profileResetErr);
+            // Fallback attempt
+            const { error: fbErr } = await supabase
+                .from('profiles')
+                .update({ target_1_claimed: false, target_2_claimed: false })
+                .gt('created_at', '1970-01-01T00:00:00Z');
+            if (fbErr) {
+                console.error("Error resetting profile claims fallback:", fbErr);
+                return res.status(500).json({ error: "Failed to reset profile claims: " + fbErr.message });
+            }
+        }
+
+        // 2. Reset referral_campaigns table if present
+        try {
+            await supabase
+                .from('referral_campaigns')
+                .update({ target_20_claimed: false, target_50_claimed: false })
+                .not('id', 'is', null);
+        } catch (e) {
+            console.log("Note: referral_campaigns table reset skipped or not present:", e);
+        }
+
+        // 3. Delete records from referral_claims table if present
+        try {
+            await supabase
+                .from('referral_claims')
+                .delete()
+                .not('id', 'is', null);
+        } catch (e) {
+            console.log("Note: referral_claims table delete skipped or not present:", e);
+        }
+
+        return res.json({ success: true, message: 'All user referral campaign claims reset successfully.' });
+    } catch (e: any) {
+        console.error("Error in resetAllReferralClaims:", e);
+        return res.status(500).json({ error: e.message || 'Failed to reset referral claims.' });
     }
 }

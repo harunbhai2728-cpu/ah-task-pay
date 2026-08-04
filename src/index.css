@@ -17,16 +17,16 @@
 
 @layer base {
   html {
-    font-size: 70%; /* Significant scaling down to increase visual density / DPI */
+    font-size: 55%; /* Significant scaling down to increase visual density / DPI */
   }
   @media (min-width: 640px) {
     html {
-      font-size: 75%;
+      font-size: 60%;
     }
   }
   @media (min-width: 1024px) {
     html {
-      font-size: 80%;
+      font-size: 65%;
     }
   }
   body {
