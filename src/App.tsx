@@ -64,7 +64,7 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
   if (!user) return <Navigate to="/" />;
 
   if (profile?.account_status === 'deleted') {
-    const isByAdmin = profile.deleted_by === 'admin';
+    const isByAdmin = profile.deleted_by === 'admin' || (profile.deletion_reason && profile.deletion_reason.toLowerCase().includes('administrator'));
     const heading = isByAdmin ? 'Your account has been deleted by Admin' : 'Your account has been deleted by You';
     
     return (
@@ -95,12 +95,26 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
               Contact WhatsApp Support
             </a>
            <a
-               href="https://t.me/ahtaskpay"
+               href="https://t.me/ahtaskpay_owner"
                target="_blank"
                rel="noopener noreferrer"
               className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
             >
-              Join Telegram Support
+              Telegram Support
+            </a>
+           <a 
+              href="https://t.me/ahtaskpay" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
+            >
+              Telegram Channel
+            </a>
+           <a 
+              href="mailto:ahtaskpay@gmail.com" 
+              className="w-full inline-block py-4 bg-gray-600 text-white rounded-2xl font-black hover:bg-gray-700 transition-all uppercase tracking-widest text-sm shadow-lg shadow-gray-200 mt-2"
+            >
+              Email Support
             </a>
            <button
               onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
@@ -143,16 +157,30 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
               Contact WhatsApp Support
             </a>
            <a 
+              href="https://t.me/ahtaskpay_owner" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
+            >
+              Telegram Support
+            </a>
+           <a 
               href="https://t.me/ahtaskpay" 
               target="_blank" 
               rel="noopener noreferrer"
               className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
             >
-              Join Telegram Channel
+              Telegram Channel
+            </a>
+           <a 
+              href="mailto:ahtaskpay@gmail.com" 
+              className="w-full inline-block py-4 bg-gray-600 text-white rounded-2xl font-black hover:bg-gray-700 transition-all uppercase tracking-widest text-sm shadow-lg shadow-gray-200 mt-2"
+            >
+              Email Support
             </a>
            <button 
              onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
-             className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all uppercase tracking-widest text-sm"
+             className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all uppercase tracking-widest text-sm mt-4"
            >
              Log Out
            </button>

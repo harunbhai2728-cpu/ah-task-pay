@@ -43,6 +43,39 @@ async function startServer() {
   let hasSupabaseRedeemTables = false;
   let hasSupabaseSettingsTable = false;
 
+  
+  const syncSetting = async (key: string, value: string) => {
+    try {
+      const { data: existing } = await supabase
+        .from("system_settings")
+        .select("id")
+        .eq("setting_key", key)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from("system_settings")
+          .update({
+            setting_value: value,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("setting_key", key);
+      } else {
+        await supabase
+          .from("system_settings")
+          .insert([
+            {
+              setting_key: key,
+              setting_value: value,
+              updated_at: new Date().toISOString(),
+            },
+          ]);
+      }
+    } catch(err) {
+      console.error("Failed to sync setting", key, err);
+    }
+  };
+
   const getDataStore = () => {
     try {
       if (fs.existsSync(DATA_STORE_PATH)) {
@@ -95,10 +128,31 @@ async function startServer() {
         .from("system_settings")
         .select("id")
         .limit(1);
+
       if (!checkErr) {
         hasSupabaseSettingsTable = true;
         console.log("Supabase system_settings table is available.");
+        
+        // Re-hydrate store from system_settings
+        try {
+           const { data: extSnap } = await supabase.from("system_settings").select("setting_key, setting_value").in('setting_key', ['campaign_start_date', 'referral_domain_url', 'custom_banner_presets']);
+           if (extSnap && extSnap.length > 0) {
+              const store = getDataStore();
+              let changed = false;
+              extSnap.forEach((s: any) => {
+                 if (s.setting_key === 'campaign_start_date') { store.campaignStartDate = s.setting_value || null; changed = true; }
+                 if (s.setting_key === 'referral_domain_url') { store.referralDomainUrl = s.setting_value; changed = true; }
+                 if (s.setting_key === 'custom_banner_presets') { 
+                    try { store.customBannerPresets = JSON.parse(s.setting_value); changed = true; } catch(e){} 
+                 }
+              });
+              if (changed) saveDataStore(store);
+           }
+        } catch(e) {
+           console.error("Failed to re-hydrate store", e);
+        }
       } else {
+
         console.log(
           "Supabase system_settings table not found/available, using pure emulated fallback. Check message:",
           checkErr?.message,
@@ -429,16 +483,19 @@ async function startServer() {
             const store = getDataStore();
             store.referralDomainUrl = input.referralDomainUrl;
             saveDataStore(store);
+            await syncSetting("referral_domain_url", store.referralDomainUrl || "");
           }
           if (input.campaignStartDate !== undefined) {
             const store = getDataStore();
-            store.campaignStartDate = input.campaignStartDate;
+            store.campaignStartDate = input.campaignStartDate === "" ? null : input.campaignStartDate;
             saveDataStore(store);
+            await syncSetting("campaign_start_date", store.campaignStartDate || "");
           }
           if (input.customBannerPresets !== undefined) {
             const store = getDataStore();
             store.customBannerPresets = input.customBannerPresets;
             saveDataStore(store);
+            await syncSetting("custom_banner_presets", JSON.stringify(store.customBannerPresets || []));
           }
 
           const mappedUpdate: any = {};
@@ -1660,6 +1717,16 @@ async function startServer() {
         }
       }
 
+      if (table === "profiles" && args && args[0]) {
+        const pItems = Array.isArray(args[0]) ? args[0] : [args[0]];
+        for (const pItem of pItems) {
+          if (pItem && typeof pItem === "object") {
+            delete pItem.deleted_by;
+            delete pItem.uid;
+          }
+        }
+      }
+
       let queryBuilder = (supabase as any).from(table);
       if (method === "select")
         queryBuilder = queryBuilder.select(args ? args[0] : "*");
@@ -2640,11 +2707,12 @@ async function startServer() {
 
         if (search) {
           const cleanSearch = search.trim();
-          const isNum = !isNaN(Number(cleanSearch));
-          if (isNum) {
-            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phoneNumber.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,serialNumber.eq.${cleanSearch}`);
+          const cleanNum = Number(cleanSearch);
+          const isValidInt = !isNaN(cleanNum) && Number.isInteger(cleanNum) && cleanNum >= 0 && cleanNum <= 2147483647;
+          if (isValidInt) {
+            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,serialNumber.eq.${cleanNum}`);
           } else {
-            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phoneNumber.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+            usersQuery = usersQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
           }
         }
 
@@ -2946,7 +3014,13 @@ async function startServer() {
 
         if (search) {
           const cleanSearch = search.trim();
-          deletionsQuery = deletionsQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phoneNumber.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+          const cleanNum = Number(cleanSearch);
+          const isValidInt = !isNaN(cleanNum) && Number.isInteger(cleanNum) && cleanNum >= 0 && cleanNum <= 2147483647;
+          if (isValidInt) {
+            deletionsQuery = deletionsQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%,serialNumber.eq.${cleanNum}`);
+          } else {
+            deletionsQuery = deletionsQuery.or(`email.ilike.%${cleanSearch}%,username.ilike.%${cleanSearch}%,displayName.ilike.%${cleanSearch}%,phone.ilike.%${cleanSearch}%`);
+          }
         }
 
         deletionsQuery = deletionsQuery
@@ -2960,11 +3034,17 @@ async function startServer() {
         mappedData = (data || []).map((u) => ({ ...u, uid: u.id }));
       }
 
+
       const { data: configSnap } = await supabase
         .from("system_configuration")
         .select("*")
         .eq("id", 1)
         .maybeSingle();
+
+
+      
+
+
 
       const safeConfig = configSnap
         ? {

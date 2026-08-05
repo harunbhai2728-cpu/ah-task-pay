@@ -177,6 +177,9 @@ export async function getReferralStatus(req: any, res: any) {
                 const missingIds = referredUserIds.filter(id => !referralStatusMap.has(id));
                 const dynamicStatusMap = new Map();
                 
+                const { data: configDays } = await supabase.from('system_configuration').select('referral_validity_days').eq('id', 1).maybeSingle();
+                const validityDays = Number(configDays?.referral_validity_days ?? 30);
+
                 if (missingIds.length > 0) {
                     const { data: submissions } = await supabase
                         .from('submissions')
@@ -190,17 +193,46 @@ export async function getReferralStatus(req: any, res: any) {
                         dynamicStatusMap.set(id, status);
                         // Optional: auto-insert missing referral record to self-heal the DB
                         try {
+                            const expDate = new Date();
+                            expDate.setDate(expDate.getDate() + validityDays);
                             await supabase.from('referrals').insert({
                                 referrer_id: user.id,
                                 referred_user_id: id,
-                                status: status
+                                status: status,
+                                expiration_date: expDate.toISOString()
                             });
                         } catch (e) { /* ignore insert errors */ }
                     }
                 }
 
+                const nowTime = Date.now();
+
                 joinedUsers = referredProfiles.map(p => {
                     let status = referralStatusMap.get(p.id) || dynamicStatusMap.get(p.id) || 'pending';
+                    const expDateStr = referralExpiryMap.get(p.id);
+
+                    // Check if pending referral is expired
+                    if (status === 'pending') {
+                        let isRefExpired = false;
+                        if (expDateStr) {
+                            if (nowTime > new Date(expDateStr).getTime()) {
+                                isRefExpired = true;
+                            }
+                        } else if (p.createdAt) {
+                            const createdTime = new Date(p.createdAt).getTime();
+                            const validityMs = validityDays * 24 * 60 * 60 * 1000;
+                            if (nowTime > createdTime + validityMs) {
+                                isRefExpired = true;
+                            }
+                        }
+
+                        if (isRefExpired) {
+                            status = 'expired';
+                            // Self-heal DB status
+                            supabase.from('referrals').update({ status: 'expired' }).eq('referred_user_id', p.id).then().catch(() => {});
+                        }
+                    }
+
                     if (status === 'valid') {
                         validCount++;
                         const pTime = new Date(p.createdAt || new Date()).getTime();
@@ -209,7 +241,7 @@ export async function getReferralStatus(req: any, res: any) {
                         if (pTime >= sTime && pTime <= eTime) {
                             campaignValidCount++;
                         }
-                    } else {
+                    } else if (status === 'pending') {
                         pendingCount++;
                     }
                     
@@ -218,7 +250,7 @@ export async function getReferralStatus(req: any, res: any) {
                         name: p.displayName || p.username || 'User',
                         username: p.username || 'user',
                         status: status,
-                        expiration: referralExpiryMap.get(p.id) || null,
+                        expiration: expDateStr || null,
                         createdAt: p.createdAt || new Date().toISOString()
                     };
                 });

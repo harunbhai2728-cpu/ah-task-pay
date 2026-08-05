@@ -180,7 +180,7 @@ export function AdminPanel() {
     }
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'deleted', deleted_by: 'admin', deletion_reason: 'Account removed by Administrator.' }).eq('id', deleteUserConfirmUser.uid || deleteUserConfirmUser.id);
+      await adminDb.from('profiles').update({ account_status: 'deleted', deletion_reason: 'Account removed by Administrator.' }).eq('id', deleteUserConfirmUser.uid || deleteUserConfirmUser.id);
       setDeleteUserConfirmUser(null);
       setDeleteUserPassword('');
       setEditingUser(null);
@@ -195,27 +195,60 @@ export function AdminPanel() {
   };
 
   const handleApproveDeletion = async (userId: string) => {
+    if (!userId) return;
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'deleted', deleted_by: 'user' }).eq('id', userId);
+      const res = await adminDb.from('profiles').update({ account_status: 'deleted' }).eq('id', userId);
+      if (res && res.error) {
+        alert("Failed to approve deletion: " + res.error.message);
+      } else {
+        alert("Account deletion approved.");
+      }
       await fetchAdminData();
-    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+    } catch (e: any) { 
+      console.error(e); 
+      alert("Error: " + (e?.message || e));
+    } finally { 
+      setAdminActionLoading(false); 
+    }
   };
 
   const handleRejectDeletion = async (userId: string) => {
+    if (!userId) return;
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null, deleted_by: null }).eq('id', userId);
+      const res = await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null, isBlocked: false }).eq('id', userId);
+      if (res && res.error) {
+        alert("Failed to reject deletion: " + res.error.message);
+      } else {
+        alert("Deletion request rejected. Account restored to active.");
+      }
       await fetchAdminData();
-    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+    } catch (e: any) { 
+      console.error(e); 
+      alert("Error: " + (e?.message || e));
+    } finally { 
+      setAdminActionLoading(false); 
+    }
   };
 
   const handleRecoverAccount = async (userId: string) => {
+    if (!userId) return;
     setAdminActionLoading(true);
     try {
-      await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null, deleted_by: null, isBlocked: false }).eq('id', userId);
+      const res = await adminDb.from('profiles').update({ account_status: 'active', deletion_reason: null, isBlocked: false }).eq('id', userId);
+      if (res && res.error) {
+        alert("Failed to recover account: " + res.error.message);
+      } else {
+        alert("একাউন্ট সফলভাবে রিকোভার করা হয়েছে। (Account recovered successfully!)");
+      }
       await fetchAdminData();
-    } catch (e) { console.error(e); } finally { setAdminActionLoading(false); }
+    } catch (e: any) { 
+      console.error(e); 
+      alert("Error: " + (e?.message || e));
+    } finally { 
+      setAdminActionLoading(false); 
+    }
   };
 
   // Deposit Rules states
@@ -2552,8 +2585,8 @@ export function AdminPanel() {
                              </div>
                              <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 p-3 rounded-xl mb-4 italic">"{u.deletion_reason || 'No reason provided'}"</p>
                              <div className="flex gap-2">
-                                <button onClick={() => handleRejectDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs hover:bg-gray-300 dark:hover:bg-slate-600">Reject</button>
-                                <button onClick={() => handleApproveDeletion(u.id)} disabled={adminActionLoading} className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700">Approve Deletion</button>
+                                <button onClick={() => handleRejectDeletion(u.id || u.uid)} disabled={adminActionLoading} className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs hover:bg-gray-300 dark:hover:bg-slate-600">Reject</button>
+                                <button onClick={() => handleApproveDeletion(u.id || u.uid)} disabled={adminActionLoading} className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700">Approve Deletion</button>
                              </div>
                           </div>
                        ))
@@ -2606,7 +2639,7 @@ export function AdminPanel() {
                              {u.deletion_reason && (
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 px-2">Reason: {u.deletion_reason}</p>
                              )}
-                             <button onClick={() => handleRecoverAccount(u.id)} disabled={adminActionLoading} className="mt-4 w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
+                             <button onClick={() => handleRecoverAccount(u.id || u.uid)} disabled={adminActionLoading} className="mt-4 w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
                           </div>
                        ))
                     )}
@@ -3515,7 +3548,7 @@ export function AdminPanel() {
             </p>
             <input
               type="password"
-              placeholder="Admin Password (ah2781)"
+              placeholder="Enter delete password"
               value={deleteUserPassword}
               onChange={(e) => setDeleteUserPassword(e.target.value)}
               className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-slate-100"

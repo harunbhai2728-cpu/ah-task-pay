@@ -300,6 +300,15 @@ export function Layout() {
               WhatsApp Support
             </a>
             <a 
+              href="https://t.me/ahtaskpay_owner" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-full font-bold shadow-lg hover:bg-sky-600 transition-transform hover:scale-105"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Telegram Support
+            </a>
+            <a 
               href="https://t.me/ahtaskpay" 
               target="_blank" 
               rel="noopener noreferrer"
@@ -307,6 +316,11 @@ export function Layout() {
             >
               <MessageCircle className="w-5 h-5" />
               Join Telegram Channel
+            </a>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-gray-400 dark:text-slate-500 text-sm">
+            <a href="mailto:ahtaskpay@gmail.com" className="hover:underline">
+              Support Email : ahtaskpay@gmail.com
             </a>
           </div>
         </footer>

@@ -112,11 +112,6 @@ export function LandingPage({ defaultIsLogin = true }: { defaultIsLogin?: boolea
         // Update footprint on successful login
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-           const { data: profile } = await supabase.from('profiles').select('account_status').eq('id', user.id).single();
-           if (profile && profile.account_status === 'deleted') {
-              await supabase.auth.signOut();
-              throw new Error('This account has been permanently deleted.');
-           }
            await supabase.from('profiles').update({
              last_ip_address: ipAddress || null,
              device_fingerprint: visitorId || null
