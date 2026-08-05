@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { User, Lock, ShieldCheck, Key, ArrowLeft, CheckCircle2, AlertTriangle, X, Mail, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -119,13 +119,13 @@ export default function ProfileSettings() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Name Update */}
+        {/* Personal Details */}
         <section className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm space-y-6 transition-colors">
           <div className="flex items-center gap-3">
              <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded-xl text-blue-600 dark:text-blue-400">
                 <User className="w-6 h-6" />
              </div>
-             <h2 className="text-xl font-black text-gray-900 dark:text-slate-100 uppercase">Change Name</h2>
+             <h2 className="text-xl font-black text-gray-900 dark:text-slate-100 uppercase">Personal Details</h2>
           </div>
 
           <form onSubmit={handleUpdateName} className="space-y-4">
@@ -142,10 +142,51 @@ export default function ProfileSettings() {
                    />
                 </div>
              </div>
+
+             {/* Registered Email (Read-only) */}
+             <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                   <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Email Address</label>
+                   <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Read Only
+                   </span>
+                </div>
+                <div className="relative">
+                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
+                   <input 
+                      type="email"
+                      readOnly
+                      disabled
+                      value={profile?.email || user?.email || 'N/A'}
+                      className="w-full pl-12 pr-4 py-4 bg-gray-100/70 dark:bg-slate-800/80 border border-gray-200/60 dark:border-slate-700 rounded-2xl text-gray-500 dark:text-slate-400 font-medium cursor-not-allowed"
+                   />
+                </div>
+             </div>
+
+             {/* Phone Number (Read-only) */}
+             <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                   <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Phone Number</label>
+                   <span className="text-[10px] font-bold text-gray-400 dark:text-slate-500 uppercase flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Read Only
+                   </span>
+                </div>
+                <div className="relative">
+                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
+                   <input 
+                      type="text"
+                      readOnly
+                      disabled
+                      value={profile?.phone || 'Not provided'}
+                      className="w-full pl-12 pr-4 py-4 bg-gray-100/70 dark:bg-slate-800/80 border border-gray-200/60 dark:border-slate-700 rounded-2xl text-gray-500 dark:text-slate-400 font-medium cursor-not-allowed"
+                   />
+                </div>
+             </div>
+
              <motion.button
                 whileTap={{ scale: 0.98 }}
                 disabled={loading}
-                className="w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-gray-200 dark:shadow-none hover:bg-gray-800 dark:hover:bg-slate-200 disabled:opacity-50 transition-colors"
+                className="w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-gray-200 dark:shadow-none hover:bg-gray-800 dark:hover:bg-slate-200 disabled:opacity-50 transition-colors mt-2"
              >
                 {loading ? 'Updating...' : 'Save Name'}
              </motion.button>
