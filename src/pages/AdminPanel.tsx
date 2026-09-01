@@ -39,6 +39,7 @@ import { cn, formatCurrency } from '../lib/utils';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { compressImage } from '../lib/imageCompress';
 import toast from 'react-hot-toast';
 
 const createAdminDb = (supabaseClient: any) => {
@@ -3041,12 +3042,8 @@ export function AdminPanel() {
                                 const fileExt = file.name.split('.').pop();
                                 const fileName = `banner_${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
 
-                                const base64Data = await new Promise<string>((resolve, reject) => {
-                                  const reader = new FileReader();
-                                  reader.onload = () => resolve(reader.result as string);
-                                  reader.onerror = () => reject(new Error("Failed to read file"));
-                                  reader.readAsDataURL(file);
-                                });
+                                // Use centralized image compression logic for under 100KB (approx 0.1MB)
+                                const base64Data = await compressImage(file, 1920, 0.1);
 
                                 const { data: { session } } = await supabase.auth.getSession();
                                 const token = session?.access_token;
