@@ -709,18 +709,6 @@ export function AdminPanel() {
     }
   };
 
-  const handleDeleteTransaction = async (tx: Transaction) => {
-    if (!window.confirm("Are you sure you want to delete this transaction permanently?")) return;
-    const loadingToast = toast.loading('Deleting transaction...');
-    try {
-      await adminDb.from('transactions').delete().eq('id', tx.id);
-      setTransactions(prev => prev.filter(t => t.id !== tx.id));
-      toast.success("Transaction deleted successfully", { id: loadingToast });
-    } catch (err: any) {
-      toast.error(err.message || 'Error deleting transaction', { id: loadingToast });
-    }
-  };
-
   const handleApproveSubmission = async (sub: Submission) => {
     if (sub.status !== 'pending' || processingSubmissionId) return;
     setProcessingSubmissionId(sub.id);
@@ -1881,34 +1869,24 @@ export function AdminPanel() {
                        <p className="text-xs font-medium text-gray-500 dark:text-slate-400 transition-colors">T: {tx.transactionId}</p>
                     </td>
                     <td className="p-6">
-                      <div className="flex gap-2">
-                        {tx.status === 'pending' && (
-                          <>
-                            <button 
-                              onClick={() => handleApproveTransaction(tx)}
-                              disabled={adminActionLoading}
-                              className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
-                            >
-                               {adminActionLoading ? "..." : <CheckCircle2 className="w-5 h-5" />}
-                            </button>
-                            <button 
-                              onClick={() => handleRejectTransaction(tx)}
-                              disabled={adminActionLoading}
-                              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
-                            >
-                               {adminActionLoading ? "..." : <XCircle className="w-5 h-5" />}
-                            </button>
-                          </>
-                        )}
-                        <button 
-                          onClick={() => handleDeleteTransaction(tx)}
-                          disabled={adminActionLoading}
-                          className="p-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50"
-                          title="Delete Transaction"
-                        >
-                           <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
+                      {tx.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleApproveTransaction(tx)}
+                            disabled={adminActionLoading}
+                            className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                          >
+                             {adminActionLoading ? "..." : <CheckCircle2 className="w-5 h-5" />}
+                          </button>
+                          <button 
+                            onClick={() => handleRejectTransaction(tx)}
+                            disabled={adminActionLoading}
+                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+                          >
+                             {adminActionLoading ? "..." : <XCircle className="w-5 h-5" />}
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
