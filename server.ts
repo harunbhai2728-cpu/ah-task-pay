@@ -23,6 +23,7 @@ async function startServer() {
     res.json({ status: "ok", message: "Server is awake" });
   });
 
+
   const activeProxyLocks = new Set<string>();
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -215,6 +216,64 @@ async function startServer() {
     }
   });
 
+  // Public endpoint for Landing Page Stats
+  app.get("/api/landing/stats", async (req, res) => {
+    try {
+      const { data: config } = await supabase.from("system_configuration").select("*").eq("id", 1).maybeSingle();
+      
+      const store = getDataStore();
+      const statsMode = store?.statsMode || "realtime";
+      
+      if (statsMode === "manual") {
+        return res.json({
+          totalUsers: store?.manualTotalUsers || 0,
+          totalJobs: store?.manualTotalJobs || 0,
+          completedTasks: store?.manualCompletedTasks || 0,
+          totalWithdraw: store?.manualTotalWithdraw || 0,
+        });
+      }
+      
+      // Realtime stats
+      const [
+        { count: totalUsers },
+        { count: totalJobs },
+        { count: completedTasks },
+        { data: withdrawals }
+      ] = await Promise.all([
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("jobs").select("*", { count: "exact", head: true }),
+        supabase.from("submissions").select("*", { count: "exact", head: true }).eq("status", "approved"),
+        supabase.from("transactions").select("amount").eq("type", "withdraw").in("status", ["approved", "completed"])
+      ]);
+
+      const totalWithdraw = Math.floor(withdrawals?.reduce((sum, w) => sum + (w.amount || 0), 0) || 0);
+
+      res.json({
+        totalUsers: totalUsers || 0,
+        totalJobs: totalJobs || 0,
+        completedTasks: completedTasks || 0,
+        totalWithdraw: totalWithdraw,
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Public endpoint for Landing Page Top Jobs
+  app.get("/api/landing/top-jobs", async (req, res) => {
+    try {
+      const { data: jobs } = await supabase
+        .from("jobs")
+        .select("id, title, pricePerWork, maxWorkers, completedCount")
+        .eq("status", "open")
+        .order("pricePerWork", { ascending: false })
+        .limit(6);
+        
+      res.json(jobs || []);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to fetch top jobs" });
+    }
+  });
   // Smart Optimization: Auto-delete images from database 24 hours after approve/reject to save database bandwidth
   app.get("/api/clear-db-images", async (req, res) => {
     try {
@@ -478,6 +537,11 @@ async function startServer() {
                 referralDomainUrl: savedDomain,
                 campaignStartDate: store.campaignStartDate || null,
                 customBannerPresets: store.customBannerPresets || [],
+            statsMode: store.statsMode || 'realtime',
+            manualTotalUsers: store.manualTotalUsers || 0,
+            manualTotalJobs: store.manualTotalJobs || 0,
+            manualCompletedTasks: store.manualCompletedTasks || 0,
+            manualTotalWithdraw: store.manualTotalWithdraw || 0,
               },
             });
           }
@@ -504,6 +568,15 @@ async function startServer() {
             await syncSetting("custom_banner_presets", JSON.stringify(store.customBannerPresets || []));
           }
 
+          if (input.statsMode !== undefined) {
+            const store = getDataStore();
+            store.statsMode = input.statsMode;
+            store.manualTotalUsers = input.manualTotalUsers || 0;
+            store.manualTotalJobs = input.manualTotalJobs || 0;
+            store.manualCompletedTasks = input.manualCompletedTasks || 0;
+            store.manualTotalWithdraw = input.manualTotalWithdraw || 0;
+            saveDataStore(store);
+          }
           const mappedUpdate: any = {};
           if (input.notice !== undefined)
             mappedUpdate.global_notice = input.notice;
@@ -3078,6 +3151,11 @@ async function startServer() {
             campaignEndDate: configSnap.campaign_end_date || null,
             campaignStartDate: store.campaignStartDate || null,
             customBannerPresets: store.customBannerPresets || [],
+            statsMode: store.statsMode || 'realtime',
+            manualTotalUsers: store.manualTotalUsers || 0,
+            manualTotalJobs: store.manualTotalJobs || 0,
+            manualCompletedTasks: store.manualCompletedTasks || 0,
+            manualTotalWithdraw: store.manualTotalWithdraw || 0,
             target1Referrals: configSnap.target_1_referrals || 0,
             target1Reward: configSnap.target_1_reward || 0,
             target2Referrals: configSnap.target_2_referrals || 0,

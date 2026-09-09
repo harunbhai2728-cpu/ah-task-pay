@@ -415,7 +415,12 @@ export function AdminPanel() {
     transferDepositToEarningFee: 10,
     loginTitle: 'Welcome to TaskPay',
     loginBannerUrl: '',
-    customBannerPresets: [] as string[]
+    customBannerPresets: [] as string[],
+    statsMode: 'realtime',
+    manualTotalUsers: 0,
+    manualTotalJobs: 0,
+    manualCompletedTasks: 0,
+    manualTotalWithdraw: 0
   });
 
   const getUserSerial = (uid: string) => {
@@ -701,6 +706,18 @@ export function AdminPanel() {
       setTransactions(previousTransactions);
       setUsers(previousUsers);
       toast.error(err.message || 'Error rejecting transaction', { id: loadingToast });
+    }
+  };
+
+  const handleDeleteTransaction = async (tx: Transaction) => {
+    if (!window.confirm("Are you sure you want to delete this transaction permanently?")) return;
+    const loadingToast = toast.loading('Deleting transaction...');
+    try {
+      await adminDb.from('transactions').delete().eq('id', tx.id);
+      setTransactions(prev => prev.filter(t => t.id !== tx.id));
+      toast.success("Transaction deleted successfully", { id: loadingToast });
+    } catch (err: any) {
+      toast.error(err.message || 'Error deleting transaction', { id: loadingToast });
     }
   };
 
@@ -1864,24 +1881,34 @@ export function AdminPanel() {
                        <p className="text-xs font-medium text-gray-500 dark:text-slate-400 transition-colors">T: {tx.transactionId}</p>
                     </td>
                     <td className="p-6">
-                      {tx.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => handleApproveTransaction(tx)}
-                            disabled={adminActionLoading}
-                            className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
-                          >
-                             {adminActionLoading ? "..." : <CheckCircle2 className="w-5 h-5" />}
-                          </button>
-                          <button 
-                            onClick={() => handleRejectTransaction(tx)}
-                            disabled={adminActionLoading}
-                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
-                          >
-                             {adminActionLoading ? "..." : <XCircle className="w-5 h-5" />}
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex gap-2">
+                        {tx.status === 'pending' && (
+                          <>
+                            <button 
+                              onClick={() => handleApproveTransaction(tx)}
+                              disabled={adminActionLoading}
+                              className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                            >
+                               {adminActionLoading ? "..." : <CheckCircle2 className="w-5 h-5" />}
+                            </button>
+                            <button 
+                              onClick={() => handleRejectTransaction(tx)}
+                              disabled={adminActionLoading}
+                              className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+                            >
+                               {adminActionLoading ? "..." : <XCircle className="w-5 h-5" />}
+                            </button>
+                          </>
+                        )}
+                        <button 
+                          onClick={() => handleDeleteTransaction(tx)}
+                          disabled={adminActionLoading}
+                          className="p-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50"
+                          title="Delete Transaction"
+                        >
+                           <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -3131,6 +3158,73 @@ export function AdminPanel() {
                         )}
                      </div>
                   </div>
+               </div>
+
+               <div className="md:col-span-2 pt-4 border-t border-gray-100 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-black text-gray-900 dark:text-slate-100 uppercase tracking-widest">Landing Page Stats Control</h4>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 font-bold mt-1">Control how stats are displayed on the landing page</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4 p-1.5 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({...config, statsMode: 'realtime'})}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${config.statsMode !== 'manual' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'}`}
+                    >
+                      Real-time
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({...config, statsMode: 'manual'})}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${config.statsMode === 'manual' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'}`}
+                    >
+                      Manual Override
+                    </button>
+                  </div>
+
+                  {config.statsMode === 'manual' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-gray-50 dark:bg-slate-700/20 p-6 rounded-[2rem] border border-gray-100 dark:border-slate-700/50">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Users</label>
+                        <input 
+                          type="number"
+                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          value={config.manualTotalUsers || 0}
+                          onChange={e => setConfig({...config, manualTotalUsers: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Jobs</label>
+                        <input 
+                          type="number"
+                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          value={config.manualTotalJobs || 0}
+                          onChange={e => setConfig({...config, manualTotalJobs: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Completed Tasks</label>
+                        <input 
+                          type="number"
+                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          value={config.manualCompletedTasks || 0}
+                          onChange={e => setConfig({...config, manualCompletedTasks: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Withdraw</label>
+                        <input 
+                          type="number"
+                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          value={config.manualTotalWithdraw || 0}
+                          onChange={e => setConfig({...config, manualTotalWithdraw: Number(e.target.value)})}
+                        />
+                      </div>
+                    </div>
+                  )}
                </div>
 
                <div className="md:col-span-2 pt-4 space-y-4">
