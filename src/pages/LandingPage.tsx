@@ -13,6 +13,7 @@ function AnimatedNumber({ value }: { value: number }) {
   useEffect(() => {
     if (isInView) {
       let startTime: number;
+      let animationFrameId: number;
       const duration = 2000;
       
       const animate = (time: number) => {
@@ -22,12 +23,14 @@ function AnimatedNumber({ value }: { value: number }) {
         setCount(Math.floor(easeOut * value));
         
         if (progress < 1) {
-          requestAnimationFrame(animate);
+          animationFrameId = requestAnimationFrame(animate);
         } else {
           setCount(value);
         }
       };
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
+      
+      return () => cancelAnimationFrame(animationFrameId);
     }
   }, [isInView, value]);
 
