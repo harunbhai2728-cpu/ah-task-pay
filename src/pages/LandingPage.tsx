@@ -7,34 +7,60 @@ import { BrandLogo } from '../components/BrandLogo';
 
 function AnimatedNumber({ value }: { value: number }) {
   const [count, setCount] = useState(0);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "100px 0px 50px 0px" });
+  const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
-    if (isInView) {
-      let startTime: number;
+    if (value <= 0) {
+      setCount(0);
+      return;
+    }
+
+    const startAnimation = () => {
+      if (hasAnimatedRef.current) {
+        setCount(value);
+        return;
+      }
+      hasAnimatedRef.current = true;
+
+      let startTime: number | null = null;
       let animationFrameId: number;
-      const duration = 2000;
-      
+      const duration = 1800;
+
       const animate = (time: number) => {
         if (!startTime) startTime = time;
         const progress = Math.min((time - startTime) / duration, 1);
         const easeOut = 1 - Math.pow(1 - progress, 3);
-        setCount(Math.floor(easeOut * value));
-        
+        const nextValue = Math.floor(easeOut * value);
+
         if (progress < 1) {
+          setCount(nextValue);
           animationFrameId = requestAnimationFrame(animate);
         } else {
           setCount(value);
         }
       };
+
       animationFrameId = requestAnimationFrame(animate);
-      
       return () => cancelAnimationFrame(animationFrameId);
+    };
+
+    if (isInView) {
+      return startAnimation();
+    } else {
+      const fallbackTimer = setTimeout(() => {
+        startAnimation();
+      }, 1200);
+      return () => clearTimeout(fallbackTimer);
     }
   }, [isInView, value]);
 
-  return <span ref={ref}>{count.toLocaleString()}{value > 1000 ? '+' : ''}</span>;
+  return (
+    <span ref={ref} className="inline-block tabular-nums">
+      {count.toLocaleString()}
+    </span>
+  );
 }
 
 export function LandingPage() {
@@ -48,14 +74,33 @@ export function LandingPage() {
     // Fetch Stats
     fetch('/api/landing/stats')
       .then(res => res.json())
-      .then(data => setStats(data))
+      .then(data => {
+        if (data && typeof data === 'object') {
+          setStats({
+            totalUsers: Number(data.totalUsers) || 0,
+            totalJobs: Number(data.totalJobs) || 0,
+            completedTasks: Number(data.completedTasks) || 0,
+            totalWithdraw: Number(data.totalWithdraw) || 0
+          });
+        }
+      })
       .catch(console.error);
       
-    // Fetch Top Jobs
-    fetch('/api/landing/top-jobs')
-      .then(res => res.json())
-      .then(data => setTopJobs(data))
-      .catch(console.error);
+    // Fetch Top Jobs with real-time refresh
+    const loadTopJobs = () => {
+      fetch(`/api/landing/top-jobs?t=${Date.now()}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTopJobs(data);
+          }
+        })
+        .catch(console.error);
+    };
+
+    loadTopJobs();
+    const interval = setInterval(loadTopJobs, 15000); // 15s real-time refresh
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -346,8 +391,15 @@ export function LandingPage() {
         <section className="w-full max-w-7xl mx-auto py-20 px-6 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="flex h-2.5 w-2.5 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Live Tasks</span>
+              </div>
               <h2 className="text-4xl font-black text-gray-900 dark:text-slate-100 tracking-tight uppercase">Top Live Opportunities</h2>
-              <p className="text-gray-500 dark:text-slate-400 font-medium mt-2">Complete these high-paying jobs before they run out!</p>
+              <p className="text-gray-500 dark:text-slate-400 font-medium mt-1">Complete these high-paying jobs before slots run out!</p>
             </div>
             <Link to="/register" className="flex items-center gap-2 text-primary-600 dark:text-primary-400 font-black uppercase tracking-widest text-sm hover:opacity-80 transition-opacity">
               View All Jobs <ArrowRight className="w-4 h-4" />
@@ -356,7 +408,12 @@ export function LandingPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {topJobs.map((job, idx) => {
-               const progress = Math.min((job.completedCount / job.maxWorkers) * 100, 100);
+               const totalSlots = job.totalSlots || job.maxWorkers || 1;
+               const filledSlots = job.filledSlots !== undefined ? job.filledSlots : (job.completedCount || 0);
+               const availableSlots = job.availableSlots !== undefined ? job.availableSlots : Math.max(0, totalSlots - filledSlots);
+               const progress = Math.min(Math.round((filledSlots / totalSlots) * 100), 100);
+               const isFull = job.isFull || availableSlots <= 0;
+
                return (
                  <motion.div 
                    key={job.id}
@@ -364,30 +421,48 @@ export function LandingPage() {
                    whileInView={{ opacity: 1, y: 0 }}
                    viewport={{ once: true }}
                    transition={{ delay: idx * 0.1 }}
-                   className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:border-primary-200 dark:hover:border-primary-800 transition-all flex flex-col justify-between"
+                   className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:border-primary-200 dark:hover:border-primary-800 transition-all flex flex-col justify-between group"
                  >
                    <div>
                      <div className="flex justify-between items-start gap-4 mb-4">
-                       <h3 className="font-bold text-gray-900 dark:text-white line-clamp-2 leading-tight">{job.title}</h3>
-                       <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-xl font-black text-sm whitespace-nowrap">
+                       <h3 className="font-bold text-gray-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                         {job.title}
+                       </h3>
+                       <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-3.5 py-1.5 rounded-xl font-black text-base whitespace-nowrap shadow-sm border border-emerald-100 dark:border-emerald-800/40">
                          {job.pricePerWork} ৳
                        </div>
                      </div>
-                     <div className="space-y-2 mb-6">
-                       <div className="flex justify-between text-xs font-bold text-gray-500 dark:text-slate-400">
+
+                     {/* Progress Bar */}
+                     <div className="space-y-2 mb-6 mt-6">
+                       <div className="flex justify-between items-center text-xs font-bold text-gray-500 dark:text-slate-400">
                          <span>Progress</span>
-                         <span>{job.completedCount} / {job.maxWorkers}</span>
+                         <span className="font-extrabold text-primary-600 dark:text-primary-400">{progress}% Filled</span>
                        </div>
-                       <div className="w-full bg-gray-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                         <div className="bg-primary-500 h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
+                       <div className="w-full bg-gray-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                         <div 
+                           className={`h-full rounded-full transition-all duration-1000 ${
+                             isFull 
+                               ? 'bg-rose-500' 
+                               : progress > 75 
+                                 ? 'bg-amber-500' 
+                                 : 'bg-primary-500'
+                           }`} 
+                           style={{ width: `${progress}%` }} 
+                         />
                        </div>
                      </div>
                    </div>
+
                    <Link 
                      to="/login"
-                     className="w-full py-3 bg-gray-50 hover:bg-primary-50 dark:bg-slate-700 dark:hover:bg-primary-900/20 text-gray-900 dark:text-white text-center rounded-xl font-black uppercase tracking-wider text-xs transition-colors border border-gray-200 dark:border-slate-600 hover:border-primary-200 dark:hover:border-primary-700 hover:text-primary-600 dark:hover:text-primary-400"
+                     className={`w-full py-3 text-center rounded-xl font-black uppercase tracking-wider text-xs transition-colors border ${
+                       isFull
+                         ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 border-gray-200 dark:border-slate-600 cursor-not-allowed'
+                         : 'bg-gray-50 hover:bg-primary-50 dark:bg-slate-700 dark:hover:bg-primary-900/20 text-gray-900 dark:text-white border-gray-200 dark:border-slate-600 hover:border-primary-200 dark:hover:border-primary-700 hover:text-primary-600 dark:hover:text-primary-400'
+                     }`}
                    >
-                     Apply Now
+                     {isFull ? 'Slot Full' : 'Apply Now'}
                    </Link>
                  </motion.div>
                );
@@ -406,8 +481,8 @@ export function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
            <FeatureCard 
              icon={<CreditCard className="w-10 h-10 text-primary-600 dark:text-primary-400" />}
-             title="Bkash & Nagad"
-             description="Instant withdrawal to bKash and Nagad with minimum 20 BDT limit."
+             title="bKash, Nagad & Recharge"
+             description="Instant withdrawal to bKash, Nagad, and Mobile Recharge with lowest limits."
            />
            <FeatureCard 
              icon={<Users className="w-10 h-10 text-blue-600 dark:text-blue-400" />}

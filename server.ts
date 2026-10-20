@@ -262,15 +262,93 @@ async function startServer() {
   // Public endpoint for Landing Page Top Jobs
   app.get("/api/landing/top-jobs", async (req, res) => {
     try {
-      const { data: jobs } = await supabase
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+      const { data: rawJobs, error } = await supabase
         .from("jobs")
-        .select("id, title, pricePerWork, maxWorkers, completedCount")
+        .select("*")
         .eq("status", "open")
-        .order("pricePerWork", { ascending: false })
-        .limit(6);
-        
-      res.json(jobs || []);
+        .order("reward", { ascending: false })
+        .limit(18);
+
+      if (error) throw error;
+
+      const jobIds = (rawJobs || []).map((j: any) => j.id);
+      let pendingMap = new Map<string, number>();
+      let approvedMap = new Map<string, number>();
+
+      if (jobIds.length > 0) {
+        const { data: activeSubs } = await supabase
+          .from("submissions")
+          .select("job_id, status")
+          .in("status", ["pending", "approved"])
+          .in("job_id", jobIds);
+
+        if (activeSubs) {
+          for (const sub of activeSubs) {
+            const jId = sub.job_id;
+            if (sub.status === "pending") {
+              pendingMap.set(jId, (pendingMap.get(jId) || 0) + 1);
+            } else if (sub.status === "approved") {
+              approvedMap.set(jId, (approvedMap.get(jId) || 0) + 1);
+            }
+          }
+        }
+      }
+
+      const formattedJobs = (rawJobs || []).map((j: any) => {
+        let extra: any = {};
+        try {
+          if (j.category && (j.category.startsWith("{") || j.category.startsWith("["))) {
+            extra = JSON.parse(j.category);
+          }
+        } catch (e) {
+          extra = {};
+        }
+
+        const dynamicPending = pendingMap.get(j.id) || 0;
+        const dynamicApproved = approvedMap.get(j.id) || 0;
+        const fallbackFilled = Number(j.slots_filled) || Number(extra.completedCount) || Number(j.completedCount) || 0;
+        const filledCount = (dynamicApproved + dynamicPending > 0)
+          ? (dynamicApproved + dynamicPending)
+          : fallbackFilled;
+
+        const totalSlots = Number(j.slots) || Number(extra.maxWorkers) || Number(j.maxWorkers) || 1;
+        const pricePerWork = Number(j.reward) || Number(extra.pricePerWork) || Number(j.pricePerWork) || 0;
+        const availableSlots = Math.max(0, totalSlots - filledCount);
+        const isFull = filledCount >= totalSlots;
+
+        return {
+          id: j.id,
+          title: j.title,
+          description: j.description || "",
+          thumbnail: j.thumbnail || extra.thumbnail || "",
+          pricePerWork: pricePerWork,
+          reward: pricePerWork,
+          maxWorkers: totalSlots,
+          totalSlots: totalSlots,
+          completedCount: filledCount,
+          filledSlots: filledCount,
+          availableSlots: availableSlots,
+          emptySlots: availableSlots,
+          pendingCount: dynamicPending,
+          approvedCount: dynamicApproved || fallbackFilled,
+          isFull: isFull,
+          autoApprove: j.autoApprove ?? extra.autoApprove ?? false,
+          createdAt: j.created_at || extra.createdAt,
+        };
+      });
+
+      // Sort: Jobs with open/available slots first, then by highest reward/pricePerWork
+      formattedJobs.sort((a, b) => {
+        if (!a.isFull && b.isFull) return -1;
+        if (a.isFull && !b.isFull) return 1;
+        return b.pricePerWork - a.pricePerWork;
+      });
+
+      res.json(formattedJobs.slice(0, 6));
     } catch (err) {
+      console.error("Failed to fetch top jobs:", err);
       res.status(500).json({ error: "Failed to fetch top jobs" });
     }
   });

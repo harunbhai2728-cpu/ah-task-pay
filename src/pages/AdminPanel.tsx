@@ -1544,13 +1544,16 @@ export function AdminPanel() {
     <div className="space-y-8 pb-12">
       <header className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-xl shadow-gray-50 dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden transition-colors">
         <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 dark:bg-red-900/10 rounded-full -translate-y-1/2 translate-x-1/2 opacity-20" />
-        <div className="flex items-center gap-5 relative z-10">
+        <div className="flex flex-wrap items-center gap-5 relative z-10">
           <div className="bg-red-600 p-4 rounded-3xl text-white shadow-xl shadow-red-100 dark:shadow-none">
             <Shield className="w-8 h-8" />
           </div>
           <div>
             <h1 className="text-3xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tighter">System Authority</h1>
             <p className="text-gray-400 dark:text-slate-500 font-bold text-xs tracking-widest uppercase italic">Master Control Hub</p>
+          </div>
+          <div className="hidden sm:block ml-2 border-l border-gray-200 dark:border-slate-700 pl-4">
+            <BrandLogo size="sm" />
           </div>
         </div>
         <div className="flex gap-4 relative z-10">
@@ -2701,6 +2704,14 @@ export function AdminPanel() {
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
                       </div>
                       <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Nagad Enabled</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <div className="relative">
+                        <input type="checkbox" className="sr-only peer" checked={config.withdrawRechargeEnabled !== false} onChange={e => setConfig({...config, withdrawRechargeEnabled: e.target.checked})} />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-sky-500"></div>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Recharge Enabled</span>
                     </label>
                   </div>
                </div>

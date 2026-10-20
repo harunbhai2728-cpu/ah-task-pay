@@ -81,7 +81,7 @@ export interface Submission {
 
 export type TransactionType = 'deposit' | 'withdrawal' | 'payment' | 'refund' | 'bonus';
 export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'rejected' | 'approved';
-export type PaymentMethod = 'bKash' | 'Nagad';
+export type PaymentMethod = 'bKash' | 'Nagad' | 'Recharge' | 'Mobile Recharge';
 
 export interface Transaction {
   id: string;
