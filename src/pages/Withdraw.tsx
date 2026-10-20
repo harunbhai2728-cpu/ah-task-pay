@@ -9,15 +9,13 @@ import {
   Zap,
   Clock,
   AlertCircle,
-  Info,
-  Check
+  Info
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Transaction } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { format } from 'date-fns';
-import { BkashLogo, NagadLogo, RechargeLogo, PaymentMethodLogo } from '../components/PaymentMethodLogos';
 
 export function Withdraw() {
   const { profile, user, systemConfig, refreshProfile } = useAuth();
@@ -49,7 +47,7 @@ export function Withdraw() {
   
   const [formData, setFormData] = useState({
     amount: '',
-    method: 'bKash' as 'bKash' | 'Nagad' | 'Mobile Recharge',
+    method: 'bKash' as 'bKash' | 'Nagad',
     phone: '',
   });
   
@@ -219,110 +217,44 @@ export function Withdraw() {
               </div>
 
               <div className="space-y-6">
-                 {/* Payment Method Selector Cards with Authentic Logos */}
-                 <div className="space-y-3">
-                   <label className="text-xs font-black text-gray-500 dark:text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                     <span>উইথড্র মেথড সিলেক্ট করুন (Payment Method)</span>
-                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">● Active Gateway</span>
-                   </label>
-
-                   {/* Gateways strictly side-by-side (পাশাপাশি) on all screens */}
-                   <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                     {/* bKash */}
-                     {systemConfig?.withdrawBkashEnabled !== false && (
-                       <button
-                         type="button"
-                         onClick={() => setFormData({ ...formData, method: 'bKash' })}
-                         className={cn(
-                           "p-2 sm:p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1.5 sm:gap-2 relative overflow-hidden group cursor-pointer",
-                           formData.method === 'bKash'
-                             ? "border-[#E2136E] bg-pink-50/90 dark:bg-pink-950/30 shadow-md shadow-[#E2136E]/20 ring-2 ring-[#E2136E]/20 scale-[1.02]"
-                             : "border-gray-200 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40 hover:border-pink-300 dark:hover:border-pink-900/40 opacity-85 hover:opacity-100"
-                         )}
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">Payment Method</label>
+                       <select 
+                         className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-orange-50 dark:focus:ring-orange-950/20 transition-all dark:text-white"
+                         value={formData.method}
+                         onChange={e => setFormData({...formData, method: e.target.value as any})}
                        >
-                         {formData.method === 'bKash' && (
-                           <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center shadow-sm">
-                             <Check className="w-2.5 h-2.5 stroke-[3]" />
-                           </div>
-                         )}
-                         <BkashLogo size="md" showLabel={true} labelPosition="bottom" />
-                       </button>
-                     )}
-
-                     {/* Nagad */}
-                     {systemConfig?.withdrawNagadEnabled !== false && (
-                       <button
-                         type="button"
-                         onClick={() => setFormData({ ...formData, method: 'Nagad' })}
-                         className={cn(
-                           "p-2 sm:p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1.5 sm:gap-2 relative overflow-hidden group cursor-pointer",
-                           formData.method === 'Nagad'
-                             ? "border-[#F15A24] bg-orange-50/90 dark:bg-orange-950/30 shadow-md shadow-[#F15A24]/20 ring-2 ring-[#F15A24]/20 scale-[1.02]"
-                             : "border-gray-200 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40 hover:border-orange-300 dark:hover:border-orange-900/40 opacity-85 hover:opacity-100"
-                         )}
-                       >
-                         {formData.method === 'Nagad' && (
-                           <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-4 h-4 rounded-full bg-[#F15A24] text-white flex items-center justify-center shadow-sm">
-                             <Check className="w-2.5 h-2.5 stroke-[3]" />
-                           </div>
-                         )}
-                         <NagadLogo size="md" showLabel={true} labelPosition="bottom" />
-                       </button>
-                     )}
-
-                     {/* Mobile Recharge */}
-                     <button
-                       type="button"
-                       onClick={() => setFormData({ ...formData, method: 'Mobile Recharge' })}
-                       className={cn(
-                         "p-2 sm:p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1.5 sm:gap-2 relative overflow-hidden group cursor-pointer",
-                         formData.method === 'Mobile Recharge'
-                           ? "border-[#0284C7] bg-sky-50/90 dark:bg-sky-950/30 shadow-md shadow-[#0284C7]/20 ring-2 ring-[#0284C7]/20 scale-[1.02]"
-                           : "border-gray-200 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40 hover:border-sky-300 dark:hover:border-sky-900/40 opacity-85 hover:opacity-100"
-                       )}
-                     >
-                       {formData.method === 'Mobile Recharge' && (
-                         <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-4 h-4 rounded-full bg-[#0284C7] text-white flex items-center justify-center shadow-sm">
-                           <Check className="w-2.5 h-2.5 stroke-[3]" />
-                         </div>
-                       )}
-                       <RechargeLogo size="md" showLabel={true} labelPosition="bottom" />
-                     </button>
-                   </div>
-                 </div>
-
-                 {/* Amount Input */}
-                 <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">
-                        উইথড্র এমাউন্ট (Amount - Min ৳{minWithdraw})
-                      </label>
-                      <span className="text-[10px] font-bold text-gray-400">Available: ৳{profile?.earningBalance || 0}</span>
+                          {systemConfig?.withdrawBkashEnabled !== false && <option value="bKash" className="dark:bg-slate-800">bKash</option>}
+                          {systemConfig?.withdrawNagadEnabled !== false && <option value="Nagad" className="dark:bg-slate-800">Nagad</option>}
+                          {(systemConfig?.withdrawBkashEnabled === false && systemConfig?.withdrawNagadEnabled === false) && (
+                            <option value="" disabled className="dark:bg-slate-800">No payment methods</option>
+                          )}
+                       </select>
                     </div>
-                    <div className="relative">
-                       <input 
-                         type="number" 
-                         required
-                         min={minWithdraw}
-                         placeholder="0.00"
-                         className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-orange-50 dark:focus:ring-orange-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white"
-                         value={formData.amount}
-                         onChange={e => setFormData({...formData, amount: e.target.value})}
-                       />
-                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-gray-400 dark:text-slate-500">৳</span>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">Amount (Min ৳{minWithdraw})</label>
+                       <div className="relative">
+                          <input 
+                            type="number" 
+                            required
+                            min={minWithdraw}
+                            placeholder="0.00"
+                            className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-orange-50 dark:focus:ring-orange-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white"
+                            value={formData.amount}
+                            onChange={e => setFormData({...formData, amount: e.target.value})}
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 dark:text-slate-500">৳</span>
+                       </div>
                     </div>
                  </div>
 
-                 {formData.amount && Number(formData.amount) >= minWithdraw && (
+                 {formData.amount && Number(formData.amount) >= 20 && (
                    <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-100 dark:border-orange-900/50 space-y-2 transition-colors"
                    >
-                      <div className="flex justify-between items-center text-xs">
-                         <span className="text-gray-500 dark:text-slate-400 font-bold">Selected Method:</span>
-                         <span className="font-black text-gray-900 dark:text-slate-100">{formData.method}</span>
-                      </div>
                       <div className="flex justify-between items-center text-xs">
                          <span className="text-gray-500 dark:text-slate-400 font-bold">Requested Amount:</span>
                          <span className="font-black text-gray-900 dark:text-slate-100">{formatCurrency(Number(formData.amount))}</span>
@@ -339,33 +271,16 @@ export function Withdraw() {
                    </motion.div>
                  )}
 
-                 {/* Phone Number Input */}
                  <div className="space-y-2">
-                   <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
-                     <span>
-                       {formData.method === 'bKash' 
-                         ? 'বিকাশ পার্সোনাল নম্বর (bKash Number)' 
-                         : formData.method === 'Nagad' 
-                           ? 'নগদ পার্সোনাল নম্বর (Nagad Number)' 
-                           : 'মোবাইল রিচার্জ নম্বর (Any BD SIM)'}
-                     </span>
-                     <span className="text-[10px] text-gray-400 font-medium">11 Digits (01xxxxxxxxx)</span>
-                   </label>
+                   <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">Recipient Mobile Number</label>
                    <input 
                      type="text" 
                      required
                      placeholder="01xxxxxxxxx"
-                     pattern="^01[3-9][0-9]{8}$"
-                     title="11 digit Bangladeshi mobile number (01xxxxxxxxx)"
                      className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-orange-50 dark:focus:ring-orange-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white"
                      value={formData.phone}
                      onChange={e => setFormData({...formData, phone: e.target.value})}
                    />
-                   {formData.method === 'Mobile Recharge' && (
-                     <p className="text-[11px] font-medium text-sky-600 dark:text-sky-400 pl-1">
-                       সাপোর্টেড অপারেটর: Grameenphone, Robi, Banglalink, Airtel, Teletalk
-                     </p>
-                   )}
                  </div>
               </div>
 
@@ -414,11 +329,18 @@ export function Withdraw() {
                 transactions.map((tx) => (
                   <div key={tx.id} className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:shadow-xl dark:hover:shadow-none transition-all">
                     <div className="flex items-center gap-4">
-                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-50 dark:bg-slate-700/60 p-2 shrink-0 border border-gray-100 dark:border-slate-700 shadow-sm">
-                          <PaymentMethodLogo method={tx.method} size="sm" showLabel={false} />
+                       <div className={cn(
+                         "w-12 h-12 rounded-2xl flex items-center justify-center",
+                         tx.status === 'completed' ? "bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400" :
+                         tx.status === 'pending' ? "bg-indigo-100 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400" :
+                         "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400"
+                       )}>
+                          {tx.status === 'pending' ? <Clock className="w-6 h-6" /> : 
+                           tx.status === 'completed' ? <CheckCircle2 className="w-6 h-6" /> : 
+                           <AlertCircle className="w-6 h-6" />}
                        </div>
                        <div>
-                          <p className="font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">{tx.method || 'Withdrawal'} Payout</p>
+                          <p className="font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">{tx.method} Payout</p>
                           <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest">{format(tx.createdAt ? new Date(tx.createdAt) : new Date(), 'MMM dd, h:mm a')}</p>
                        </div>
                     </div>

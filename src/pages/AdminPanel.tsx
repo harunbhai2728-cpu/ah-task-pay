@@ -39,7 +39,6 @@ import { cn, formatCurrency } from '../lib/utils';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
-import { compressImage } from '../lib/imageCompress';
 import toast from 'react-hot-toast';
 
 const createAdminDb = (supabaseClient: any) => {
@@ -415,12 +414,7 @@ export function AdminPanel() {
     transferDepositToEarningFee: 10,
     loginTitle: 'Welcome to TaskPay',
     loginBannerUrl: '',
-    customBannerPresets: [] as string[],
-    statsMode: 'realtime',
-    manualTotalUsers: 0,
-    manualTotalJobs: 0,
-    manualCompletedTasks: 0,
-    manualTotalWithdraw: 0
+    customBannerPresets: [] as string[]
   });
 
   const getUserSerial = (uid: string) => {
@@ -1544,16 +1538,13 @@ export function AdminPanel() {
     <div className="space-y-8 pb-12">
       <header className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-xl shadow-gray-50 dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden transition-colors">
         <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 dark:bg-red-900/10 rounded-full -translate-y-1/2 translate-x-1/2 opacity-20" />
-        <div className="flex flex-wrap items-center gap-5 relative z-10">
+        <div className="flex items-center gap-5 relative z-10">
           <div className="bg-red-600 p-4 rounded-3xl text-white shadow-xl shadow-red-100 dark:shadow-none">
             <Shield className="w-8 h-8" />
           </div>
           <div>
             <h1 className="text-3xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tighter">System Authority</h1>
             <p className="text-gray-400 dark:text-slate-500 font-bold text-xs tracking-widest uppercase italic">Master Control Hub</p>
-          </div>
-          <div className="hidden sm:block ml-2 border-l border-gray-200 dark:border-slate-700 pl-4">
-            <BrandLogo size="sm" />
           </div>
         </div>
         <div className="flex gap-4 relative z-10">
@@ -2705,14 +2696,6 @@ export function AdminPanel() {
                       </div>
                       <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Nagad Enabled</span>
                     </label>
-
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <div className="relative">
-                        <input type="checkbox" className="sr-only peer" checked={config.withdrawRechargeEnabled !== false} onChange={e => setConfig({...config, withdrawRechargeEnabled: e.target.checked})} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-sky-500"></div>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Recharge Enabled</span>
-                    </label>
                   </div>
                </div>
 
@@ -3058,8 +3041,12 @@ export function AdminPanel() {
                                 const fileExt = file.name.split('.').pop();
                                 const fileName = `banner_${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
 
-                                // Use centralized image compression logic for under 100KB (approx 0.1MB)
-                                const base64Data = await compressImage(file, 1920, 0.1);
+                                const base64Data = await new Promise<string>((resolve, reject) => {
+                                  const reader = new FileReader();
+                                  reader.onload = () => resolve(reader.result as string);
+                                  reader.onerror = () => reject(new Error("Failed to read file"));
+                                  reader.readAsDataURL(file);
+                                });
 
                                 const { data: { session } } = await supabase.auth.getSession();
                                 const token = session?.access_token;
@@ -3147,73 +3134,6 @@ export function AdminPanel() {
                         )}
                      </div>
                   </div>
-               </div>
-
-               <div className="md:col-span-2 pt-4 border-t border-gray-100 dark:border-slate-800 space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-sm font-black text-gray-900 dark:text-slate-100 uppercase tracking-widest">Landing Page Stats Control</h4>
-                      <p className="text-xs text-gray-500 dark:text-slate-400 font-bold mt-1">Control how stats are displayed on the landing page</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-4 p-1.5 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-fit">
-                    <button
-                      type="button"
-                      onClick={() => setConfig({...config, statsMode: 'realtime'})}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${config.statsMode !== 'manual' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'}`}
-                    >
-                      Real-time
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfig({...config, statsMode: 'manual'})}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${config.statsMode === 'manual' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'}`}
-                    >
-                      Manual Override
-                    </button>
-                  </div>
-
-                  {config.statsMode === 'manual' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-gray-50 dark:bg-slate-700/20 p-6 rounded-[2rem] border border-gray-100 dark:border-slate-700/50">
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Users</label>
-                        <input 
-                          type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
-                          value={config.manualTotalUsers || 0}
-                          onChange={e => setConfig({...config, manualTotalUsers: Number(e.target.value)})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Jobs</label>
-                        <input 
-                          type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
-                          value={config.manualTotalJobs || 0}
-                          onChange={e => setConfig({...config, manualTotalJobs: Number(e.target.value)})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Completed Tasks</label>
-                        <input 
-                          type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
-                          value={config.manualCompletedTasks || 0}
-                          onChange={e => setConfig({...config, manualCompletedTasks: Number(e.target.value)})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Withdraw</label>
-                        <input 
-                          type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
-                          value={config.manualTotalWithdraw || 0}
-                          onChange={e => setConfig({...config, manualTotalWithdraw: Number(e.target.value)})}
-                        />
-                      </div>
-                    </div>
-                  )}
                </div>
 
                <div className="md:col-span-2 pt-4 space-y-4">
