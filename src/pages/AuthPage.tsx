@@ -188,7 +188,7 @@ export function AuthPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }
         
         <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-2xl space-y-6 transition-colors">
           <div className="flex justify-center mb-6">
-             <BrandLogo size="md" />
+             <BrandLogo size="lg" />
           </div>
 
           <div className="flex bg-gray-100/50 dark:bg-slate-700 p-1.5 rounded-2xl transition-colors">
@@ -284,7 +284,7 @@ export function AuthPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }
               </div>
               {isLogin && (
                 <div className="text-right px-2">
-                  <Link to="/forgot-password" size="sm" className="text-xs text-primary-600 dark:text-primary-400 font-bold hover:underline">Forgot Password?</Link>
+                  <Link to="/forgot-password" className="text-xs text-primary-600 dark:text-primary-400 font-bold hover:underline">Forgot Password?</Link>
                 </div>
               )}
             </div>

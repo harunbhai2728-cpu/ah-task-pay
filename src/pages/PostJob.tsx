@@ -141,7 +141,7 @@ export function PostJob() {
                     if (e.target.files && e.target.files[0]) {
                        try {
                          const { compressImage } = await import('../lib/imageCompress');
-                         const compressed = await compressImage(e.target.files[0], 400);
+                         const compressed = await compressImage(e.target.files[0], 800, 0.05);
                          setFormData(prev => ({...prev, thumbnail: compressed}));
                        } catch (err: any) {
                          alert(err.message || 'Failed to process image');

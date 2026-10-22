@@ -428,7 +428,7 @@ export function Dashboard() {
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-indigo-50 dark:bg-indigo-900/10 rounded-full translate-y-1/2 -translate-x-1/2 opacity-20 blur-2xl" />
         
         <div className="flex items-center gap-8 relative z-10">
-          <div className="bg-white dark:bg-slate-700 p-4 rounded-[2.5rem] flex items-center justify-center shadow-xl border border-gray-50 dark:border-slate-600 transform hover:scale-105 transition-all overflow-hidden font-black text-4xl">
+          <div className="shrink-0 transform hover:scale-105 transition-all">
             <BrandLogo size="lg" />
           </div>
           <div>

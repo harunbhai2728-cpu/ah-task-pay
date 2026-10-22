@@ -163,7 +163,7 @@ export function PostAd() {
                 onChange={async e => {
                   if (e.target.files && e.target.files[0]) {
                      try {
-                       const compressed = await compressImage(e.target.files[0], 800);
+                       const compressed = await compressImage(e.target.files[0], 1080, 0.05);
                        setFormData(prev => ({...prev, image: compressed}));
                      } catch (err: any) {
                        alert(err.message || 'Failed to process image');

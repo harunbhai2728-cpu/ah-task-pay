@@ -10,6 +10,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import { Layout } from './components/Layout';
 import { LandingPage } from './pages/LandingPage';
+import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
 import { PostJob } from './pages/PostJob';
 import { PostAd } from './pages/PostAd';
@@ -34,8 +35,8 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
   const { user, profile, loading, isAdmin, error } = useAuth();
   
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 transition-colors">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 dark:border-primary-400"></div>
     </div>
   );
 
@@ -232,7 +233,8 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/register" element={<LandingPage defaultIsLogin={false} />} />
+            <Route path="/login" element={<AuthPage defaultIsLogin={true} />} />
+            <Route path="/register" element={<AuthPage defaultIsLogin={false} />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/terms-privacy" element={<TermsPrivacy />} />
             <Route element={<PrivateRoute><Layout /></PrivateRoute>}>

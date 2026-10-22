@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { BrandLogo } from '../components/BrandLogo';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -47,7 +48,7 @@ export default function ForgotPassword() {
             <Link to="/" className="p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all">
                 <ArrowLeft className="w-5 h-5 text-gray-400" />
             </Link>
-            <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Forgot Password</h2>
+            <BrandLogo size="sm" />
             <div className="w-10"></div>
         </div>
 

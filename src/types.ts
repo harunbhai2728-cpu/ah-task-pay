@@ -9,10 +9,12 @@ export interface AppNotification {
 
 export interface UserProfile {
   uid: string;
+  id?: string;
   email: string;
   displayName: string;
   username: string;
   phone: string;
+  phoneNumber?: string;
   role: UserRole;
   earningBalance: number;
   depositBalance: number;
@@ -33,11 +35,12 @@ export interface UserProfile {
 }
 
 
-export type JobStatus = 'open' | 'closed' | 'delete_requested' | 'deleted' | 'rejected' | 'pending';
+export type JobStatus = 'open' | 'closed' | 'delete_requested' | 'deleted' | 'rejected' | 'pending' | 'completed';
 
 export interface Job {
   id: string;
   posterId: string;
+  author_id?: string;
   posterName?: string;
   posterSerial?: number;
   title: string;
@@ -48,6 +51,7 @@ export interface Job {
   autoApprove: boolean;
   pinCode?: string;
   pricePerWork: number;
+  reward?: number;
   maxWorkers: number;
   completedCount: number;
   pendingCount?: number;
@@ -81,7 +85,7 @@ export interface Submission {
 
 export type TransactionType = 'deposit' | 'withdrawal' | 'payment' | 'refund' | 'bonus';
 export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'rejected' | 'approved';
-export type PaymentMethod = 'bKash' | 'Nagad';
+export type PaymentMethod = 'bKash' | 'Nagad' | 'Recharge' | 'Mobile Recharge';
 
 export interface Transaction {
   id: string;
@@ -89,6 +93,8 @@ export interface Transaction {
   userSerial?: number | null;
   type: TransactionType;
   amount: number;
+  fee?: number;
+  finalAmount?: number;
   method?: PaymentMethod;
   phone?: string;
   transactionId?: string;

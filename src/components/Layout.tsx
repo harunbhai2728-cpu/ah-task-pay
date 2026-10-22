@@ -389,9 +389,9 @@ export function Layout() {
               className="absolute right-0 top-0 bottom-0 w-64 bg-white dark:bg-slate-800 p-6 transition-colors shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="font-bold text-lg dark:text-slate-100">Menu</h2>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="dark:text-slate-400">
+              <div className="flex justify-between items-center mb-6">
+                <BrandLogo size="sm" />
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-1 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700">
                   <X className="w-6 h-6" />
                 </button>
               </div>

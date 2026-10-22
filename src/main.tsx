@@ -1,8 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 import './index.css';
 import toast from 'react-hot-toast';
+import { registerSW } from 'virtual:pwa-register';
 
 // Suppress benign Supabase refresh token errors
 window.addEventListener('unhandledrejection', (event) => {
@@ -80,8 +81,6 @@ Object.defineProperty(window, 'fetch', {
     throw new Error("Maximum retries reached");
   }
 });
-
-import { registerSW } from 'virtual:pwa-register';
 
 // Register PWA service worker via vite-plugin-pwa with automatic hot-update notifications
 const updateSW = registerSW({

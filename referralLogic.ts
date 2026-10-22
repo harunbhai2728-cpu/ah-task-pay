@@ -229,7 +229,7 @@ export async function getReferralStatus(req: any, res: any) {
                         if (isRefExpired) {
                             status = 'expired';
                             // Self-heal DB status
-                            supabase.from('referrals').update({ status: 'expired' }).eq('referred_user_id', p.id).then().catch(() => {});
+                            Promise.resolve(supabase.from('referrals').update({ status: 'expired' }).eq('referred_user_id', p.id)).catch(() => {});
                         }
                     }
 

@@ -1,19 +1,22 @@
-import React from 'react';
 import { Shield, Book, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { BrandLogo } from '../components/BrandLogo';
 
 export function TermsPrivacy() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 space-y-12 pb-20">
       
-      <div className="flex items-center gap-4 border-b border-gray-200 pb-6">
-        <Link to="/" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <ArrowLeft className="w-6 h-6 text-gray-600" />
-        </Link>
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Terms & Privacy Policy</h1>
-          <p className="text-gray-500 font-medium mt-1 uppercase tracking-widest text-xs">Read carefully before continuing</p>
+      <div className="flex items-center justify-between border-b border-gray-200 pb-6">
+        <div className="flex items-center gap-4">
+          <Link to="/" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <ArrowLeft className="w-6 h-6 text-gray-600" />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Terms & Privacy Policy</h1>
+            <p className="text-gray-500 font-medium mt-1 uppercase tracking-widest text-xs">Read carefully before continuing</p>
+          </div>
         </div>
+        <BrandLogo size="sm" />
       </div>
 
       <section className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 space-y-8">
