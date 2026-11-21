@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { 
   ArrowDownLeft, 
@@ -18,11 +18,16 @@ import { Transaction } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { BkashLogo, NagadLogo, PaymentMethodLogo } from '../components/PaymentMethodLogos';
+import { Pagination } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 export function Deposit() {
   const { profile, user, systemConfig, refreshProfile } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const historyRef = useRef<HTMLDivElement>(null);
   
   // Dynamic Deposit Rules States
   const [depositRules, setDepositRules] = useState('');
@@ -166,34 +171,38 @@ export function Deposit() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-fadeIn">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-blue-200 dark:border-slate-700 border-t-[#0B3D9E] dark:border-t-[#F97316] rounded-full animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <Plus className="w-6 h-6 text-indigo-600 animate-pulse" />
+            <Plus className="w-6 h-6 text-[#0B3D9E] dark:text-blue-400 animate-pulse" />
           </div>
         </div>
         <div className="text-center space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Preparing Deposit Gateway</h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest animate-pulse">Fetching official payment accounts...</p>
+          <h3 className="text-xl font-bold font-display text-slate-900 dark:text-slate-100">Preparing Deposit Gateway</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest animate-pulse">Fetching official payment accounts...</p>
         </div>
       </div>
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedTransactions = transactions.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div className="space-y-10 pb-20">
       <div className="flex items-center gap-4">
-        <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-xl shadow-indigo-100 dark:shadow-none transition-all">
+        <div className="bg-gradient-to-br from-[#041645] to-[#0B3D9E] p-4 rounded-3xl text-white shadow-xl shadow-blue-900/15 dark:shadow-none transition-all">
            <Plus className="w-8 h-8" />
         </div>
         <div>
-           <h1 className="text-3xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tighter">Add Liquidity</h1>
-           <p className="text-gray-400 dark:text-slate-500 font-bold text-xs tracking-widest uppercase italic">Secure Deposit Gateway</p>
+           <h1 className="text-3xl font-black font-display text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Add Liquidity</h1>
+           <p className="text-slate-500 dark:text-slate-400 font-bold text-xs tracking-widest uppercase italic">Secure Deposit Gateway</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Form Section */}
-        <div className="bg-white dark:bg-slate-800 p-8 md:p-10 rounded-[3rem] border border-gray-100 dark:border-slate-700 shadow-2xl shadow-gray-50 dark:shadow-none space-y-8 transition-colors">
+        <div className="bg-white dark:bg-[#1E293B] p-8 md:p-10 rounded-[3rem] border border-slate-200 dark:border-slate-700/80 shadow-lg shadow-slate-200/40 dark:shadow-none space-y-8 transition-colors">
            
            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-5 rounded-2xl flex items-start gap-3 transition-colors">
               <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
@@ -204,18 +213,18 @@ export function Deposit() {
 
            <form onSubmit={handleDeposit} className="space-y-8">
               {/* Account Number Box with Active Brand Logo */}
-              <div className="bg-gray-900 dark:bg-slate-950 p-6 sm:p-8 rounded-[2rem] text-white space-y-4 relative overflow-hidden group border border-transparent dark:border-slate-800 transition-colors shadow-xl">
+              <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-6 sm:p-8 rounded-[2rem] text-white space-y-4 relative overflow-hidden group border border-blue-800/40 transition-colors shadow-xl">
                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
                    <Smartphone className="w-16 h-16" />
                  </div>
                  
                  <div className="flex items-center justify-between gap-3">
                    <div>
-                     <p className="text-xs font-black text-indigo-400 dark:text-indigo-400 uppercase tracking-widest">
+                     <p className="text-xs font-black text-blue-200 uppercase tracking-widest">
                        {formData.method} ({formData.method === 'Nagad' ? (systemConfig?.nagadMethod || 'Personal') : (systemConfig?.bkashMethod || 'Personal')}) Number
                      </p>
                      <div className="flex items-center gap-3 sm:gap-4 mt-2">
-                        <p className="text-2xl sm:text-4xl font-black tracking-tighter">
+                        <p className="text-2xl sm:text-4xl font-black font-display tracking-tighter tabular-nums">
                           {formData.method === 'Nagad' ? (systemConfig?.nagadNumber || '01870866189') : (systemConfig?.bkashNumber || '01870866189')}
                         </p>
                         <button 
@@ -322,35 +331,35 @@ export function Deposit() {
                       required
                       min={minDeposit}
                       placeholder={`৳ ${minDeposit}.00`}
-                      className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white"
+                      className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-bold outline-none focus:ring-4 focus:ring-[#0B3D9E]/15 focus:border-[#0B3D9E] dark:focus:border-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white tabular-nums"
                       value={formData.amount}
                       onChange={e => setFormData({...formData, amount: e.target.value})}
                     />
                  </div>
 
                  <div className="space-y-2">
-                   <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                   <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
                      যে নম্বর থেকে টাকা পাঠিয়েছেন (Sender Mobile Number)
                    </label>
                    <input 
                      type="text" 
                      required
                      placeholder="01xxxxxxxxx"
-                     className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white"
+                     className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-bold outline-none focus:ring-4 focus:ring-[#0B3D9E]/15 focus:border-[#0B3D9E] dark:focus:border-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white tabular-nums"
                      value={formData.phone}
                      onChange={e => setFormData({...formData, phone: e.target.value})}
                    />
                  </div>
 
                  <div className="space-y-2">
-                   <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+                   <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">
                      ট্রানজেকশন আইডি (Transaction ID / TrxID)
                    </label>
                    <input 
                      type="text" 
                      required
                      placeholder="e.g. 8X9Y10Z2"
-                     className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white uppercase"
+                     className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-bold outline-none focus:ring-4 focus:ring-[#0B3D9E]/15 focus:border-[#0B3D9E] dark:focus:border-blue-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white uppercase"
                      value={formData.transactionId}
                      onChange={e => setFormData({...formData, transactionId: e.target.value})}
                    />
@@ -361,14 +370,14 @@ export function Deposit() {
                  <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-green-500 text-white p-5 rounded-2xl font-bold flex items-center gap-3 shadow-lg shadow-green-100 dark:shadow-none"
+                  className="bg-emerald-600 text-white p-5 rounded-2xl font-bold flex items-center gap-3 shadow-lg"
                  >
                     <CheckCircle2 className="w-6 h-6" /> {successMsg}
                  </motion.div>
               ) : (
                 <button 
                   disabled={submitting}
-                  className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 dark:shadow-none disabled:opacity-50 flex items-center justify-center gap-3 transition-colors cursor-pointer"
+                  className="w-full py-5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-[2rem] font-black text-lg transition-all shadow-xl shadow-orange-500/20 disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
                 >
                   {submitting ? (
                     <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -380,10 +389,10 @@ export function Deposit() {
         </div>
 
         {/* History Section */}
-        <div className="space-y-6">
+        <div ref={historyRef} className="space-y-6 scroll-mt-6">
            <div className="flex items-center justify-between px-2">
-              <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2 dark:text-slate-100">
-                 <History className="w-6 h-6 text-gray-400 dark:text-slate-500" />
+              <h2 className="text-xl font-black font-display uppercase tracking-tight flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                 <History className="w-6 h-6 text-[#0B3D9E] dark:text-blue-400" />
                  Deposit History
               </h2>
            </div>
@@ -391,31 +400,31 @@ export function Deposit() {
            <div className="space-y-4">
               {loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-100 dark:bg-slate-800 animate-pulse rounded-[2rem]" />
+                  <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-[2rem]" />
                 ))
               ) : transactions.length === 0 ? (
-                <div className="bg-white dark:bg-slate-800 p-12 rounded-[3rem] border border-dashed border-gray-200 dark:border-slate-700 text-center text-gray-400 dark:text-slate-500 italic transition-colors">
+                <div className="bg-white dark:bg-[#1E293B] p-12 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-700 text-center text-slate-400 dark:text-slate-500 italic transition-colors">
                   No liquidity events found.
                 </div>
               ) : (
-                transactions.map((tx) => (
-                  <div key={tx.id} className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:shadow-xl dark:hover:shadow-none transition-all">
+                paginatedTransactions.map((tx) => (
+                  <div key={tx.id} className="bg-white dark:bg-[#1E293B] p-6 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center justify-between group hover:shadow-lg dark:hover:shadow-none transition-all">
                     <div className="flex items-center gap-4">
-                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-50 dark:bg-slate-700/60 p-2 shrink-0 border border-gray-100 dark:border-slate-700 shadow-sm">
+                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 dark:bg-slate-800/80 p-2 shrink-0 border border-slate-200/70 dark:border-slate-700 shadow-sm">
                           <PaymentMethodLogo method={tx.method} size="sm" showLabel={false} />
                        </div>
                        <div>
-                          <p className="font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">{tx.method || 'Deposit'} Deposit</p>
-                          <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest">{format(tx.createdAt ? new Date(tx.createdAt) : new Date(), 'MMM dd, h:mm a')}</p>
+                          <p className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">{tx.method || 'Deposit'} Deposit</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">{format(tx.createdAt ? new Date(tx.createdAt) : new Date(), 'MMM dd, h:mm a')}</p>
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(tx.amount)}</p>
+                       <p className="text-xl font-black text-slate-900 dark:text-slate-100 tabular-nums">{formatCurrency(tx.amount)}</p>
                        <span className={cn(
                          "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md",
-                         tx.status === 'completed' ? "bg-green-500 text-white" :
-                         tx.status === 'pending' ? "bg-orange-500 text-white" :
-                         "bg-red-500 text-white"
+                         tx.status === 'completed' ? "bg-emerald-500 text-white" :
+                         tx.status === 'pending' ? "bg-[#F97316] text-white" :
+                         "bg-rose-500 text-white"
                        )}>
                          {tx.status}
                        </span>
@@ -424,6 +433,17 @@ export function Deposit() {
                 ))
               )}
            </div>
+
+           {!loading && transactions.length > 0 && (
+             <Pagination
+               currentPage={safePage}
+               totalItems={transactions.length}
+               pageSize={PAGE_SIZE}
+               onPageChange={setCurrentPage}
+               itemLabel="deposits"
+               scrollTargetRef={historyRef}
+             />
+           )}
         </div>
       </div>
     </div>

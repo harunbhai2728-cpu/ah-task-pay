@@ -1533,8 +1533,8 @@ export function AdminPanel() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4" id="admin-panel-loader">
-         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-         <span className="font-black text-xs text-gray-400 dark:text-slate-500 tracking-widest uppercase animate-pulse">
+         <div className="w-12 h-12 border-4 border-blue-200 dark:border-slate-700 border-t-[#0B3D9E] dark:border-t-[#F97316] rounded-full animate-spin" />
+         <span className="font-black text-xs text-slate-400 dark:text-slate-500 tracking-widest uppercase animate-pulse">
             Syncing Master Database...
          </span>
       </div>
@@ -1543,124 +1543,124 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-8 pb-12">
-      <header className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-xl shadow-gray-50 dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden transition-colors">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 dark:bg-red-900/10 rounded-full -translate-y-1/2 translate-x-1/2 opacity-20" />
+      <header className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-6 sm:p-8 rounded-[2.5rem] border border-blue-900/60 shadow-xl shadow-blue-950/20 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden text-white">
+        <div className="absolute -top-12 -right-12 w-72 h-72 bg-[#F97316]/15 rounded-full blur-2xl pointer-events-none" />
         <div className="flex flex-wrap items-center gap-5 relative z-10">
-          <div className="bg-red-600 p-4 rounded-3xl text-white shadow-xl shadow-red-100 dark:shadow-none">
+          <div className="bg-[#F97316] p-4 rounded-3xl text-white shadow-xl shadow-orange-950/30">
             <Shield className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tighter">System Authority</h1>
-            <p className="text-gray-400 dark:text-slate-500 font-bold text-xs tracking-widest uppercase italic">Master Control Hub</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">System Authority</h1>
+            <p className="text-blue-200/80 font-bold text-xs tracking-widest uppercase">Master Control Hub</p>
           </div>
-          <div className="hidden sm:block ml-2 border-l border-gray-200 dark:border-slate-700 pl-4">
+          <div className="hidden sm:block ml-2 border-l border-white/15 pl-4 bg-white/95 dark:bg-slate-900/90 px-3 py-1.5 rounded-2xl">
             <BrandLogo size="sm" />
           </div>
         </div>
-        <div className="flex gap-4 relative z-10">
+        <div className="flex flex-wrap gap-3 sm:gap-4 relative z-10">
            <button 
              onClick={() => fetchAdminData(true)}
              disabled={isRefreshing}
-             className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl shadow-lg dark:shadow-none flex items-center gap-3 transition-colors font-bold text-sm disabled:opacity-50"
+             className="bg-[#F97316] hover:bg-[#EA580C] text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-3 transition-colors font-bold text-sm disabled:opacity-50 cursor-pointer"
            >
              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-refresh-cw ${isRefreshing ? 'animate-spin' : ''}`}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
              {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
            </button>
-           <div className="bg-gray-900 dark:bg-slate-950 text-white px-6 py-3 rounded-2xl shadow-lg dark:shadow-none flex items-center gap-3 transition-colors">
-              <Users className="w-5 h-5 text-gray-400" />
+           <div className="bg-white/10 border border-white/15 backdrop-blur-sm text-white px-6 py-3 rounded-2xl flex items-center gap-3">
+              <Users className="w-5 h-5 text-blue-200" />
               <div>
-                 <p className="text-[10px] font-black uppercase opacity-60 text-gray-500 dark:text-slate-400">Live Accounts</p>
-                 <p className="font-black text-xl">{totalUsers}</p>
+                 <p className="text-[10px] font-black uppercase text-blue-200/80 tracking-wider">Live Accounts</p>
+                 <p className="font-display font-black text-xl tabular-nums">{totalUsers}</p>
               </div>
            </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Users</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{totalUsers}</p>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Users</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{totalUsers}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
             <Briefcase className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Jobs</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{totalJobs}</p>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Jobs</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{totalJobs}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Tasks Done</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{completedJobsCount}</p>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Tasks Done</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{completedJobsCount}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-2xl flex items-center justify-center shrink-0">
             <Wallet className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Earning Balance</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(totalEarningBalance)}</p>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Earning Balance</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalEarningBalance)}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
             <Wallet className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Deposit Balance</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(totalDepositBalance)}</p>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Deposit Balance</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalDepositBalance)}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center shrink-0">
             <Lock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Held Balance</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(totalHeld)}</p>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Held Balance</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalHeld)}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center shrink-0">
             <ArrowDownLeft className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Deposit</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(totalDeposit)}</p>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Deposit</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalDeposit)}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center shrink-0">
             <ArrowUpRight className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Total Withdraw</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-slate-100">{formatCurrency(totalWithdraw)}</p>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Withdraw</p>
+            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalWithdraw)}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
+          <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-2xl flex items-center justify-center shrink-0">
             <AlertCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Pending Items</p>
-            <p className="text-2xl font-black text-red-600 dark:text-red-400">{pendingTransactionsCount + pendingSubsCount}</p>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Pending Items</p>
+            <p className="font-display text-2xl font-black text-[#F97316] dark:text-[#FB923C] tabular-nums">{pendingTransactionsCount + pendingSubsCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="flex bg-white dark:bg-slate-800 p-2 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-x-auto gap-2 transition-colors">
+      <div className="flex bg-white dark:bg-[#1E293B] p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-x-auto gap-2 transition-colors">
         {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'deletions', 'settings'] as const).map(tab => {
           let hasPending = false;
           if (tab === 'transactions') {
@@ -1682,13 +1682,13 @@ export function AdminPanel() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap relative",
-                activeTab === tab ? "bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-lg" : "text-gray-400 dark:text-slate-500 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-600 dark:hover:text-slate-300"
+                "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap relative cursor-pointer",
+                activeTab === tab ? "bg-[#07266E] dark:bg-[#F97316] text-white shadow-md" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
               )}
             >
               <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab === 'deletions' ? 'Restricted' : tab}</span>
               {hasPending && (
-                <span className="w-2.5 h-2.5 bg-red-600 border-2 border-white dark:border-slate-800 rounded-full animate-pulse shrink-0" />
+                <span className="w-2.5 h-2.5 bg-rose-500 border-2 border-white dark:border-[#1E293B] rounded-full animate-pulse shrink-0" />
               )}
             </button>
           );
@@ -1698,21 +1698,21 @@ export function AdminPanel() {
         {activeTab === 'users' && (
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input 
                 type="text"
                 placeholder="Search by ID, Phone, Email or Name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-red-50 dark:focus:ring-red-900/10 outline-none font-bold placeholder:text-gray-300 dark:placeholder:text-slate-600 text-gray-900 dark:text-slate-100 transition-colors"
+                className="w-full pl-12 pr-4 py-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] outline-none font-bold placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white transition-colors"
               />
             </div>
             <div className="sm:w-64">
               <select
                 value={userSortOrder}
                 onChange={(e) => setUserSortOrder(e.target.value as any)}
-                className="w-full px-6 py-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[2.5rem] shadow-sm dark:shadow-none focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/10 outline-none font-bold text-gray-900 dark:text-slate-100 transition-colors cursor-pointer appearance-none"
-                style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.5rem top 50%', backgroundSize: '0.65rem auto' }}
+                className="w-full px-6 py-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] outline-none font-bold text-slate-900 dark:text-white transition-colors cursor-pointer appearance-none"
+                style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394A3B8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.5rem top 50%', backgroundSize: '0.65rem auto' }}
               >
                 <option value="newest">Sort by Newest Users</option>
                 <option value="balance_high">Sort by High Balance</option>
@@ -1722,10 +1722,10 @@ export function AdminPanel() {
             <button
               onClick={() => setShowDuplicateIPs(!showDuplicateIPs)}
               className={cn(
-                "px-6 py-5 rounded-[2.5rem] font-bold text-sm transition-colors border shadow-sm flex items-center justify-center gap-2",
+                "px-6 py-4 rounded-2xl font-bold text-sm transition-colors border shadow-sm flex items-center justify-center gap-2 cursor-pointer",
                 showDuplicateIPs 
-                  ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800" 
-                  : "bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700"
+                  ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800" 
+                  : "bg-white dark:bg-[#1E293B] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800"
               )}
             >
               <AlertTriangle className="w-5 h-5" />
@@ -1734,26 +1734,26 @@ export function AdminPanel() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden transition-colors relative">
+        <div className="bg-white dark:bg-[#1E293B] rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden transition-colors relative">
           {tabLoading && (
-            <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 z-50 flex items-center justify-center backdrop-blur-sm">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+            <div className="absolute inset-0 bg-white/60 dark:bg-[#0B1120]/60 z-50 flex items-center justify-center backdrop-blur-sm">
+              <div className="animate-spin rounded-full h-9 w-9 border-4 border-blue-200 dark:border-slate-700 border-t-[#0B3D9E] dark:border-t-[#F97316]"></div>
             </div>
           )}
 
           {fetchError && (
-            <div className="m-6 p-5 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
+            <div className="m-6 p-5 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0" />
+                <AlertTriangle className="w-6 h-6 text-rose-600 dark:text-rose-400 shrink-0" />
                 <div>
-                  <h4 className="font-black text-red-800 dark:text-red-300 text-sm uppercase tracking-tight">Connection / Server Error</h4>
-                  <p className="text-xs text-red-600 dark:text-red-400 font-bold">{fetchError}</p>
+                  <h4 className="font-black text-rose-800 dark:text-rose-300 text-sm uppercase tracking-tight">Connection / Server Error</h4>
+                  <p className="text-xs text-rose-600 dark:text-rose-400 font-bold">{fetchError}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => fetchAdminData(false, false, activeTab, currentPage)}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-red-100 dark:shadow-none uppercase tracking-wider transition-all flex items-center gap-1.5 justify-center self-start sm:self-auto cursor-pointer"
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md uppercase tracking-wider transition-all flex items-center gap-1.5 justify-center self-start sm:self-auto cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
                 Retry Connection
@@ -1763,22 +1763,22 @@ export function AdminPanel() {
 
         {activeTab === 'transactions' && (
           <div className="space-y-4">
-            <div className="p-6 pb-2 relative border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="relative flex-1 flex gap-4">
+            <div className="p-6 pb-4 relative border-b border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="relative flex-1 flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input 
                     type="text"
                     placeholder="Filter transactions by User UID, Name, or Serial..."
                     value={txSearchTerm}
                     onChange={(e) => setTxSearchTerm(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-500 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E]"
                   />
                 </div>
                 <select
                   value={txTypeFilter}
                   onChange={(e) => setTxTypeFilter(e.target.value)}
-                  className="w-40 px-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20 cursor-pointer"
+                  className="sm:w-44 px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] cursor-pointer"
                 >
                   <option value="All">All Types</option>
                   <option value="deposit">Deposit</option>
@@ -1790,7 +1790,7 @@ export function AdminPanel() {
               {txSearchTerm && (
                 <button
                   onClick={() => setTxSearchTerm('')}
-                  className="px-4 py-2 text-xs font-black uppercase text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+                  className="px-4 py-2 text-xs font-black uppercase text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
                 >
                   Clear
                 </button>
@@ -1799,78 +1799,78 @@ export function AdminPanel() {
             <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 transition-colors">
-                  <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">User</th>
-                  <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Type/Method</th>
-                  <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Amount</th>
-                  <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Status</th>
-                  <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Details</th>
-                  <th className="p-6 text-xs font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Actions</th>
+                <tr className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] text-blue-100 border-b border-blue-900/50">
+                  <th className="p-6 text-xs font-black uppercase tracking-widest">User</th>
+                  <th className="p-6 text-xs font-black uppercase tracking-widest">Type/Method</th>
+                  <th className="p-6 text-xs font-black uppercase tracking-widest">Amount</th>
+                  <th className="p-6 text-xs font-black uppercase tracking-widest">Status</th>
+                  <th className="p-6 text-xs font-black uppercase tracking-widest">Details</th>
+                  <th className="p-6 text-xs font-black uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50 transition-colors">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 transition-colors">
                 {sortedTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors text-gray-700 dark:text-slate-300">
+                  <tr key={tx.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors text-slate-700 dark:text-slate-300">
                     <td className="p-6">
-                      <p className="font-bold text-gray-900 dark:text-slate-100" title={(tx as any).userName || 'User'}>
+                      <p className="font-bold text-slate-900 dark:text-white" title={(tx as any).userName || 'User'}>
                         {((tx as any).userName && (tx as any).userName.length > 14) ? `${(tx as any).userName.slice(0, 14)}...` : ((tx as any).userName || 'User')}
                       </p>
-                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2 mt-0.5">
                         {tx.userId.slice(0, 8)}...
-                        <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.5 rounded font-black">#{tx.userSerial || getUserSerial(tx.userId)}</span>
+                        <span className="bg-blue-50 dark:bg-blue-950/60 text-[#0B3D9E] dark:text-blue-400 px-1.5 py-0.5 rounded font-black">#{tx.userSerial || getUserSerial(tx.userId)}</span>
                       </p>
                     </td>
                     <td className="p-6">
                       <div className="flex items-center gap-2">
-                        {tx.type === 'deposit' ? <ArrowDownLeft className="text-green-500 w-4 h-4" /> : <ArrowUpRight className="text-orange-500 w-4 h-4" />}
+                        {tx.type === 'deposit' ? <ArrowDownLeft className="text-emerald-500 w-4 h-4" /> : <ArrowUpRight className="text-[#F97316] w-4 h-4" />}
                         <span className="font-bold capitalize">{tx.type} ({tx.method})</span>
                       </div>
-                      <p className="text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
                         {tx.createdAt ? new Date(tx.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : ''}
                       </p>
                     </td>
                     <td className="p-6">
                       {tx.type === 'withdrawal' ? (
                         <>
-                          <p className="font-black text-lg text-gray-900 dark:text-slate-100 transition-colors">
+                          <p className="font-black text-lg text-slate-900 dark:text-white tabular-nums">
                             {formatCurrency(tx.finalAmount !== undefined ? tx.finalAmount : (tx.amount - (tx.fee || 0)))}
                           </p>
-                          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold mt-0.5 transition-colors">
+                          <p className="text-xs text-slate-400 dark:text-slate-500 font-bold mt-0.5 tabular-nums">
                             with charge {formatCurrency(tx.amount)}
                           </p>
                         </>
                       ) : (
-                        <p className="font-black text-lg text-gray-900 dark:text-slate-100 transition-colors">{formatCurrency(tx.amount)}</p>
+                        <p className="font-black text-lg text-slate-900 dark:text-white tabular-nums">{formatCurrency(tx.amount)}</p>
                       )}
                     </td>
                     <td className="p-6">
                       <span className={cn(
-                        "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full transition-colors",
-                        tx.status === 'completed' ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" :
-                        tx.status === 'pending' ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400" :
-                        "bg-red-100 dark:bg-red-900/10 text-red-600 dark:text-red-400"
+                        "text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full transition-colors",
+                        tx.status === 'completed' ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400" :
+                        tx.status === 'pending' ? "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400" :
+                        "bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400"
                       )}>
                         {tx.status}
                       </span>
                     </td>
                     <td className="p-6">
                        <div className="flex items-center gap-2 mb-1">
-                         <span className="text-xs text-gray-500 font-medium">P:</span>
-                         <span className="text-lg font-semibold text-gray-900 dark:text-slate-100">{tx.phone}</span>
+                         <span className="text-xs text-slate-500 font-medium">P:</span>
+                         <span className="text-base font-bold text-slate-900 dark:text-white tabular-nums">{tx.phone}</span>
                          {tx.phone && (
                            <button 
                              onClick={() => {
                                navigator.clipboard.writeText(tx.phone);
                                toast.success('Copied!');
                              }}
-                             className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700/50 rounded transition-colors text-gray-400 hover:text-gray-900 dark:text-slate-500 dark:hover:text-slate-200"
+                             className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded transition-colors text-slate-400 hover:text-slate-900 dark:text-slate-500 dark:hover:text-slate-200 cursor-pointer"
                              title="Copy phone"
                            >
                              <Copy className="w-4 h-4" />
                            </button>
                          )}
                        </div>
-                       <p className="text-xs font-medium text-gray-500 dark:text-slate-400 transition-colors">T: {tx.transactionId}</p>
+                       <p className="text-xs font-medium text-slate-500 dark:text-slate-400 transition-colors">T: {tx.transactionId}</p>
                     </td>
                     <td className="p-6">
                       {tx.status === 'pending' && (
@@ -1878,14 +1878,14 @@ export function AdminPanel() {
                           <button 
                             onClick={() => handleApproveTransaction(tx)}
                             disabled={adminActionLoading}
-                            className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
+                            className="p-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:opacity-50 cursor-pointer"
                           >
                              {adminActionLoading ? "..." : <CheckCircle2 className="w-5 h-5" />}
                           </button>
                           <button 
                             onClick={() => handleRejectTransaction(tx)}
                             disabled={adminActionLoading}
-                            className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+                            className="p-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50 cursor-pointer"
                           >
                              {adminActionLoading ? "..." : <XCircle className="w-5 h-5" />}
                           </button>
@@ -1901,59 +1901,59 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'users' && (
-           <div className="overflow-x-auto bg-white dark:bg-slate-800 rounded-3xl shadow-xl dark:shadow-none shadow-gray-100 overflow-hidden border border-gray-100 dark:border-slate-700 transition-colors">
+           <div className="overflow-x-auto bg-white dark:bg-[#1E293B] rounded-3xl overflow-hidden transition-colors">
              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-gray-900 dark:bg-slate-900 border-b border-gray-800 transition-colors">
-                    <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-slate-500">Identity</th>
-                    <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-slate-500">Financials</th>
-                    <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-slate-500">Authority Controls</th>
+                  <tr className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] border-b border-blue-900/50">
+                    <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Identity</th>
+                    <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Financials</th>
+                    <th className="p-6 text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Authority Controls</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50 transition-colors">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 transition-colors">
                   {sortedUsers.map((u) => (
-                    <tr key={u.uid} className={cn("hover:bg-gray-50/50 dark:hover:bg-slate-700/30 transition-colors", u.isBlocked && "bg-red-50/50 dark:bg-red-900/10")}>
+                    <tr key={u.uid} className={cn("hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors", u.isBlocked && "bg-rose-50/50 dark:bg-rose-950/20")}>
                       <td className="p-6">
                         <div className="flex items-center gap-4">
-                          <div className="bg-indigo-600 dark:bg-indigo-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs shadow-lg dark:shadow-none">
+                          <div className="bg-gradient-to-br from-[#07266E] to-[#0B3D9E] text-white w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs shadow-md shrink-0">
                             #{u.serialNumber || u.uid.slice(0, 5).toUpperCase()}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                               <p className="font-black text-gray-900 dark:text-slate-100 uppercase tracking-tighter" title={(u as any).name || u.displayName || (u as any).username || 'Unnamed User'}>
+                               <p className="font-black text-slate-900 dark:text-white uppercase tracking-tight" title={(u as any).name || u.displayName || (u as any).username || 'Unnamed User'}>
                                  {(() => {
                                    const fullName = (u as any).name || u.displayName || (u as any).username || 'Unnamed User';
                                    return fullName.length > 16 ? `${fullName.slice(0, 16)}...` : fullName;
                                  })()}
-                                 <span className="text-indigo-600 dark:text-indigo-400 ml-1">#{u.serialNumber || u.uid.slice(0, 5).toUpperCase()}</span>
+                                 <span className="text-[#0B3D9E] dark:text-blue-400 ml-1">#{u.serialNumber || u.uid.slice(0, 5).toUpperCase()}</span>
                                </p>
-                               <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-slate-400 rounded transition-colors">{u.role}</span>
+                               <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 rounded transition-colors">{u.role}</span>
                             </div>
-                            <p className="text-xs text-gray-400 dark:text-slate-500 font-bold" title={u.uid}>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold" title={u.uid}>
                               UID: {u.uid && u.uid.length > 12 ? `${u.uid.slice(0, 12)}...` : u.uid}
                             </p>
-                            <p className="text-xs text-gray-400 dark:text-slate-500 font-bold" title={(u as any).username || 'nousername'}>
+                            <p className="text-xs text-slate-400 dark:text-slate-400 font-bold" title={(u as any).username || 'nousername'}>
                               @{((u as any).username && (u as any).username.length > 14) ? `${(u as any).username.slice(0, 14)}...` : ((u as any).username || 'nousername')} • {(u as any).phone || u.email || 'No Phone'}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
                               IP: {u.last_ip_address || 'N/A'}
                               {(() => {
                                 const isActive = !u.isBlocked && u.account_status !== 'deleted';
                                 const count = isActive ? (activeIPCounts[u.last_ip_address!] || 0) : (duplicateIPCounts[u.last_ip_address!] || 0);
                                 return u.last_ip_address && u.last_ip_address !== 'N/A' && typeof u.last_ip_address === 'string' && u.last_ip_address.trim() !== '' && count > 1 ? (
-                                  <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
+                                  <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-widest rounded">
                                     Matched: {count} Accounts
                                   </span>
                                 ) : null;
                               })()}
                             </p>
                             {u.warning && (
-                               <div className="mt-2 flex items-center justify-between bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-lg text-orange-600 dark:text-orange-400 transition-colors">
+                               <div className="mt-2 flex items-center justify-between bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/50 px-3 py-2 rounded-lg text-[#F97316] dark:text-[#FB923C] transition-colors">
                                   <div className="flex items-center gap-1">
-                                    <AlertTriangle className="w-3 h-3" />
+                                    <AlertTriangle className="w-3 h-3 shrink-0" />
                                     <p className="text-[10px] font-black uppercase tracking-widest break-all">Active Warn: {u.warning}</p>
                                   </div>
-                                  <button onClick={() => handleRemoveWarning(u)} className="ml-3 p-1 shrink-0 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Remove Warning">
+                                  <button onClick={() => handleRemoveWarning(u)} className="ml-3 p-1 shrink-0 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors cursor-pointer" title="Remove Warning">
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                </div>
@@ -1965,12 +1965,12 @@ export function AdminPanel() {
                         <div className="space-y-4">
                            <div className="grid grid-cols-2 gap-4">
                              <div>
-                                <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest leading-none mb-1">Earning Bal</p>
-                                <p className="font-black text-xl text-gray-900 dark:text-slate-100">{formatCurrency(u.earningBalance)}</p>
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest leading-none mb-1">Earning Bal</p>
+                                <p className="font-display font-black text-xl text-slate-900 dark:text-white tabular-nums">{formatCurrency(u.earningBalance)}</p>
                              </div>
                              <div>
-                                <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest leading-none mb-1">Deposit Bal</p>
-                                <p className="font-black text-xl text-blue-600 dark:text-blue-400">{formatCurrency(u.depositBalance)}</p>
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest leading-none mb-1">Deposit Bal</p>
+                                <p className="font-display font-black text-xl text-[#0B3D9E] dark:text-blue-400 tabular-nums">{formatCurrency(u.depositBalance)}</p>
                              </div>
                            </div>
                            <div className="flex flex-col gap-2">
@@ -1980,18 +1980,18 @@ export function AdminPanel() {
                                     placeholder="Earning Amt"
                                     value={balanceAdjust[u.uid] || ''}
                                     onChange={(e) => setBalanceAdjust(prev => ({ ...prev, [u.uid]: e.target.value }))}
-                                    className="w-full px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-slate-100 transition-colors"
+                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#F97316]/30 focus:border-[#F97316] text-slate-900 dark:text-white transition-colors"
                                   />
                                   <button 
                                     onClick={() => handleAdjustBalance(u.uid, 'earningBalance', true)}
-                                    className="p-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-xl hover:bg-indigo-700 dark:hover:bg-indigo-800 transition-all shadow-md dark:shadow-none"
+                                    className="p-2 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-xl transition-all shadow-sm cursor-pointer"
                                     title="Add Balance"
                                   >
                                     <Plus className="w-4 h-4" />
                                   </button>
                                   <button 
                                     onClick={() => handleAdjustBalance(u.uid, 'earningBalance', false)}
-                                    className="p-2 bg-red-600 dark:bg-red-700 text-white rounded-xl hover:bg-red-700 dark:hover:bg-red-800 transition-all shadow-md dark:shadow-none"
+                                    className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-all shadow-sm cursor-pointer"
                                     title="Subtract Balance"
                                   >
                                     <Minus className="w-4 h-4" />
@@ -2003,18 +2003,18 @@ export function AdminPanel() {
                                     placeholder="Deposit Amt"
                                     value={depositBalanceAdjust[u.uid] || ''}
                                     onChange={(e) => setDepositBalanceAdjust(prev => ({ ...prev, [u.uid]: e.target.value }))}
-                                    className="w-full px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 text-blue-900 dark:text-blue-100 transition-colors"
+                                    className="w-full px-3 py-2 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#0B3D9E]/30 focus:border-[#0B3D9E] text-slate-900 dark:text-blue-100 transition-colors"
                                   />
                                   <button 
                                     onClick={() => handleAdjustBalance(u.uid, 'depositBalance', true)}
-                                    className="p-2 bg-blue-600 dark:bg-blue-700 text-white rounded-xl hover:bg-blue-700 dark:hover:bg-blue-800 transition-all shadow-md dark:shadow-none"
+                                    className="p-2 bg-[#0B3D9E] hover:bg-[#07266E] text-white rounded-xl transition-all shadow-sm cursor-pointer"
                                     title="Add Balance"
                                   >
                                     <Plus className="w-4 h-4" />
                                   </button>
                                   <button 
                                     onClick={() => handleAdjustBalance(u.uid, 'depositBalance', false)}
-                                    className="p-2 bg-red-600 dark:bg-red-700 text-white rounded-xl hover:bg-red-700 dark:hover:bg-red-800 transition-all shadow-md dark:shadow-none"
+                                    className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-all shadow-sm cursor-pointer"
                                     title="Subtract Balance"
                                   >
                                     <Minus className="w-4 h-4" />
@@ -2027,38 +2027,38 @@ export function AdminPanel() {
                         <div className="flex flex-col gap-3">
                            <button 
                              onClick={() => handleOpenEditModal(u)}
-                             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-800 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md dark:shadow-none"
+                             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#07266E] hover:bg-[#0B3D9E] text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm cursor-pointer"
                            >
                              <Settings className="w-4 h-4" />
                              এডিট সেটিংস (Edit)
                            </button>
-                           <div className="flex items-center gap-2 mt-2">
+                           <div className="flex items-center gap-2 mt-1">
                               <input 
                                 type="text"
                                 placeholder="Notification message..."
                                 value={notificationText[u.uid] || ''}
                                 onChange={(e) => setNotificationText(prev => ({ ...prev, [u.uid]: e.target.value }))}
-                                className="flex-1 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 text-blue-900 dark:text-blue-100 placeholder:text-blue-300 dark:placeholder:text-blue-700 transition-colors"
+                                className="flex-1 px-4 py-2 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#0B3D9E]/30 text-slate-900 dark:text-blue-100 placeholder:text-slate-400 dark:placeholder:text-blue-400/50 transition-colors"
                               />
                               <button 
                                 onClick={() => handleSendNotification(u)}
-                                className="p-2 bg-blue-500 dark:bg-blue-600 text-white rounded-xl hover:bg-blue-600 dark:hover:bg-blue-700 shadow-md dark:shadow-none transition-colors"
+                                className="p-2 bg-[#0B3D9E] hover:bg-[#07266E] text-white rounded-xl shadow-sm transition-colors cursor-pointer"
                                 title="Send Notification"
                               >
                                  <Bell className="w-4 h-4" />
                               </button>
                            </div>
-                           <div className="flex items-center gap-2 mt-2">
+                           <div className="flex items-center gap-2 mt-1">
                               <input 
                                 type="text"
                                 placeholder="Warning message..."
                                 value={warningText[u.uid] || ''}
                                 onChange={(e) => setWarningText(prev => ({ ...prev, [u.uid]: e.target.value }))}
-                                className="flex-1 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500 text-orange-900 dark:text-orange-100 placeholder:text-orange-300 dark:placeholder:text-orange-700 transition-colors"
+                                className="flex-1 px-4 py-2 bg-orange-50/70 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/60 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-[#F97316]/30 text-slate-900 dark:text-orange-100 placeholder:text-slate-400 dark:placeholder:text-orange-400/50 transition-colors"
                               />
                               <button 
                                 onClick={() => handleSendWarning(u)}
-                                className="p-2 bg-orange-500 dark:bg-orange-600 text-white rounded-xl hover:bg-orange-600 dark:hover:bg-orange-700 shadow-md dark:shadow-none transition-colors"
+                                className="p-2 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-xl shadow-sm transition-colors cursor-pointer"
                               >
                                  <MessageSquare className="w-4 h-4" />
                               </button>
@@ -2066,10 +2066,10 @@ export function AdminPanel() {
                            <button 
                             onClick={() => handleToggleBlock(u)}
                             className={cn(
-                              "flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                              "flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
                               u.isBlocked 
-                                ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50" 
-                                : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40"
+                                ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50" 
+                                : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/60"
                             )}
                           >
                             {u.isBlocked ? <Unlock className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
@@ -2085,30 +2085,30 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'jobs' && (
-           <div className="p-8 space-y-4">
+           <div className="p-6 sm:p-8 space-y-4">
               <div className="relative pb-2">
-                 <Search className="absolute left-4 top-4 w-4 h-4 text-gray-400" />
+                 <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
                  <input 
                    type="text"
                    placeholder="Filter jobs by Title, Job ID, Poster UID or Serial..."
                    value={jobsSearchTerm}
                    onChange={(e) => setJobsSearchTerm(e.target.value)}
-                   className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-500 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20"
+                   className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E]"
                  />
               </div>
               {sortedJobs.map(job => (
-                <div key={job.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none gap-4 transition-colors">
+                <div key={job.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm gap-4 transition-colors">
                    <div className="space-y-1">
                       <div className="flex items-center gap-2 mb-1">
-                          <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
+                          <span className="bg-blue-50 text-[#0B3D9E] dark:bg-blue-950/60 dark:text-blue-400 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-200 dark:border-blue-800/50">
                             ID: #{job.id.split('-')[0].toUpperCase()}
                           </span>
                       </div>
-                      <p className="font-black text-gray-900 dark:text-slate-100 uppercase tracking-tighter">{job.title}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest font-black flex items-center gap-1 flex-wrap">
+                      <p className="font-display font-black text-slate-900 dark:text-white uppercase tracking-tight">{job.title}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-black flex items-center gap-1 flex-wrap">
                         <span>By: {job.posterName || job.posterId.slice(0,8)}</span>
                         {job.posterSerial && (
-                            <span className="bg-gray-200 dark:bg-slate-600 px-1.5 py-0.5 rounded text-gray-700 dark:text-slate-300">
+                            <span className="bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-300">
                                 UID: #{job.posterSerial}
                             </span>
                         )}
@@ -2117,23 +2117,23 @@ export function AdminPanel() {
                    </div>
                    <div className="text-right flex flex-col md:flex-row items-end md:items-center gap-4">
                       <div className="text-right">
-                         <p className="font-black text-indigo-600 dark:text-indigo-400 text-xl">{formatCurrency(job.pricePerWork)}</p>
-                         <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest">{job.completedCount} / {job.maxWorkers} Sub</p>
-                         <p className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-widest">{job.approvedCount || 0} Appr | {(job.completedCount - (job.approvedCount || 0))} Pend</p>
+                         <p className="font-display font-black text-[#0B3D9E] dark:text-[#FB923C] text-xl tabular-nums">{formatCurrency(job.pricePerWork)}</p>
+                         <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest tabular-nums">{job.completedCount} / {job.maxWorkers} Sub</p>
+                         <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest tabular-nums">{job.approvedCount || 0} Appr | {(job.completedCount - (job.approvedCount || 0))} Pend</p>
                       </div>
                       
                       {job.status === 'pending' ? (
                         <div className="flex gap-2">
-                           <button onClick={() => handleApproveJobPending(job)} className="px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors">এপ্রুভ করুন</button>
-                           <button onClick={() => handleRejectJobPending(job)} className="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors">রিজেক্ট করুন</button>
+                           <button onClick={() => handleApproveJobPending(job)} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer">এপ্রুভ করুন</button>
+                           <button onClick={() => handleRejectJobPending(job)} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer">রিজেক্ট করুন</button>
                         </div>
                       ) : job.status === 'delete_requested' ? (
                         <div className="flex gap-2">
-                           <button onClick={() => handleApproveDeleteJob(job)} className="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-bold rounded-lg text-xs transition-colors">Approve Delete</button>
-                           <button onClick={() => handleRejectDeleteJob(job.id)} className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-bold rounded-lg text-xs transition-colors">Reject Delete</button>
+                           <button onClick={() => handleApproveDeleteJob(job)} className="px-4 py-2 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 font-bold rounded-lg text-xs transition-colors cursor-pointer">Approve Delete</button>
+                           <button onClick={() => handleRejectDeleteJob(job.id)} className="px-4 py-2 bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 font-bold rounded-lg text-xs transition-colors cursor-pointer">Reject Delete</button>
                         </div>
                       ) : (
-                        <button onClick={() => initiateDeleteJob(job)} title="Hard delete job" className="p-2 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg shrink-0 transition-colors">
+                        <button onClick={() => initiateDeleteJob(job)} title="Hard delete job" className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg shrink-0 transition-colors cursor-pointer">
                            <Ban className="w-5 h-5" />
                         </button>
                       )}
@@ -2144,55 +2144,55 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'submissions' && (
-          <div className="p-8 space-y-6">
+          <div className="p-6 sm:p-8 space-y-6">
              <div className="relative pb-2">
-                <Search className="absolute left-4 top-4 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
                 <input 
                   type="text"
                   placeholder="Filter submissions by Worker Name, UID, Serial, Job ID or Submission ID..."
                   value={subSearchTerm}
                   onChange={(e) => setSubSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-500 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E]"
                 />
              </div>
              {sortedSubmissions.map((sub) => (
-               <div key={sub.id} className="bg-gray-50 dark:bg-slate-700/50 rounded-3xl p-6 border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none space-y-4 transition-colors">
-                  <div className="flex justify-between items-start">
+               <div key={sub.id} className="bg-slate-50 dark:bg-slate-800/60 rounded-3xl p-6 border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-4 transition-colors">
+                  <div className="flex justify-between items-start gap-4">
                      <div>
-                        <h4 className="font-black text-gray-900 dark:text-slate-100 uppercase text-lg">{sub.jobTitle || 'Job Submission'}</h4>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                          Worker: {(sub.workerName && sub.workerName.length > 14) ? `${sub.workerName.slice(0, 14)}...` : (sub.workerName || 'Worker')} <span className="text-indigo-600 dark:text-indigo-400">#{sub.workerSerial || getUserSerial(sub.workerId)}</span> | Submitted: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : ''}
+                        <h4 className="font-display font-black text-slate-900 dark:text-white uppercase text-lg">{sub.jobTitle || 'Job Submission'}</h4>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
+                          Worker: {(sub.workerName && sub.workerName.length > 14) ? `${sub.workerName.slice(0, 14)}...` : (sub.workerName || 'Worker')} <span className="text-[#0B3D9E] dark:text-blue-400">#{sub.workerSerial || getUserSerial(sub.workerId)}</span> | Submitted: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : ''}
                         </p>
                      </div>
                      <span className={cn(
-                       "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                       sub.status === 'approved' ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" :
-                       sub.status === 'pending' ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400" :
-                       "bg-red-100 text-red-600"
+                       "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0",
+                       sub.status === 'approved' ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400" :
+                       sub.status === 'pending' ? "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400" :
+                       "bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400"
                      )}>{sub.status}</span>
                   </div>
 
                   {sub.proofText && (
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-gray-100 dark:border-slate-700 transition-colors">
-                       <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase mb-1">Text Proof</p>
-                       <p className="text-sm font-medium text-gray-700 dark:text-slate-300">{sub.proofText}</p>
+                    <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-slate-200 dark:border-slate-700 transition-colors">
+                       <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Text Proof</p>
+                       <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{sub.proofText}</p>
                     </div>
                   )}
 
                   {sub.screenshots && sub.screenshots.length > 0 && (
                     <div className="flex gap-4 overflow-x-auto pb-2">
                        {sub.screenshots.map((s, idx) => (
-                         <img key={idx} src={s} className="h-48 w-auto rounded-2xl object-cover border border-gray-100 dark:border-slate-700 shadow-sm transition-colors" alt="proof" />
+                         <img key={idx} src={s} className="h-48 w-auto rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm transition-colors" alt="proof" />
                        ))}
                     </div>
                   )}
 
                   {sub.status === 'pending' && (
-                    <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-slate-700 transition-colors">
+                    <div className="flex gap-4 pt-4 border-t border-slate-200 dark:border-slate-700 transition-colors">
                        <button 
                          onClick={() => handleApproveSubmission(sub)}
                          disabled={adminActionLoading || processingSubmissionId !== null}
-                         className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg dark:shadow-none shadow-green-100 hover:bg-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                         className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                        >
                           {processingSubmissionId === sub.id ? (
                             <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
@@ -2206,7 +2206,7 @@ export function AdminPanel() {
                        <button 
                          onClick={() => handleRejectSubmission(sub)}
                          disabled={adminActionLoading || processingSubmissionId !== null}
-                         className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg dark:shadow-none shadow-red-100 hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                         className="flex-1 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                        >
                           {processingSubmissionId === sub.id ? (
                             <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
@@ -2225,50 +2225,50 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'tickets' && (
-          <div className="p-8 space-y-6">
+          <div className="p-6 sm:p-8 space-y-6">
              <div className="relative pb-2">
-                <Search className="absolute left-4 top-4 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
                 <input 
                   type="text"
                   placeholder="Filter tickets by Subject, Ticket ID, User UID or Serial..."
                   value={ticketSearchTerm}
                   onChange={(e) => setTicketSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-500 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E]"
                 />
              </div>
              {sortedTickets.length === 0 ? (
-               <div className="text-center p-12 text-gray-400 dark:text-slate-500 font-bold italic">No tickets found.</div>
+               <div className="text-center p-12 text-slate-400 dark:text-slate-500 font-bold italic">No tickets found.</div>
              ) : (
                sortedTickets.map(ticket => (
-                 <div key={ticket.id} className="bg-gray-50 dark:bg-slate-700/50 rounded-3xl p-6 border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none space-y-4 transition-colors">
-                    <div className="flex justify-between items-start">
+                 <div key={ticket.id} className="bg-slate-50 dark:bg-slate-800/60 rounded-3xl p-6 border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-4 transition-colors">
+                    <div className="flex justify-between items-start gap-4">
                        <div>
-                          <h4 className="font-black text-gray-900 dark:text-slate-100 uppercase text-lg">{ticket.subject}</h4>
-                          <p className="text-[10px] text-gray-500 dark:text-slate-400 font-bold uppercase tracking-widest">
-                            User: {(getUserName(ticket.userId) && getUserName(ticket.userId).length > 14) ? `${getUserName(ticket.userId).slice(0, 14)}...` : getUserName(ticket.userId)} <span className="text-indigo-600 dark:text-indigo-400">#{ticket.userSerial || getUserSerial(ticket.userId)}</span>
+                          <h4 className="font-display font-black text-slate-900 dark:text-white uppercase text-lg">{ticket.subject}</h4>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
+                            User: {(getUserName(ticket.userId) && getUserName(ticket.userId).length > 14) ? `${getUserName(ticket.userId).slice(0, 14)}...` : getUserName(ticket.userId)} <span className="text-[#0B3D9E] dark:text-blue-400">#{ticket.userSerial || getUserSerial(ticket.userId)}</span>
                           </p>
-                          <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest transition-colors">Submitted: {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : ''}</p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest transition-colors">Submitted: {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : ''}</p>
                        </div>
                        <span className={cn(
-                         "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                         ticket.status === 'resolved' ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400" : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+                         "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0",
+                         ticket.status === 'resolved' ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400" : "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400"
                        )}>
                          {ticket.status}
                        </span>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl text-gray-700 dark:text-slate-300 text-sm whitespace-pre-wrap border border-gray-100 dark:border-slate-700 transition-colors">
+                    <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl text-slate-700 dark:text-slate-300 text-sm whitespace-pre-wrap border border-slate-200 dark:border-slate-700 transition-colors">
                       {Array.isArray(ticket.replies) && ticket.replies.length > 0 ? ticket.replies[0].text : 'No description'}
                     </div>
 
                     {Array.isArray(ticket.replies) && ticket.replies.length > 1 && (
-                      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl space-y-3 transition-colors">
+                      <div className="bg-white dark:bg-[#1E293B] p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 transition-colors">
                         {ticket.replies.slice(1).map((reply: any, i: number) => (
                            <div key={i} className={cn(
                              "p-3 rounded-xl text-sm font-medium transition-colors",
-                             reply.sender === 'admin' ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 mr-8 text-blue-900 dark:text-blue-100" : "bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 ml-8 text-gray-700 dark:text-slate-300"
+                             reply.sender === 'admin' ? "bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 mr-8 text-slate-900 dark:text-blue-100" : "bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ml-8 text-slate-700 dark:text-slate-300"
                            )}>
-                              <div className="font-black text-[10px] uppercase tracking-widest opacity-50 mb-1">
+                              <div className="font-black text-[10px] uppercase tracking-widest opacity-60 mb-1">
                                 {reply.sender === 'admin' ? 'You (Admin)' : 'User'}
                               </div>
                               {reply.text}
@@ -2278,11 +2278,11 @@ export function AdminPanel() {
                     )}
 
                     {ticket.status === 'open' && (
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap sm:flex-nowrap gap-2">
                         <input 
                            type="text"
                            placeholder="Type an admin reply..."
-                           className="flex-1 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-gray-900 dark:text-slate-100 placeholder:text-gray-300 dark:placeholder:text-slate-600"
+                           className="flex-1 min-w-[200px] px-4 py-2.5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                            value={ticketReplies[ticket.id] || ''}
                            onChange={(e) => setTicketReplies(prev => ({ ...prev, [ticket.id]: e.target.value }))}
                            onKeyDown={async (e) => {
@@ -2294,22 +2294,22 @@ export function AdminPanel() {
                         />
                         <button 
                            onClick={() => handleSendTicketReply(ticket)}
-                           className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg dark:shadow-none transition-all font-medium whitespace-nowrap"
+                           className="px-6 py-2.5 bg-[#0B3D9E] hover:bg-[#07266E] text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm transition-all whitespace-nowrap cursor-pointer"
                         >
                            <Send className="w-4 h-4" />
                            Send
                         </button>
                         <button 
                           onClick={() => handleResolveTicket(ticket)}
-                          className="py-2 px-6 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 text-sm whitespace-nowrap shadow-lg dark:shadow-none transition-all"
+                          className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm whitespace-nowrap shadow-sm transition-all cursor-pointer"
                         >
                           Mark Resolved
                         </button>
                       </div>
                     )}
                     {ticket.status === 'resolved' && ticket.adminReply && (!Array.isArray(ticket.replies) || ticket.replies.length === 0) && (
-                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl text-sm font-medium text-blue-900">
-                        <span className="font-bold text-blue-600 mr-2">Resolution:</span>
+                      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-4 rounded-xl text-sm font-medium text-slate-900 dark:text-blue-100">
+                        <span className="font-bold text-[#0B3D9E] dark:text-blue-400 mr-2">Resolution:</span>
                         {ticket.adminReply}
                       </div>
                     )}
@@ -2320,65 +2320,65 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'ads' && (
-          <div className="p-8 space-y-4">
+          <div className="p-6 sm:p-8 space-y-4">
              <div className="relative pb-2">
-                <Search className="absolute left-4 top-4 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-4 top-4 w-4 h-4 text-slate-400" />
                 <input 
                   type="text"
                   placeholder="Filter advertisements by Link, Ad ID, User UID or Serial..."
                   value={adsSearchTerm}
                   onChange={(e) => setAdsSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-900/40 border border-gray-100 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-500 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400/20"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl outline-none font-bold text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E]"
                 />
              </div>
              {sortedAds.length === 0 ? (
-                <div className="p-12 text-center text-gray-500 dark:text-slate-500 font-bold bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 transition-colors">No Advertisements Found</div>
+                <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-bold bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 transition-colors">No Advertisements Found</div>
              ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {sortedAds.map((ad: any) => (
-                    <div key={ad.id} className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-gray-100 dark:border-slate-700 shadow-xl dark:shadow-none space-y-4 relative overflow-hidden flex flex-col transition-colors">
+                    <div key={ad.id} className="bg-white dark:bg-slate-800/70 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-4 relative overflow-hidden flex flex-col transition-colors">
                       <div className="flex-shrink-0">
-                         <img src={ad.image} alt="Ad Banner" className="w-full h-40 object-cover rounded-xl border border-gray-100 dark:border-slate-700" />
+                         <img src={ad.image} alt="Ad Banner" className="w-full h-40 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
                       </div>
                       <div className="flex-1 space-y-2">
-                         <div className="flex items-center justify-between">
-                           <p className="text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 tracking-widest break-all">Link: <a href={ad.link} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">{ad.link}</a></p>
+                         <div className="flex items-center justify-between gap-2">
+                           <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest break-all">Link: <a href={ad.link} target="_blank" rel="noreferrer" className="text-[#0B3D9E] dark:text-blue-400 hover:underline">{ad.link}</a></p>
                            <button 
                              onClick={() => initiateDeleteAdAdmin(ad)}
                              title="Delete without refund"
-                             className="p-2 text-red-400 dark:text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                             className="p-2 text-rose-400 dark:text-rose-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
                            >
                              <Trash2 className="w-4 h-4" />
                            </button>
                          </div>
-                         <p className="text-sm font-bold text-gray-900 dark:text-slate-100">Duration: {ad.durationDays} Days | Price: {formatCurrency(ad.price)}</p>
-                         <p className="text-xs font-bold text-gray-500 dark:text-slate-400">Submitted by: <span className="text-indigo-600 dark:text-indigo-400">#{ad.userSerial || ad.userId.slice(0, 6)}</span></p>
-                         <div className="flex items-center gap-2">
+                         <p className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">Duration: {ad.durationDays} Days | Price: {formatCurrency(ad.price)}</p>
+                         <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Submitted by: <span className="text-[#0B3D9E] dark:text-blue-400">#{ad.userSerial || ad.userId.slice(0, 6)}</span></p>
+                         <div className="flex items-center gap-2 flex-wrap">
                             <span className={cn(
                               "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                              ad.status === 'approved' ? "bg-green-100 text-green-600" :
-                              ad.status === 'rejected' ? "bg-red-100 text-red-600" : "bg-yellow-100 text-yellow-600"
+                              ad.status === 'approved' ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400" :
+                              ad.status === 'rejected' ? "bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400" : "bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400"
                             )}>
                               {ad.status}
                             </span>
                             {ad.status === 'approved' && ad.expiresAt && (
-                               <span className="text-xs font-bold text-gray-500">
+                               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                                  Expires: {new Date(ad.expiresAt.toMillis ? ad.expiresAt.toMillis() : ad.expiresAt).toLocaleString()}
                                </span>
                             )}
                          </div>
                       </div>
                       {ad.status === 'pending' && (
-                        <div className="flex gap-2 pt-4 border-t border-gray-50">
+                        <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-slate-700">
                           <button 
                             onClick={() => handleApproveAd(ad)}
-                            className="flex-1 py-3 bg-green-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-green-600 flex items-center justify-center gap-1"
+                            className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <CheckCircle2 className="w-4 h-4" /> Approve
                           </button>
                           <button 
                             onClick={() => handleRejectAd(ad)}
-                            className="flex-1 py-3 bg-red-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-600 flex items-center justify-center gap-1"
+                            className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <XCircle className="w-4 h-4" /> Reject & Refund
                           </button>
@@ -2392,24 +2392,26 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'redeem_codes' && (
-          <div className="p-8 space-y-8">
+          <div className="p-6 sm:p-8 space-y-8">
             <div className="flex items-center gap-3 mb-6">
-              <Gift className="w-8 h-8 text-emerald-600 animate-pulse" />
+              <div className="p-3 bg-orange-50 dark:bg-orange-950/50 rounded-2xl text-[#F97316] dark:text-[#FB923C]">
+                <Gift className="w-7 h-7" />
+              </div>
               <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight transition-colors">Redeem Codes Manager</h2>
-                <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest transition-colors">Create rewards and track user claims</p>
+                <h2 className="font-display text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight transition-colors">Redeem Codes Manager</h2>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest transition-colors">Create rewards and track user claims</p>
               </div>
             </div>
 
             {redeemSuccessMsg && (
-              <div id="admin-redeem-success" className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-400 rounded-xl flex items-center gap-3 font-semibold text-sm transition-all animate-fadeIn">
+              <div id="admin-redeem-success" className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center gap-3 font-semibold text-sm transition-all animate-fadeIn">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                 <p>{redeemSuccessMsg}</p>
               </div>
             )}
 
             {redeemErrorMsg && (
-              <div id="admin-redeem-error" className="p-4 bg-rose-50 dark:bg-rose-900/20 border-l-4 border-rose-500 text-rose-800 dark:text-rose-400 rounded-xl flex items-center gap-3 font-semibold text-sm transition-all animate-fadeIn">
+              <div id="admin-redeem-error" className="p-4 bg-rose-50 dark:bg-rose-950/40 border-l-4 border-rose-500 text-rose-800 dark:text-rose-300 rounded-xl flex items-center gap-3 font-semibold text-sm transition-all animate-fadeIn">
                 <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
                 <p>{redeemErrorMsg}</p>
               </div>
@@ -2417,37 +2419,37 @@ export function AdminPanel() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Form panel */}
-              <div className="bg-gray-50/50 dark:bg-slate-700/50 p-6 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none space-y-4 transition-colors">
-                <h3 className="font-black text-gray-800 dark:text-slate-200 uppercase tracking-wide text-xs">Create New Reward Code</h3>
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-4 transition-colors">
+                <h3 className="font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide text-xs">Create New Reward Code</h3>
                 <form onSubmit={handleCreateRedeemCode} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 tracking-wider mb-2">Redeem Code (e.g. GETBDT100)</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider mb-2">Redeem Code (e.g. GETBDT100)</label>
                     <input 
                       type="text"
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm dark:shadow-none outline-none font-bold uppercase placeholder:text-gray-300 dark:placeholder:text-slate-600 focus:border-emerald-600 dark:focus:border-emerald-500 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="w-full px-4 py-3 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm outline-none font-bold uppercase placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                       placeholder="BOOST20"
                       value={newRedeemCode}
                       onChange={(e) => setNewRedeemCode(e.target.value.toUpperCase().replace(/\s+/g, ''))}
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 tracking-wider mb-2">Reward Amount (BDT)</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider mb-2">Reward Amount (BDT)</label>
                     <input 
                       type="number"
                       step="any"
                       min="0.01"
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm dark:shadow-none outline-none font-bold placeholder:text-gray-300 dark:placeholder:text-slate-600 focus:border-emerald-600 dark:focus:border-emerald-500 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="w-full px-4 py-3 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm outline-none font-bold placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                       placeholder="10"
                       value={redeemAmount}
                       onChange={(e) => setRedeemAmount(e.target.value)}
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 tracking-wider mb-2">Max Claims Limit (Users Count)</label>
+                    <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider mb-2">Max Claims Limit (Users Count)</label>
                     <input 
                       type="number"
                       min="1"
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm dark:shadow-none outline-none font-bold placeholder:text-gray-300 dark:placeholder:text-slate-600 focus:border-emerald-600 dark:focus:border-emerald-500 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="w-full px-4 py-3 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm outline-none font-bold placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                       placeholder="5"
                       value={redeemMaxUses}
                       onChange={(e) => setRedeemMaxUses(e.target.value)}
@@ -2456,7 +2458,7 @@ export function AdminPanel() {
                   <button
                     type="submit"
                     disabled={redeemLoading}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm py-4 rounded-2xl shadow-md dark:shadow-none transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-[#F97316] hover:bg-[#EA580C] disabled:opacity-50 text-white font-bold text-sm py-4 rounded-2xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {redeemLoading ? 'Creating...' : 'Create Reward Code'}
                   </button>
@@ -2465,63 +2467,63 @@ export function AdminPanel() {
 
               {/* Data Table panel */}
               <div className="lg:col-span-2 space-y-4">
-                <h3 className="font-black text-gray-800 dark:text-slate-200 uppercase tracking-wide text-xs transition-colors">Active Reward Codes ({redeemCodes.length})</h3>
+                <h3 className="font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide text-xs transition-colors">Active Reward Codes ({redeemCodes.length})</h3>
                 
                 {redeemCodes.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50/20 dark:bg-slate-700/20 rounded-3xl border border-dashed border-gray-200 dark:border-slate-700 transition-colors">
-                    <Gift className="w-12 h-12 text-gray-300 dark:text-slate-600 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-gray-400 dark:text-slate-500">কোন রিডিম কোড পাওয়া যায়নি</p>
-                    <p className="text-xs text-gray-300 dark:text-slate-600">একটি রিডিম কোড তৈরি করতে বাম পাশের ফর্মটি ব্যবহার করুন</p>
+                  <div className="text-center py-12 bg-slate-50/60 dark:bg-slate-800/30 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 transition-colors">
+                    <Gift className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                    <p className="text-sm font-bold text-slate-400 dark:text-slate-500">কোন রিডিম কোড পাওয়া যায়নি</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-600">একটি রিডিম কোড তৈরি করতে বাম পাশের ফর্মটি ব্যবহার করুন</p>
                   </div>
                 ) : (
-                  <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden overflow-x-auto transition-colors">
+                  <div className="bg-white dark:bg-[#1E293B] rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden overflow-x-auto transition-colors">
                     <table className="w-full text-left border-collapse border-spacing-0">
                       <thead>
-                        <tr className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700 transition-colors">
-                          <th className="p-4 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-wider">SN.</th>
-                          <th className="p-4 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-wider">Code</th>
-                          <th className="p-4 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-wider">Amount</th>
-                          <th className="p-4 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-wider">Claims (Used / Max)</th>
-                          <th className="p-4 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-wider">Created</th>
-                          <th className="p-4 text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                        <tr className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] text-blue-100 border-b border-blue-900/50">
+                          <th className="p-4 text-[10px] font-black uppercase tracking-wider">SN.</th>
+                          <th className="p-4 text-[10px] font-black uppercase tracking-wider">Code</th>
+                          <th className="p-4 text-[10px] font-black uppercase tracking-wider">Amount</th>
+                          <th className="p-4 text-[10px] font-black uppercase tracking-wider">Claims (Used / Max)</th>
+                          <th className="p-4 text-[10px] font-black uppercase tracking-wider">Created</th>
+                          <th className="p-4 text-[10px] font-black uppercase tracking-wider text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
                         {redeemCodes.map((codeItem, index) => {
                           const percentage = Math.min(100, Math.round(((codeItem.used_count || 0) / (codeItem.max_uses || 1)) * 100));
                           return (
-                            <tr key={codeItem.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
-                              <td className="p-4 text-xs font-bold text-gray-400 dark:text-slate-500">{index + 1}</td>
+                            <tr key={codeItem.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                              <td className="p-4 text-xs font-bold text-slate-400 dark:text-slate-500 tabular-nums">{index + 1}</td>
                               <td className="p-4">
-                                <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-mono font-extrabold text-sm px-3 py-1.5 rounded-xl border border-emerald-100 dark:border-emerald-800/50 transition-colors">
+                                <span className="bg-blue-50 dark:bg-blue-950/60 text-[#0B3D9E] dark:text-blue-400 font-mono font-extrabold text-sm px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800/50 transition-colors">
                                   {codeItem.code}
                                 </span>
                               </td>
-                              <td className="p-4 font-black text-gray-800 dark:text-slate-100 text-sm transition-colors">
+                              <td className="p-4 font-black text-slate-900 dark:text-white text-sm tabular-nums transition-colors">
                                 {formatCurrency(codeItem.amount)}
                               </td>
                               <td className="p-4 space-y-1.5 min-w-[150px]">
-                                <div className="flex justify-between items-center text-xs font-bold text-gray-500 dark:text-slate-400 transition-colors">
+                                <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums transition-colors">
                                   <span>{codeItem.used_count} / {codeItem.max_uses} claimed</span>
                                   <span>{percentage}%</span>
                                 </div>
-                                <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden transition-colors">
+                                <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden transition-colors">
                                   <div 
                                     className={cn(
                                       "h-full rounded-full transition-all duration-300",
-                                      percentage >= 100 ? "bg-red-500" : "bg-emerald-500"
+                                      percentage >= 100 ? "bg-rose-500" : "bg-[#F97316]"
                                     )}
                                     style={{ width: `${percentage}%` }}
                                   />
                                 </div>
                               </td>
-                              <td className="p-4 text-xs font-bold text-gray-400 dark:text-slate-500 whitespace-nowrap transition-colors">
+                              <td className="p-4 text-xs font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap transition-colors">
                                 {codeItem.created_at ? format(new Date(codeItem.created_at), 'dd MMM yyyy, hh:mm a') : 'N/A'}
                               </td>
                               <td className="p-4 text-right">
                                 <button
                                   onClick={() => handleDeleteRedeemCode(codeItem.id, codeItem.code)}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-xl transition-all"
+                                  className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 p-2 rounded-xl transition-all cursor-pointer"
                                   title="Delete Code"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -2542,26 +2544,26 @@ export function AdminPanel() {
         {activeTab === 'deletions' && (
           <div className="p-6 md:p-8 space-y-8">
             <div className="flex items-center gap-3 mb-6 transition-colors">
-              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
-              <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase">Restricted Accounts</h2>
+              <AlertTriangle className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+              <h2 className="font-display text-2xl font-black text-slate-900 dark:text-white uppercase">Restricted Accounts</h2>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search by Name, Email, Phone..."
                   value={restrictedSearchTerm}
                   onChange={(e) => setRestrictedSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl font-medium text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] outline-none"
                 />
               </div>
               <div className="flex gap-2">
                 <select
                   value={restrictedFilter}
                   onChange={(e: any) => setRestrictedFilter(e.target.value)}
-                  className="px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl font-bold text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
+                  className="px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] outline-none"
                 >
                   <option value="all">All Accounts</option>
                   <option value="blocked">Blocked Only</option>
@@ -2569,7 +2571,7 @@ export function AdminPanel() {
                 </select>
                 <button
                   onClick={() => { fetchAdminData(); }}
-                  className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-sm transition-colors"
+                  className="px-6 py-3 bg-[#0B3D9E] hover:bg-[#07266E] text-white font-bold rounded-xl text-sm transition-colors cursor-pointer"
                 >
                   Search
                 </button>
@@ -2578,25 +2580,25 @@ export function AdminPanel() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Pending Requests */}
-              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
-                 <h3 className="text-lg font-black text-amber-600 dark:text-amber-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Pending Requests</h3>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-200 dark:border-slate-700/80 p-6 shadow-sm">
+                 <h3 className="font-display text-lg font-black text-[#F97316] dark:text-[#FB923C] mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Pending Requests</h3>
                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
                     {users.filter(u => u.account_status === 'pending_deletion').length === 0 ? (
-                       <p className="text-gray-400 text-sm font-medium">No pending deletion requests.</p>
+                       <p className="text-slate-400 text-sm font-medium">No pending deletion requests.</p>
                     ) : (
                        users.filter(u => u.account_status === 'pending_deletion').map(u => (
-                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                          <div key={u.id} className="p-4 bg-white dark:bg-[#1E293B] rounded-2xl border border-amber-200 dark:border-amber-800/50">
                              <div className="flex justify-between items-start mb-2">
                                <div>
-                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
-                                  <p className="text-xs text-gray-500 font-mono">UID: {u.uid}</p>
+                                  <p className="font-bold text-slate-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-slate-500 font-mono">UID: {u.uid}</p>
                                </div>
-                               <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold">Pending</span>
+                               <span className="px-2 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-bold">Pending</span>
                              </div>
-                             <p className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-900 p-3 rounded-xl mb-4 italic">"{u.deletion_reason || 'No reason provided'}"</p>
+                             <p className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl mb-4 italic">"{u.deletion_reason || 'No reason provided'}"</p>
                              <div className="flex gap-2">
-                                <button onClick={() => handleRejectDeletion(u.id || u.uid)} disabled={adminActionLoading} className="flex-1 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl font-bold text-xs hover:bg-gray-300 dark:hover:bg-slate-600">Reject</button>
-                                <button onClick={() => handleApproveDeletion(u.id || u.uid)} disabled={adminActionLoading} className="flex-1 py-2 bg-red-600 text-white rounded-xl font-bold text-xs hover:bg-red-700">Approve Deletion</button>
+                                <button onClick={() => handleRejectDeletion(u.id || u.uid)} disabled={adminActionLoading} className="flex-1 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer">Reject</button>
+                                <button onClick={() => handleApproveDeletion(u.id || u.uid)} disabled={adminActionLoading} className="flex-1 py-2 bg-rose-600 text-white rounded-xl font-bold text-xs hover:bg-rose-700 cursor-pointer">Approve Deletion</button>
                              </div>
                           </div>
                        ))
@@ -2605,8 +2607,8 @@ export function AdminPanel() {
               </div>
 
               {/* Deleted Accounts */}
-              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-700 p-6 shadow-sm">
-                 <h3 className="text-lg font-black text-red-600 dark:text-red-500 mb-4 border-b border-gray-100 dark:border-slate-700 pb-2">Restricted List</h3>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-200 dark:border-slate-700/80 p-6 shadow-sm">
+                 <h3 className="font-display text-lg font-black text-rose-600 dark:text-rose-400 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Restricted List</h3>
                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
                     {users.filter(u => {
                        const isRestricted = u.account_status === 'deleted' || u.isBlocked === true;
@@ -2615,7 +2617,7 @@ export function AdminPanel() {
                        if (restrictedFilter === 'deleted') return u.account_status === 'deleted';
                        return true;
                     }).length === 0 ? (
-                       <p className="text-gray-400 text-sm font-medium">No accounts found.</p>
+                       <p className="text-slate-400 text-sm font-medium">No accounts found.</p>
                     ) : (
                        users.filter(u => {
                           const isRestricted = u.account_status === 'deleted' || u.isBlocked === true;
@@ -2624,32 +2626,32 @@ export function AdminPanel() {
                           if (restrictedFilter === 'deleted') return u.account_status === 'deleted';
                           return true;
                        }).map(u => (
-                          <div key={u.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-2xl border border-red-100 dark:border-red-900/30">
+                          <div key={u.id} className="p-4 bg-white dark:bg-[#1E293B] rounded-2xl border border-rose-200 dark:border-rose-900/50">
                              <div className="flex justify-between items-start mb-2">
                                <div>
-                                  <p className="font-bold text-gray-900 dark:text-white">{u.displayName}</p>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{u.email} • {u.phoneNumber || u.phone || 'No Phone'}</p>
-                                  <p className="text-xs text-gray-500 font-mono mb-1">UID: {u.uid}</p>
-                                  <p className="text-[10px] text-gray-500 dark:text-slate-400 flex items-center gap-2">
+                                  <p className="font-bold text-slate-900 dark:text-white">{u.displayName}</p>
+                                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{u.email} • {u.phoneNumber || u.phone || 'No Phone'}</p>
+                                  <p className="text-xs text-slate-500 font-mono mb-1">UID: {u.uid}</p>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                     IP: {u.last_ip_address || 'N/A'}
                                     {(() => {
                                       const count = duplicateIPCounts[u.last_ip_address!] || 0;
                                       return u.last_ip_address && u.last_ip_address !== 'N/A' && count > 1 ? (
-                                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-widest rounded">
+                                        <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-widest rounded">
                                           Matched: {count} Accounts
                                         </span>
                                       ) : null;
                                     })()}
                                   </p>
                                </div>
-                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold">
+                               <span className="px-2 py-1 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold">
                                  {u.isBlocked ? 'Blocked' : 'Deleted'}
                                </span>
                              </div>
                              {u.deletion_reason && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 px-2">Reason: {u.deletion_reason}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 px-2">Reason: {u.deletion_reason}</p>
                              )}
-                             <button onClick={() => handleRecoverAccount(u.id || u.uid)} disabled={adminActionLoading} className="mt-4 w-full py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/50">Recover Account</button>
+                             <button onClick={() => handleRecoverAccount(u.id || u.uid)} disabled={adminActionLoading} className="mt-4 w-full py-2 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-xl font-bold text-xs hover:bg-emerald-200 dark:hover:bg-emerald-900/60 cursor-pointer">Recover Account</button>
                           </div>
                        ))
                     )}
@@ -2660,67 +2662,69 @@ export function AdminPanel() {
         )}
 
         {activeTab === 'settings' && (
-          <div className="p-8 space-y-8">
+          <div className="p-6 sm:p-8 space-y-8">
             <div className="flex items-center gap-3 mb-6 transition-colors">
-              <Settings className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-              <h2 className="text-2xl font-black text-gray-900 dark:text-slate-100 uppercase">System Configuration</h2>
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-2xl text-[#0B3D9E] dark:text-blue-400">
+                <Settings className="w-7 h-7" />
+              </div>
+              <h2 className="font-display text-2xl font-black text-slate-900 dark:text-white uppercase">System Configuration</h2>
             </div>
 
             <form onSubmit={handleUpdateConfig} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <div className="md:col-span-2 space-y-4 border-b border-gray-100 dark:border-slate-800 pb-8">
-                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Deposit Methods Status</h3>
+               <div className="md:col-span-2 space-y-4 border-b border-slate-200 dark:border-slate-700/80 pb-8">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4">Deposit Methods Status</h3>
                   <div className="flex flex-col sm:flex-row gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <div className="relative">
                         <input type="checkbox" className="sr-only peer" checked={config.depositBkashEnabled !== false} onChange={e => setConfig({...config, depositBkashEnabled: e.target.checked})} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-500"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-pink-500"></div>
                       </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">bKash Enabled</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white uppercase">bKash Enabled</span>
                     </label>
 
                     <label className="flex items-center gap-3 cursor-pointer">
                       <div className="relative">
                         <input type="checkbox" className="sr-only peer" checked={config.depositNagadEnabled !== false} onChange={e => setConfig({...config, depositNagadEnabled: e.target.checked})} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-orange-500"></div>
                       </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Nagad Enabled</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white uppercase">Nagad Enabled</span>
                     </label>
                   </div>
                </div>
 
-               <div className="md:col-span-2 space-y-4 border-b border-gray-100 dark:border-slate-800 pb-8">
-                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4">Withdrawal Methods Status</h3>
+               <div className="md:col-span-2 space-y-4 border-b border-slate-200 dark:border-slate-700/80 pb-8">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4">Withdrawal Methods Status</h3>
                   <div className="flex flex-col sm:flex-row gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <div className="relative">
                         <input type="checkbox" className="sr-only peer" checked={config.withdrawBkashEnabled !== false} onChange={e => setConfig({...config, withdrawBkashEnabled: e.target.checked})} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-pink-500"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-pink-500"></div>
                       </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">bKash Enabled</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white uppercase">bKash Enabled</span>
                     </label>
 
                     <label className="flex items-center gap-3 cursor-pointer">
                       <div className="relative">
                         <input type="checkbox" className="sr-only peer" checked={config.withdrawNagadEnabled !== false} onChange={e => setConfig({...config, withdrawNagadEnabled: e.target.checked})} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-orange-500"></div>
                       </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Nagad Enabled</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white uppercase">Nagad Enabled</span>
                     </label>
 
                     <label className="flex items-center gap-3 cursor-pointer">
                       <div className="relative">
                         <input type="checkbox" className="sr-only peer" checked={config.withdrawRechargeEnabled !== false} onChange={e => setConfig({...config, withdrawRechargeEnabled: e.target.checked})} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-sky-500"></div>
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-sky-500"></div>
                       </div>
-                      <span className="text-sm font-bold text-gray-900 dark:text-slate-100 uppercase">Recharge Enabled</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white uppercase">Recharge Enabled</span>
                     </label>
                   </div>
                </div>
 
                <div className="space-y-4 md:col-span-2">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Global Dashboard Notice</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Global Dashboard Notice</label>
                   <textarea 
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-900/20 text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                     rows={4}
                     value={config.notice}
                     onChange={e => setConfig({...config, notice: e.target.value})}
@@ -2728,56 +2732,56 @@ export function AdminPanel() {
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Min Deposit (BDT)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Min Deposit (BDT)</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.minDeposit}
                     onChange={e => setConfig({...config, minDeposit: Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Min Withdraw (BDT)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Min Withdraw (BDT)</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.minWithdraw}
                     onChange={e => setConfig({...config, minWithdraw: Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Withdrawal Fee (%)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Withdrawal Fee (%)</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.withdrawalFee}
                     onChange={e => setConfig({...config, withdrawalFee: Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Job Service Charge (%)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Job Service Charge (%)</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.jobPostingFee}
                     onChange={e => setConfig({...config, jobPostingFee: Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Official bKash Number</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Official bKash Number</label>
                   <div className="flex gap-2">
                     <input 
                       type="text"
-                      className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold flex-1 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold flex-1 text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                       value={config.bkashNumber || ''}
                       onChange={e => setConfig({...config, bkashNumber: e.target.value})}
                     />
                     <select
-                      className="p-4 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold w-32 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold w-32 text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                       value={config.bkashMethod || 'Personal'}
                       onChange={e => setConfig({...config, bkashMethod: e.target.value})}
                     >
@@ -2789,16 +2793,16 @@ export function AdminPanel() {
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Official Nagad Number</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Official Nagad Number</label>
                   <div className="flex gap-2">
                     <input 
                       type="text"
-                      className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold flex-1 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold flex-1 text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                       value={config.nagadNumber || ''}
                       onChange={e => setConfig({...config, nagadNumber: e.target.value})}
                     />
                     <select
-                      className="p-4 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold w-32 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold w-32 text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                       value={config.nagadMethod || 'Personal'}
                       onChange={e => setConfig({...config, nagadMethod: e.target.value})}
                     >
@@ -2810,72 +2814,72 @@ export function AdminPanel() {
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Earning to Deposit Fee (%)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Earning to Deposit Fee (%)</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.transferEarningToDepositFee || 0}
                     onChange={e => setConfig({...config, transferEarningToDepositFee: Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Deposit to Earning Fee (%)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Deposit to Earning Fee (%)</label>
                   <input 
                     type="number"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.transferDepositToEarningFee || 0}
                     onChange={e => setConfig({...config, transferDepositToEarningFee: Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Referral Bonus (BDT)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Referral Bonus (BDT)</label>
                   <input 
                     type="number"
                     step="0.1"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.referralBonusAmount ?? 5}
                     onChange={e => setConfig({...config, referralBonusAmount: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Referral Job Target</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Referral Job Target</label>
                   <input 
                     type="number"
                     min="1"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.referralValidationCriteria ?? 1}
                     onChange={e => setConfig({...config, referralValidationCriteria: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Referral Validation Timeframe (Days)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Referral Validation Timeframe (Days)</label>
                   <input 
                     type="number"
                     min="1"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.referralValidityDays ?? 30}
                     onChange={e => setConfig({...config, referralValidityDays: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Referral Link Domain URL</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Referral Link Domain URL</label>
                   <input 
                     type="text"
                     placeholder="e.g. https://ahtaskpay.com"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.referralDomainUrl || ''}
                     onChange={e => setConfig({...config, referralDomainUrl: e.target.value})}
                   />
                </div>
 
-               <div className="md:col-span-2 space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+               <div className="md:col-span-2 space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700/80">
                   <div className="flex items-center justify-between">
-                     <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Dynamic Referral Campaign</h3>
+                     <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Dynamic Referral Campaign</h3>
                      <button
                         type="button"
                         onClick={async () => {
@@ -2909,7 +2913,7 @@ export function AdminPanel() {
                            }
                         }}
                         disabled={adminActionLoading}
-                        className="px-4 py-2 bg-red-100 text-red-600 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-red-200 transition-colors disabled:opacity-50 cursor-pointer"
+                        className="px-4 py-2 bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors disabled:opacity-50 cursor-pointer"
                      >
                         {adminActionLoading ? 'Resetting...' : 'Reset All User Claims'}
                      </button>
@@ -2917,89 +2921,89 @@ export function AdminPanel() {
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Campaign Start Date</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Campaign Start Date</label>
                   <input 
                     type="datetime-local"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.campaignStartDate ? new Date(config.campaignStartDate).toISOString().slice(0, 16) : ''}
                     onChange={e => setConfig({...config, campaignStartDate: e.target.value})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Campaign End Date</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Campaign End Date</label>
                   <input 
                     type="datetime-local"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.campaignEndDate ? new Date(config.campaignEndDate).toISOString().slice(0, 16) : ''}
                     onChange={e => setConfig({...config, campaignEndDate: e.target.value})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Target 1: Req. Referrals</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Target 1: Req. Referrals</label>
                   <input 
                     type="number"
                     min="0"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.target1Referrals ?? 0}
                     onChange={e => setConfig({...config, target1Referrals: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Target 1: Reward (BDT)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Target 1: Reward (BDT)</label>
                   <input 
                     type="number"
                     min="0"
                     step="0.1"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.target1Reward ?? 0}
                     onChange={e => setConfig({...config, target1Reward: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
 
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Target 2: Req. Referrals</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Target 2: Req. Referrals</label>
                   <input 
                     type="number"
                     min="0"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.target2Referrals ?? 0}
                     onChange={e => setConfig({...config, target2Referrals: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Target 2: Reward (BDT)</label>
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Target 2: Reward (BDT)</label>
                   <input 
                     type="number"
                     min="0"
                     step="0.1"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.target2Reward ?? 0}
                     onChange={e => setConfig({...config, target2Reward: e.target.value === '' ? '' : Number(e.target.value)})}
                   />
                </div>
 
-               <div className="md:col-span-2 space-y-4 pt-4 border-t border-gray-100 dark:border-slate-800">
-                  <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Login Page Title</label>
+               <div className="md:col-span-2 space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700/80">
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Login Page Title</label>
                   <input 
                     type="text"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                     value={config.loginTitle || ''}
                     onChange={e => setConfig({...config, loginTitle: e.target.value})}
                   />
-                  <span className="text-xs text-gray-500 block mt-2">Use &lt;br&gt; for a new line. Use &lt;span style='color: #FF5733;'&gt;Word&lt;/span&gt; to color a specific word.</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 block mt-2">Use &lt;br&gt; for a new line. Use &lt;span style='color: #FF5733;'&gt;Word&lt;/span&gt; to color a specific word.</span>
                </div>
 
                <div className="md:col-span-2 space-y-4">
                   <div className="flex justify-between items-center">
-                    <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Login Page Banner Image</label>
-                    <span className="text-xs text-primary-600 dark:text-indigo-400 font-bold">No link required</span>
+                    <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Login Page Banner Image</label>
+                    <span className="text-xs text-[#0B3D9E] dark:text-blue-400 font-bold">No link required</span>
                   </div>
                   
                   {/* Current Image Banner Preview */}
                   {config.loginBannerUrl ? (
-                    <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 shadow-sm transition-colors">
+                    <div className="relative w-full h-48 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
                       <img 
                         src={config.loginBannerUrl} 
                         alt="Current Banner" 
@@ -3010,7 +3014,7 @@ export function AdminPanel() {
                         <button
                           type="button"
                           onClick={() => setConfig({ ...config, loginBannerUrl: '' })}
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
+                          className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
                         >
                           Remove Image
                         </button>
@@ -3025,24 +3029,24 @@ export function AdminPanel() {
                                 toast.error("Already saved as preset");
                             }
                           }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md dark:shadow-none"
+                          className="bg-[#0B3D9E] hover:bg-[#07266E] text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
                         >
                           Save as Preset
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full h-24 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700 flex items-center justify-center text-gray-400 dark:text-slate-600 font-bold bg-gray-50/50 dark:bg-slate-700/20 text-sm transition-colors">
+                    <div className="w-full h-24 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500 font-bold bg-slate-50/70 dark:bg-slate-800/40 text-sm transition-colors">
                       No banner image selected
                     </div>
                   )}
 
                   {/* Device Gallery Selection or custom URL */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     <label className="flex flex-col items-center justify-center p-6 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl cursor-pointer hover:border-primary-500 dark:hover:border-indigo-500 hover:bg-primary-50/10 dark:hover:bg-indigo-900/10 transition-all text-center space-y-2 shadow-sm dark:shadow-none">
-                        <Upload className="w-6 h-6 text-primary-600 dark:text-indigo-400" />
-                        <span className="text-sm font-black text-gray-700 dark:text-slate-300">Choose from Device Gallery</span>
-                        <span className="text-xs text-gray-400 dark:text-slate-500 font-medium font-bold">PNG, JPG or GIF up to 3MB</span>
+                     <label className="flex flex-col items-center justify-center p-6 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer hover:border-[#0B3D9E] dark:hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-all text-center space-y-2 shadow-sm">
+                        <Upload className="w-6 h-6 text-[#0B3D9E] dark:text-blue-400" />
+                        <span className="text-sm font-black text-slate-700 dark:text-slate-200">Choose from Device Gallery</span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 font-bold">PNG, JPG or GIF up to 3MB</span>
                         <input 
                           type="file" 
                           accept="image/*" 
@@ -3098,12 +3102,12 @@ export function AdminPanel() {
                         />
                      </label>
 
-                     <div className="flex flex-col justify-center space-y-2 p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm transition-colors">
-                        <span className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest pl-1">Or enter URL manually</span>
+                     <div className="flex flex-col justify-center space-y-2 p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm transition-colors">
+                        <span className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest pl-1">Or enter URL manually</span>
                         <input 
                           type="url"
                           placeholder="https://example.com/banner.jpg"
-                          className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold text-sm placeholder:text-gray-400 dark:placeholder:text-slate-600 text-gray-900 dark:text-slate-100 transition-colors"
+                          className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white focus:border-[#0B3D9E] outline-none transition-colors"
                           value={config.loginBannerUrl || ''}
                           onChange={e => setConfig({...config, loginBannerUrl: e.target.value})}
                         />
@@ -3112,7 +3116,7 @@ export function AdminPanel() {
 
                   {/* Curated Preset Banners Gallery */}
                   <div className="space-y-4 pt-2">
-                     <span className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest pl-1">My Presets Gallery</span>
+                     <span className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest pl-1">My Presets Gallery</span>
                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
                         {config.customBannerPresets && config.customBannerPresets.length > 0 ? (
                           config.customBannerPresets.map((presetUrl, idx) => (
@@ -3121,8 +3125,8 @@ export function AdminPanel() {
                                 type="button"
                                 onClick={() => setConfig({ ...config, loginBannerUrl: presetUrl })}
                                 className={cn(
-                                  "w-full h-full rounded-xl border-2 overflow-hidden",
-                                  config.loginBannerUrl === presetUrl ? "border-primary-600 ring-2 ring-primary-100" : "border-transparent"
+                                  "w-full h-full rounded-xl border-2 overflow-hidden cursor-pointer",
+                                  config.loginBannerUrl === presetUrl ? "border-[#0B3D9E] ring-2 ring-[#0B3D9E]/30 dark:border-[#F97316] dark:ring-[#F97316]/30" : "border-transparent"
                                 )}
                               >
                                 <img src={presetUrl} alt="Preset" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -3135,14 +3139,14 @@ export function AdminPanel() {
                                   setConfig({ ...config, customBannerPresets: updated });
                                   toast.success("Preset removed");
                                 }}
-                                className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                                className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md cursor-pointer"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
                             </div>
                           ))
                         ) : (
-                          <div className="col-span-full text-center p-4 text-xs font-bold text-gray-500 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                          <div className="col-span-full text-center p-4 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
                             No presets saved yet. Upload an image and click "Save as Preset".
                           </div>
                         )}
@@ -3150,65 +3154,65 @@ export function AdminPanel() {
                   </div>
                </div>
 
-               <div className="md:col-span-2 pt-4 border-t border-gray-100 dark:border-slate-800 space-y-4">
+               <div className="md:col-span-2 pt-4 border-t border-slate-200 dark:border-slate-700/80 space-y-4">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-sm font-black text-gray-900 dark:text-slate-100 uppercase tracking-widest">Landing Page Stats Control</h4>
-                      <p className="text-xs text-gray-500 dark:text-slate-400 font-bold mt-1">Control how stats are displayed on the landing page</p>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Landing Page Stats Control</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-1">Control how stats are displayed on the landing page</p>
                     </div>
                   </div>
                   
-                  <div className="flex gap-4 p-1.5 bg-gray-100 dark:bg-slate-700/50 rounded-2xl w-fit">
+                  <div className="flex gap-3 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
                     <button
                       type="button"
                       onClick={() => setConfig({...config, statsMode: 'realtime'})}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${config.statsMode !== 'manual' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'}`}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${config.statsMode !== 'manual' ? 'bg-[#07266E] dark:bg-[#F97316] shadow-sm text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                     >
                       Real-time
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfig({...config, statsMode: 'manual'})}
-                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${config.statsMode === 'manual' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200'}`}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${config.statsMode === 'manual' ? 'bg-[#07266E] dark:bg-[#F97316] shadow-sm text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
                     >
                       Manual Override
                     </button>
                   </div>
 
                   {config.statsMode === 'manual' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-gray-50 dark:bg-slate-700/20 p-6 rounded-[2rem] border border-gray-100 dark:border-slate-700/50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 bg-slate-50 dark:bg-slate-800/40 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700/80">
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Users</label>
+                        <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Manual Total Users</label>
                         <input 
                           type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          className="w-full p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none focus:border-[#0B3D9E]"
                           value={config.manualTotalUsers || 0}
                           onChange={e => setConfig({...config, manualTotalUsers: Number(e.target.value)})}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Jobs</label>
+                        <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Manual Total Jobs</label>
                         <input 
                           type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          className="w-full p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none focus:border-[#0B3D9E]"
                           value={config.manualTotalJobs || 0}
                           onChange={e => setConfig({...config, manualTotalJobs: Number(e.target.value)})}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Completed Tasks</label>
+                        <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Manual Completed Tasks</label>
                         <input 
                           type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          className="w-full p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none focus:border-[#0B3D9E]"
                           value={config.manualCompletedTasks || 0}
                           onChange={e => setConfig({...config, manualCompletedTasks: Number(e.target.value)})}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Manual Total Withdraw</label>
+                        <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Manual Total Withdraw</label>
                         <input 
                           type="number"
-                          className="w-full p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold text-gray-900 dark:text-slate-100"
+                          className="w-full p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-900 dark:text-white outline-none focus:border-[#0B3D9E]"
                           value={config.manualTotalWithdraw || 0}
                           onChange={e => setConfig({...config, manualTotalWithdraw: Number(e.target.value)})}
                         />
@@ -3218,44 +3222,44 @@ export function AdminPanel() {
                </div>
 
                <div className="md:col-span-2 pt-4 space-y-4">
-                  <button disabled={savingConfig} type="submit" className="w-full py-4 bg-gray-900 dark:bg-slate-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl dark:shadow-none shadow-gray-200 hover:bg-gray-800 dark:hover:bg-slate-600 transition-all disabled:opacity-50">
+                  <button disabled={savingConfig} type="submit" className="w-full py-4 bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] hover:opacity-95 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg transition-all disabled:opacity-50 cursor-pointer">
                      {savingConfig ? 'Saving...' : 'Save System Settings'}
                   </button>
                </div>
             </form>
 
             {/* Deposit Rules Settings Section */}
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-150 dark:border-slate-700 shadow-sm dark:shadow-none space-y-6 mt-8 transition-colors">
+            <div className="bg-slate-50 dark:bg-slate-800/60 p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-6 mt-8 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl">
-                  <AlertCircle className="w-6 h-6 animate-pulse" />
+                <div className="p-3 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-2xl">
+                  <AlertCircle className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">Deposit Rules Settings</h3>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Dynamic instructions shown to users when adding liquidity</p>
+                  <h3 className="font-display text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Deposit Rules Settings</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Dynamic instructions shown to users when adding liquidity</p>
                 </div>
               </div>
 
               {depositRulesSuccessMsg && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-400 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-300 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
                   {depositRulesSuccessMsg}
                 </div>
               )}
 
               {depositRulesErrorMsg && (
-                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border-l-4 border-rose-500 text-rose-800 dark:text-rose-400 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border-l-4 border-rose-500 text-rose-800 dark:text-rose-300 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
                   {depositRulesErrorMsg}
                 </div>
               )}
 
               <form onSubmit={handleUpdateDepositRules} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 tracking-wider">Deposit Rules (Instructions)</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Deposit Rules (Instructions)</label>
                   <textarea
                     rows={6}
                     required
                     placeholder="উক্ত নাম্বারে টাকা পাঠিয়ে সেন্ডার নাম্বার, টাকার পরিমান ও ট্রানজেকশন আইডি দিন। ভুয়া রিকোয়েস্ট দিলে একাউন্ট ব্লক করা হবে।"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-inner font-extrabold text-gray-800 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-600 outline-none focus:border-amber-500 dark:focus:border-amber-400 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm leading-relaxed"
+                    className="w-full p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl font-extrabold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-[#0B3D9E] transition-all text-sm leading-relaxed"
                     value={depositRules}
                     onChange={(e) => setDepositRules(e.target.value)}
                   />
@@ -3264,7 +3268,7 @@ export function AdminPanel() {
                 <button
                   type="submit"
                   disabled={depositRulesLoading}
-                  className="w-full py-4 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md dark:shadow-none transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-[#F97316] hover:bg-[#EA580C] disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {depositRulesLoading ? 'Saving...' : 'Save Deposit Rules'}
                 </button>
@@ -3272,37 +3276,37 @@ export function AdminPanel() {
             </div>
 
             {/* Withdraw Rules Settings Section */}
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-150 dark:border-slate-700 shadow-sm dark:shadow-none space-y-6 mt-8 transition-colors">
+            <div className="bg-slate-50 dark:bg-slate-800/60 p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-6 mt-8 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl">
-                  <AlertCircle className="w-6 h-6 animate-pulse" />
+                <div className="p-3 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-2xl">
+                  <AlertCircle className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">Withdraw Rules Settings</h3>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Dynamic instructions shown to users when exiting capital</p>
+                  <h3 className="font-display text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Withdraw Rules Settings</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Dynamic instructions shown to users when exiting capital</p>
                 </div>
               </div>
 
               {withdrawRulesSuccessMsg && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-400 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-300 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
                   {withdrawRulesSuccessMsg}
                 </div>
               )}
 
               {withdrawRulesErrorMsg && (
-                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border-l-4 border-rose-500 text-rose-800 dark:text-rose-400 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border-l-4 border-rose-500 text-rose-800 dark:text-rose-300 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
                   {withdrawRulesErrorMsg}
                 </div>
               )}
 
               <form onSubmit={handleUpdateWithdrawRules} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 tracking-wider">Withdraw Rules (Instructions)</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Withdraw Rules (Instructions)</label>
                   <textarea
                     rows={6}
                     required
                     placeholder="নম্বরটি ভালোভাবে চেক করুন। ভুল নম্বরে টাকা গেলে কর্তৃপক্ষ দায়ী নয়। পেমেন্ট সম্পন্ন হতে ১-২৪ ঘণ্টা সময় লাগতে পারে।"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-inner font-extrabold text-gray-800 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-600 outline-none focus:border-amber-500 dark:focus:border-amber-400 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm leading-relaxed"
+                    className="w-full p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl font-extrabold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-[#0B3D9E] transition-all text-sm leading-relaxed"
                     value={withdrawRules}
                     onChange={(e) => setWithdrawRules(e.target.value)}
                   />
@@ -3311,7 +3315,7 @@ export function AdminPanel() {
                 <button
                   type="submit"
                   disabled={withdrawRulesLoading}
-                  className="w-full py-4 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md dark:shadow-none transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-[#F97316] hover:bg-[#EA580C] disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {withdrawRulesLoading ? 'Saving...' : 'Save Withdraw Rules'}
                 </button>
@@ -3319,37 +3323,37 @@ export function AdminPanel() {
             </div>
 
             {/* Ad Post Rules Settings Section */}
-            <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-150 dark:border-slate-700 shadow-sm dark:shadow-none space-y-6 mt-8 transition-colors">
+            <div className="bg-slate-50 dark:bg-slate-800/60 p-6 sm:p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-6 mt-8 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-2xl">
-                  <AlertCircle className="w-6 h-6 animate-pulse" />
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-2xl">
+                  <AlertCircle className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">Ad Post Rules Settings</h3>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">Dynamic instructions shown to users when posting an advertisement</p>
+                  <h3 className="font-display text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Ad Post Rules Settings</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Dynamic instructions shown to users when posting an advertisement</p>
                 </div>
               </div>
 
               {adPostRulesSuccessMsg && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-400 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-500 text-emerald-800 dark:text-emerald-300 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
                   {adPostRulesSuccessMsg}
                 </div>
               )}
 
               {adPostRulesErrorMsg && (
-                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border-l-4 border-rose-500 text-rose-800 dark:text-rose-400 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border-l-4 border-rose-500 text-rose-800 dark:text-rose-300 rounded-xl font-semibold text-sm animate-fadeIn animate-duration-300">
                   {adPostRulesErrorMsg}
                 </div>
               )}
 
               <form onSubmit={handleUpdateAdPostRules} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 tracking-wider">Ad Post Rules (Instructions)</label>
+                  <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Ad Post Rules (Instructions)</label>
                   <textarea
                     rows={4}
                     required
                     placeholder="সতর্কতা: আপনি অ্যাড পোস্ট করার পর যদি আবার অ্যাড ডিলিট করেন, তাহলে কোনো রিফান্ড পাবেন না।"
-                    className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-inner font-extrabold text-gray-800 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-600 outline-none focus:border-red-500 dark:focus:border-red-400 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm leading-relaxed"
+                    className="w-full p-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-2xl font-extrabold text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-rose-500 transition-all text-sm leading-relaxed"
                     value={adPostRules}
                     onChange={(e) => setAdPostRules(e.target.value)}
                   />
@@ -3358,7 +3362,7 @@ export function AdminPanel() {
                 <button
                   type="submit"
                   disabled={adPostRulesLoading}
-                  className="w-full py-4 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md dark:shadow-none transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-widest rounded-2xl shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {adPostRulesLoading ? 'Saving...' : 'Save Ad Post Rules'}
                 </button>
@@ -3366,18 +3370,18 @@ export function AdminPanel() {
             </div>
 
             {isSuperAdmin && (
-              <div className="mt-12 p-8 border-2 border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10 rounded-[2.5rem] space-y-6 transition-colors">
-                <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="mt-12 p-8 border-2 border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 rounded-[2.5rem] space-y-6 transition-colors">
+                <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
                   <Unlock className="w-8 h-8" />
-                  <h2 className="text-2xl font-black uppercase tracking-tight text-gray-900 dark:text-slate-100">Super Admin Override</h2>
+                  <h2 className="font-display text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Super Admin Override</h2>
                 </div>
-                <p className="text-sm font-bold text-gray-600 dark:text-slate-400">
+                <p className="text-sm font-bold text-slate-600 dark:text-slate-400">
                   You are logged in as the master system administrator. This gives you complete control over the system, bypassing standard constraints.
                 </p>
                 <div className="flex flex-col md:flex-row gap-4">
                    <button 
                      onClick={() => alert('Super tools coming soon!')}
-                     className="px-6 py-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none text-gray-900 dark:text-slate-100 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2 transition-all"
+                     className="px-6 py-4 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 shadow-sm text-slate-900 dark:text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-2 transition-all cursor-pointer"
                    >
                      <Settings className="w-4 h-4" /> System Reset Override
                    </button>
@@ -3388,11 +3392,11 @@ export function AdminPanel() {
         )}
 
         {['transactions', 'users', 'jobs', 'submissions', 'tickets', 'ads', 'deletions'].includes(activeTab) && totalItems > 0 && (
-          <div className="p-6 border-t border-gray-100 dark:border-slate-700/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50 dark:bg-slate-900/10 transition-colors">
-            <div className="text-xs font-bold text-gray-500 dark:text-slate-400">
-              Showing <span className="font-black text-gray-900 dark:text-slate-100">{Math.min((currentPage - 1) * 20 + 1, totalItems)}</span> to{' '}
-              <span className="font-black text-gray-900 dark:text-slate-100">{Math.min(currentPage * 20, totalItems)}</span> of{' '}
-              <span className="font-black text-gray-900 dark:text-slate-100">{totalItems}</span> results
+          <div className="p-6 border-t border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/70 dark:bg-slate-900/30 transition-colors">
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums">
+              Showing <span className="font-black text-slate-900 dark:text-white">{Math.min((currentPage - 1) * 20 + 1, totalItems)}</span> to{' '}
+              <span className="font-black text-slate-900 dark:text-white">{Math.min(currentPage * 20, totalItems)}</span> of{' '}
+              <span className="font-black text-slate-900 dark:text-white">{totalItems}</span> results
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -3403,12 +3407,12 @@ export function AdminPanel() {
                   }
                 }}
                 disabled={currentPage === 1 || tabLoading}
-                className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-xs rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Previous
               </button>
-              <div className="text-xs font-black text-gray-400 dark:text-slate-500 px-2">
+              <div className="text-xs font-black text-slate-400 dark:text-slate-500 px-2 tabular-nums">
                 Page {currentPage} of {Math.max(1, Math.ceil(totalItems / 20))}
               </div>
               <button
@@ -3419,7 +3423,7 @@ export function AdminPanel() {
                   }
                 }}
                 disabled={currentPage >= Math.ceil(totalItems / 20) || tabLoading}
-                className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-bold text-xs rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 Next
                 <ChevronRight className="w-4 h-4" />
@@ -3430,29 +3434,29 @@ export function AdminPanel() {
       </div>
 
       {blockConfirmUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6 transition-colors">
-            <div className="flex items-center gap-4 text-red-600 dark:text-red-400">
-              <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6 transition-colors">
+            <div className="flex items-center gap-4 text-rose-600 dark:text-rose-400">
+              <div className="bg-rose-100 dark:bg-rose-950/60 p-3 rounded-full">
                 <AlertTriangle className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-slate-100">Block User</h3>
+              <h3 className="font-display text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Block User</h3>
             </div>
             
             <div className="space-y-4">
-              <p className="text-gray-600 dark:text-slate-300 font-medium">
+              <p className="text-slate-600 dark:text-slate-300 font-medium">
                 Are you sure you want to block <strong>{blockConfirmUser.displayName || 'this user'}</strong>? 
                 This action requires administrative confirmation.
               </p>
               
               <div className="space-y-2">
-                <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Admin Password</label>
+                <label className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Admin Password</label>
                 <input 
                   type="password"
                   placeholder="Enter admin password"
                   value={blockPassword}
                   onChange={(e) => setBlockPassword(e.target.value)}
-                  className="w-full p-4 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-slate-100 transition-colors"
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white transition-colors"
                 />
               </div>
             </div>
@@ -3463,13 +3467,13 @@ export function AdminPanel() {
                   setBlockConfirmUser(null);
                   setBlockPassword('');
                 }}
-                className="flex-1 py-4 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all"
+                className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmBlockUser}
-                className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-xl dark:shadow-none shadow-red-200"
+                className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg cursor-pointer"
               >
                 Confirm
               </button>
@@ -3480,14 +3484,14 @@ export function AdminPanel() {
 
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 my-8 text-left transition-colors">
-            <div className="flex items-center gap-3 border-b border-gray-100 dark:border-slate-700 pb-4">
-              <div className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 p-3 rounded-2xl">
+          <div className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-6 my-8 text-left transition-colors">
+            <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-700/80 pb-4">
+              <div className="bg-blue-50 dark:bg-blue-950/60 text-[#0B3D9E] dark:text-blue-400 p-3 rounded-2xl">
                 <Settings className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black uppercase tracking-tight text-gray-900 dark:text-slate-100">ব্যবহারকারীর তথ্য পরিবর্তন করুন</h3>
-                <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                <h3 className="font-display text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">ব্যবহারকারীর তথ্য পরিবর্তন করুন</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-400 font-bold uppercase tracking-wider">
                   User: {editingUser.displayName || 'No Name'} (#{editingUser.serialNumber || editingUser.uid.slice(0, 6).toUpperCase()})
                 </p>
               </div>
@@ -3495,81 +3499,81 @@ export function AdminPanel() {
 
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               {!supabaseServiceRoleReady && (
-                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-400 space-y-2 text-xs font-semibold">
+                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 space-y-2 text-xs font-semibold">
                   <p className="font-extrabold flex items-center gap-1.5 text-amber-950 dark:text-amber-100 uppercase tracking-wide">
                     ⚠️ সার্ভিস রোল কী সেটিংস করা নেই (SUPABASE_SERVICE_ROLE_KEY is missing)
                   </p>
-                  <p className="leading-relaxed text-amber-800 dark:text-amber-400 font-semibold">
+                  <p className="leading-relaxed text-amber-800 dark:text-amber-300 font-semibold">
                     ব্যবহারকারীর ইমেইল ও পাসওয়ার্ড পরিবর্তন করতে হলে আপনার <strong>AI Studio-র Settings ➜ Secrets</strong> এ গিয়ে <strong>SUPABASE_SERVICE_ROLE_KEY</strong> ভ্যালুটি যুক্ত করতে হবে। এটি যুক্ত করা না থাকলে পাসওয়ার্ড বা ইমেইল ডাটাবেজে সেভ হবে না এবং নতুন পাসওয়ার্ডে লগইন কাজ করবে না।
                   </p>
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">নাম (Display Name)</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">নাম (Display Name)</label>
                 <input
                   type="text"
                   placeholder="ব্যবহারকারীর পুরো নাম লিখুন"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-slate-100 transition-colors"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">ইউজারনেম (Username)</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">ইউজারনেম (Username)</label>
                 <input
                   type="text"
                   placeholder="ইউনিক ইউজারনেম"
                   value={editUsername}
                   onChange={(e) => setEditUsername(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-slate-100 transition-colors"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">ইমেইল (Email Address)</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">ইমেইল (Email Address)</label>
                 <input
                   type="email"
                   placeholder="ইমেইল এড্রেস"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-slate-100 transition-colors"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">ফোন নম্বর (Phone Number)</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">ফোন নম্বর (Phone Number)</label>
                 <input
                   type="text"
                   placeholder="যেমন: +8801XXXXXXXXX"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-slate-100 transition-colors"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-[#0B3D9E]/20 focus:border-[#0B3D9E] text-slate-900 dark:text-white transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest">Last Known IP (আইপি অ্যাড্রেস)</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Last Known IP (আইপি অ্যাড্রেস)</label>
                 <input
                   type="text"
                   value={editingUser.last_ip_address || 'Not Recorded Yet'}
                   disabled
                   readOnly
-                  className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl font-bold text-sm outline-none text-gray-500 dark:text-slate-400 opacity-80 cursor-not-allowed transition-colors"
+                  className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none text-slate-500 dark:text-slate-400 opacity-80 cursor-not-allowed transition-colors"
                 />
               </div>
 
-              <div className="space-y-1.5 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 transition-colors">
-                <label className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest block mb-1">নতুন পাসওয়ার্ড সেট করুন (New Password)</label>
+              <div className="space-y-1.5 p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-800/60 transition-colors">
+                <label className="text-[10px] font-black text-[#0B3D9E] dark:text-blue-400 uppercase tracking-widest block mb-1">নতুন পাসওয়ার্ড সেট করুন (New Password)</label>
                 <input
                   type="text"
                   placeholder="নতুন পাসওয়ার্ড লিখুন (কমপক্ষে ৬ অক্ষর)"
                   value={editPassword}
                   onChange={(e) => setEditPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-indigo-100 dark:border-indigo-800/50 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-indigo-700 dark:text-indigo-200"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#1E293B] border border-blue-200 dark:border-blue-800/60 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-[#0B3D9E]/30 text-[#07266E] dark:text-blue-100"
                 />
-                <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1 font-semibold">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-semibold">
                   পাসওয়ার্ড পরিবর্তন করতে চাইলে এখানে নতুন পাসওয়ার্ড লিখুন। পরিবর্তন না করতে চাইলে খালি রাখুন।
                 </p>
               </div>
@@ -3579,11 +3583,11 @@ export function AdminPanel() {
               <button
                 type="button"
                 onClick={handleAdminImpersonate}
-                className="w-full py-3.5 border-2 border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-xs flex items-center justify-center gap-2"
+                className="w-full py-3.5 border-2 border-[#0B3D9E] text-[#0B3D9E] dark:border-blue-400 dark:text-blue-400 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all text-xs flex items-center justify-center gap-2 cursor-pointer"
                 disabled={editSubmitLoading || impersonateLoading}
               >
                  {impersonateLoading ? (
-                   <span className="w-4 h-4 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin"></span>
+                   <span className="w-4 h-4 border-2 border-[#0B3D9E] dark:border-blue-400 border-t-transparent rounded-full animate-spin"></span>
                  ) : null}
                  {impersonateLoading ? 'Loading...' : 'Login As User (Support Mode)'}
               </button>
@@ -3591,7 +3595,7 @@ export function AdminPanel() {
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="flex-1 py-3.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs"
+                  className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs cursor-pointer"
                   disabled={editSubmitLoading}
                 >
                   বাতিল (Cancel)
@@ -3599,7 +3603,7 @@ export function AdminPanel() {
                 <button
                   type="button"
                   onClick={handleSaveUserDetails}
-                  className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all text-xs shadow-lg dark:shadow-none shadow-indigo-100 flex items-center justify-center gap-2"
+                  className="flex-1 py-3.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black uppercase tracking-widest transition-all text-xs shadow-lg flex items-center justify-center gap-2 cursor-pointer"
                   disabled={editSubmitLoading || impersonateLoading}
                 >
                   {editSubmitLoading && (
@@ -3611,7 +3615,7 @@ export function AdminPanel() {
               <button
                 type="button"
                 onClick={() => setDeleteUserConfirmUser(editingUser)}
-                className="w-full py-3.5 mt-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-2xl font-black uppercase tracking-widest hover:bg-red-200 dark:hover:bg-red-900/50 transition-all text-xs border border-red-200 dark:border-red-900/50"
+                className="w-full py-3.5 mt-2 bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-2xl font-black uppercase tracking-widest hover:bg-rose-200 dark:hover:bg-rose-900/60 transition-all text-xs border border-rose-200 dark:border-rose-800/60 cursor-pointer"
               >
                 Delete Account (একাউন্ট ডিলিট)
               </button>
@@ -3622,9 +3626,9 @@ export function AdminPanel() {
 
       {deleteUserConfirmUser && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl space-y-6">
-            <h3 className="text-xl font-black text-gray-900 dark:text-slate-100">একাউন্ট ডিলিট নিশ্চিত করুন</h3>
-            <p className="text-xs text-gray-500 dark:text-slate-400 font-bold leading-relaxed">
+          <div className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl space-y-6">
+            <h3 className="font-display text-xl font-black text-slate-900 dark:text-white">একাউন্ট ডিলিট নিশ্চিত করুন</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
               আপনি {deleteUserConfirmUser.displayName || 'এই ব্যবহারকারী'}-এর একাউন্ট পার্মানেন্টলি ডিলিট করতে যাচ্ছেন। অনুগ্রহ করে এডমিন পাসওয়ার্ড দিন।
             </p>
             <input
@@ -3632,19 +3636,19 @@ export function AdminPanel() {
               placeholder="Enter delete password"
               value={deleteUserPassword}
               onChange={(e) => setDeleteUserPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-slate-100"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white"
             />
             <div className="flex gap-4">
               <button
                 onClick={() => { setDeleteUserConfirmUser(null); setDeleteUserPassword(''); }}
-                className="flex-1 py-3 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs"
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs cursor-pointer"
               >
                 বাতিল
               </button>
               <button
                 onClick={handleForceDeleteUser}
                 disabled={adminActionLoading}
-                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-red-700 transition-all text-xs shadow-lg shadow-red-200 dark:shadow-none"
+                className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-rose-700 transition-all text-xs shadow-lg cursor-pointer"
               >
                 {adminActionLoading ? 'লোড হচ্ছে...' : 'ডিলিট করুন'}
               </button>
@@ -3674,14 +3678,14 @@ export function AdminPanel() {
       {/* Reject Modal */}
       {rejectingSub && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
-            <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-slate-100 mb-4">Reject Proof</h2>
-            <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-6">Enter the reason for rejection:</p>
+          <div className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
+            <h2 className="font-display text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white mb-4">Reject Proof</h2>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">Enter the reason for rejection:</p>
             
             <input
               type="text"
               autoFocus
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-slate-100 mb-6"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-rose-500 text-slate-900 dark:text-white mb-6"
               placeholder="e.g. Invalid screenshot, incomplete task..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -3701,14 +3705,14 @@ export function AdminPanel() {
                   setRejectingSub(null);
                   setRejectReason('');
                 }}
-                className="flex-1 py-3.5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-slate-600 transition-all text-xs"
+                className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmRejectSubmission}
-                className="flex-1 py-3.5 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-red-700 transition-all text-xs shadow-lg dark:shadow-none shadow-red-100"
+                className="flex-1 py-3.5 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-rose-700 transition-all text-xs shadow-lg cursor-pointer"
               >
                 Reject Proof
               </button>

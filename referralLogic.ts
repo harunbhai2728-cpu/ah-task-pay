@@ -85,6 +85,47 @@ export async function registerReferral(req: any, res: any) {
     }
 }
 
+async function fetchAllPaged<T = any>(
+    buildQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+): Promise<T[]> {
+    const PAGE = 1000;
+    const all: T[] = [];
+    let from = 0;
+    while (true) {
+        const { data, error } = await buildQuery(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+    }
+    return all;
+}
+
+async function fetchInChunks<T = any>(
+    ids: string[],
+    chunkSize: number,
+    queryChunk: (chunk: string[]) => PromiseLike<{ data: T[] | null; error: any }>
+): Promise<T[]> {
+    if (ids.length === 0) return [];
+    const chunks: string[][] = [];
+    for (let i = 0; i < ids.length; i += chunkSize) {
+        chunks.push(ids.slice(i, i + chunkSize));
+    }
+    const results: T[] = [];
+    const CONCURRENCY = 5;
+    for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+        const batch = chunks.slice(i, i + CONCURRENCY);
+        const batchRes = await Promise.all(batch.map((chunk) => queryChunk(chunk)));
+        for (const res of batchRes) {
+            if (res.data && res.data.length > 0) {
+                results.push(...res.data);
+            }
+        }
+    }
+    return results;
+}
+
 export async function getReferralStatus(req: any, res: any) {
     try {
         const authHeader = req.headers.authorization;
@@ -94,38 +135,46 @@ export async function getReferralStatus(req: any, res: any) {
         if (authErr || !user) {
             // Try fallback decode if jwt is valid
             try {
-               const jwtPayload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-               if (jwtPayload && jwtPayload.sub) {
-                   user = { id: jwtPayload.sub } as any;
-                   authErr = null;
-               } else {
-                   console.error("Auth Error in getReferralStatus:", authErr);
-                   return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
-               }
-            } catch(e) {
-               console.error("Auth Error in getReferralStatus:", authErr);
-               return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
+                const jwtPayload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                if (jwtPayload && jwtPayload.sub) {
+                    user = { id: jwtPayload.sub } as any;
+                    authErr = null;
+                } else {
+                    console.error("Auth Error in getReferralStatus:", authErr);
+                    return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
+                }
+            } catch (e) {
+                console.error("Auth Error in getReferralStatus:", authErr);
+                return res.status(401).json({ error: 'Invalid token', details: authErr?.message });
             }
         }
 
-        // Retrieve global configs
-        const { data: config } = await supabase.from('system_configuration').select('*').eq('id', 1).maybeSingle();
-        
-        // Retrieve referral_code and profile claims
-        let profile = null;
-        try {
-            const { data, error } = await supabase.from('profiles').select('username, referral_code, target_1_claimed, target_2_claimed').eq('id', user.id).maybeSingle();
-            if (data) profile = data;
-        } catch (e) {}
+        // Run independent top-level queries concurrently
+        const [configRes, profileRes, directReferrals] = await Promise.all([
+            supabase.from('system_configuration').select('*').eq('id', 1).maybeSingle(),
+            supabase
+                .from('profiles')
+                .select('username, referral_code, target_1_claimed, target_2_claimed')
+                .eq('id', user.id)
+                .maybeSingle(),
+            fetchAllPaged<any>((from, to) =>
+                supabase
+                    .from('referrals')
+                    .select('referred_user_id, status, expiration_date, created_at')
+                    .eq('referrer_id', user.id)
+                    .range(from, to)
+            ).catch(() => [] as any[])
+        ]);
+
+        const config = configRes?.data || null;
+        const profile = profileRes?.data || null;
 
         let code = profile?.referral_code;
         if (!code) {
             code = `AH${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-            try {
-                await supabase.from('profiles').update({ referral_code: code }).eq('id', user.id);
-            } catch (err) {
+            Promise.resolve(supabase.from('profiles').update({ referral_code: code }).eq('id', user.id)).catch((err) => {
                 console.error("Failed to auto-generate referral code:", err);
-            }
+            });
         }
 
         let validCount = 0;
@@ -134,84 +183,142 @@ export async function getReferralStatus(req: any, res: any) {
         let joinedUsers: any[] = [];
 
         let isExpired = false;
-        let campaignEndDate = config?.campaign_end_date || null;
-        let campaignStartDate = getCampaignStartDate();
-        
+        const campaignEndDate = config?.campaign_end_date || null;
+        const campaignStartDate = getCampaignStartDate();
+        const validityDays = Number(config?.referral_validity_days ?? 30);
+
         if (campaignEndDate) {
             const end = new Date(campaignEndDate).getTime();
-            const now = new Date().getTime();
+            const now = Date.now();
             if (now >= end) {
                 isExpired = true;
             }
         }
 
         try {
-            // STEP 2: Fetch all users where referred_by matches this user's referral code
-            const { data: referredProfiles, error: pErr } = await supabase
-                .from('profiles')
-                .select('id, displayName, username, createdAt')
-                .eq('referred_by', code);
+            // Fetch all profiles referred by this user's referral code (paged safely past 1000-row limit)
+            const referredProfiles = await fetchAllPaged<any>((from, to) =>
+                supabase
+                    .from('profiles')
+                    .select('id, displayName, username, createdAt')
+                    .eq('referred_by', code)
+                    .order('createdAt', { ascending: false })
+                    .range(from, to)
+            );
 
-            if (referredProfiles && referredProfiles.length > 0) {
-                const referredUserIds = referredProfiles.map(p => p.id);
+            const profileMap = new Map<string, any>();
+            for (const p of referredProfiles) {
+                profileMap.set(p.id, p);
+            }
 
-                // Fetch their referral status from the 'referrals' table 
-                // OR calculate it dynamically based on approved jobs if missing
-                const { data: refs } = await supabase
-                    .from('referrals')
-                    .select('referred_user_id, status, expiration_date')
-                    .in('referred_user_id', referredUserIds);
+            const referralStatusMap = new Map<string, string>();
+            const referralExpiryMap = new Map<string, string>();
+            const extraProfileIds: string[] = [];
 
-                const referralStatusMap = new Map();
-                const referralExpiryMap = new Map();
-                if (refs) {
-                    for (const r of refs) {
-                        referralStatusMap.set(r.referred_user_id, r.status);
-                        if (r.expiration_date) {
-                            referralExpiryMap.set(r.referred_user_id, r.expiration_date);
+            for (const r of directReferrals) {
+                if (!r.referred_user_id) continue;
+                referralStatusMap.set(r.referred_user_id, r.status);
+                if (r.expiration_date) {
+                    referralExpiryMap.set(r.referred_user_id, r.expiration_date);
+                }
+                if (!profileMap.has(r.referred_user_id)) {
+                    extraProfileIds.push(r.referred_user_id);
+                }
+            }
+
+            // Include users linked via referrals.referrer_id even if profiles.referred_by wasn't populated
+            if (extraProfileIds.length > 0) {
+                const extraProfiles = await fetchInChunks<any>(extraProfileIds, 80, (chunk) =>
+                    supabase
+                        .from('profiles')
+                        .select('id, displayName, username, createdAt')
+                        .in('id', chunk)
+                );
+                for (const ep of extraProfiles) {
+                    profileMap.set(ep.id, ep);
+                }
+            }
+
+            const allProfiles = Array.from(profileMap.values());
+            if (allProfiles.length > 0) {
+                const missingIds = allProfiles
+                    .map((p) => p.id)
+                    .filter((id) => !referralStatusMap.has(id));
+
+                // Check referrals table in safe chunks for any rows whose referrer_id differed/null
+                if (missingIds.length > 0) {
+                    const existingRefs = await fetchInChunks<any>(missingIds, 80, (chunk) =>
+                        supabase
+                            .from('referrals')
+                            .select('referred_user_id, status, expiration_date')
+                            .in('referred_user_id', chunk)
+                    );
+                    for (const r of existingRefs) {
+                        if (r.referred_user_id) {
+                            referralStatusMap.set(r.referred_user_id, r.status);
+                            if (r.expiration_date) {
+                                referralExpiryMap.set(r.referred_user_id, r.expiration_date);
+                            }
                         }
                     }
                 }
 
-                // If some users are NOT in 'referrals' table (due to old bugs), we check submissions directly to repair state
-                const missingIds = referredUserIds.filter(id => !referralStatusMap.has(id));
-                const dynamicStatusMap = new Map();
-                
-                const { data: configDays } = await supabase.from('system_configuration').select('referral_validity_days').eq('id', 1).maybeSingle();
-                const validityDays = Number(configDays?.referral_validity_days ?? 30);
+                const stillMissingIds = allProfiles
+                    .map((p) => p.id)
+                    .filter((id) => !referralStatusMap.has(id));
 
-                if (missingIds.length > 0) {
-                    const { data: submissions } = await supabase
-                        .from('submissions')
-                        .select('worker_id, status')
-                        .eq('status', 'approved')
-                        .in('worker_id', missingIds);
-                        
-                    const approvedWorkers = new Set((submissions || []).map(s => s.worker_id));
-                    for (const id of missingIds) {
+                const dynamicStatusMap = new Map<string, string>();
+                const rowsToInsert: any[] = [];
+
+                if (stillMissingIds.length > 0) {
+                    const approvedSubs = await fetchInChunks<any>(stillMissingIds, 80, (chunk) =>
+                        supabase
+                            .from('submissions')
+                            .select('worker_id')
+                            .eq('status', 'approved')
+                            .in('worker_id', chunk)
+                    );
+
+                    const approvedWorkers = new Set(approvedSubs.map((s) => s.worker_id));
+                    const defaultExpDate = new Date();
+                    defaultExpDate.setDate(defaultExpDate.getDate() + validityDays);
+                    const defaultExpIso = defaultExpDate.toISOString();
+
+                    for (const id of stillMissingIds) {
                         const status = approvedWorkers.has(id) ? 'valid' : 'pending';
                         dynamicStatusMap.set(id, status);
-                        // Optional: auto-insert missing referral record to self-heal the DB
-                        try {
-                            const expDate = new Date();
-                            expDate.setDate(expDate.getDate() + validityDays);
-                            await supabase.from('referrals').insert({
-                                referrer_id: user.id,
-                                referred_user_id: id,
-                                status: status,
-                                expiration_date: expDate.toISOString()
-                            });
-                        } catch (e) { /* ignore insert errors */ }
+                        rowsToInsert.push({
+                            referrer_id: user.id,
+                            referred_user_id: id,
+                            status,
+                            expiration_date: defaultExpIso
+                        });
                     }
+
+                    // Bulk self-heal in chunks in the background (no N+1 sequential awaits)
+                    const INSERT_CHUNK = 200;
+                    const insertPromises: PromiseLike<any>[] = [];
+                    for (let i = 0; i < rowsToInsert.length; i += INSERT_CHUNK) {
+                        const slice = rowsToInsert.slice(i, i + INSERT_CHUNK);
+                        insertPromises.push(
+                            supabase
+                                .from('referrals')
+                                .upsert(slice, { onConflict: 'referred_user_id', ignoreDuplicates: true })
+                        );
+                    }
+                    Promise.allSettled(insertPromises).catch(() => {});
                 }
 
                 const nowTime = Date.now();
+                const validityMs = validityDays * 24 * 60 * 60 * 1000;
+                const sTime = campaignStartDate ? new Date(campaignStartDate).getTime() : 0;
+                const eTime = campaignEndDate ? new Date(campaignEndDate).getTime() : Infinity;
+                const expiredUserIds: string[] = [];
 
-                joinedUsers = referredProfiles.map(p => {
+                joinedUsers = allProfiles.map((p) => {
                     let status = referralStatusMap.get(p.id) || dynamicStatusMap.get(p.id) || 'pending';
                     const expDateStr = referralExpiryMap.get(p.id);
 
-                    // Check if pending referral is expired
                     if (status === 'pending') {
                         let isRefExpired = false;
                         if (expDateStr) {
@@ -220,7 +327,6 @@ export async function getReferralStatus(req: any, res: any) {
                             }
                         } else if (p.createdAt) {
                             const createdTime = new Date(p.createdAt).getTime();
-                            const validityMs = validityDays * 24 * 60 * 60 * 1000;
                             if (nowTime > createdTime + validityMs) {
                                 isRefExpired = true;
                             }
@@ -228,32 +334,48 @@ export async function getReferralStatus(req: any, res: any) {
 
                         if (isRefExpired) {
                             status = 'expired';
-                            // Self-heal DB status
-                            Promise.resolve(supabase.from('referrals').update({ status: 'expired' }).eq('referred_user_id', p.id)).catch(() => {});
+                            expiredUserIds.push(p.id);
                         }
                     }
 
                     if (status === 'valid') {
                         validCount++;
                         const pTime = new Date(p.createdAt || new Date()).getTime();
-                        const sTime = campaignStartDate ? new Date(campaignStartDate).getTime() : 0;
-                        const eTime = campaignEndDate ? new Date(campaignEndDate).getTime() : Infinity;
                         if (pTime >= sTime && pTime <= eTime) {
                             campaignValidCount++;
                         }
                     } else if (status === 'pending') {
                         pendingCount++;
                     }
-                    
+
                     return {
                         id: p.id,
                         name: p.displayName || p.username || 'User',
                         username: p.username || 'user',
-                        status: status,
+                        status,
                         expiration: expDateStr || null,
                         createdAt: p.createdAt || new Date().toISOString()
                     };
                 });
+
+                // Sort newest referrals first
+                joinedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                // Bulk self-heal expired statuses in chunks without blocking response
+                if (expiredUserIds.length > 0) {
+                    const EXPIRE_CHUNK = 80;
+                    const updatePromises: PromiseLike<any>[] = [];
+                    for (let i = 0; i < expiredUserIds.length; i += EXPIRE_CHUNK) {
+                        const slice = expiredUserIds.slice(i, i + EXPIRE_CHUNK);
+                        updatePromises.push(
+                            supabase
+                                .from('referrals')
+                                .update({ status: 'expired' })
+                                .in('referred_user_id', slice)
+                        );
+                    }
+                    Promise.allSettled(updatePromises).catch(() => {});
+                }
             }
         } catch (refE: any) {
             console.error("Error fetching referrals info:", refE);

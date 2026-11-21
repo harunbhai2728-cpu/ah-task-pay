@@ -35,25 +35,25 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
   const { user, profile, loading, isAdmin, error } = useAuth();
   
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 transition-colors">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 dark:border-primary-400"></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] transition-colors">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0B3D9E] dark:border-[#F97316]"></div>
     </div>
   );
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
-        <div className="bg-white p-12 rounded-[3rem] shadow-2xl text-center space-y-6 max-w-md border border-red-100">
-          <div className="bg-red-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-200">
-             <LogOut className="w-12 h-12" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] p-6 transition-colors">
+        <div className="bg-white dark:bg-[#1E293B] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-6 max-w-md border border-red-200 dark:border-red-900/40">
+          <div className="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-500/20">
+             <LogOut className="w-10 h-10" />
           </div>
-          <div className="space-y-4">
-            <h2 className="text-3xl font-black text-red-600 uppercase tracking-tight">System Error</h2>
-            <p className="text-gray-700 font-bold tracking-tight text-lg">{error}</p>
+          <div className="space-y-3">
+            <h2 className="text-3xl font-black text-red-600 dark:text-red-400 uppercase tracking-tight">System Error</h2>
+            <p className="text-slate-700 dark:text-slate-300 font-semibold text-base">{error}</p>
           </div>
           <button 
              onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
-             className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all uppercase tracking-widest text-sm"
+             className="w-full py-4 bg-[#07266E] hover:bg-[#0B3D9E] dark:bg-[#F97316] dark:hover:bg-[#EA580C] text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg"
            >
              Log Out & Try Again Later
           </button>
@@ -69,21 +69,21 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
     const heading = isByAdmin ? 'Your account has been deleted by Admin' : 'Your account has been deleted by You';
     
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
-        <div className="bg-white p-12 rounded-[3rem] shadow-2xl text-center space-y-6 max-w-md border border-red-100">
-           <div className="bg-red-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-200">
-              <LogOut className="w-12 h-12" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] p-6 transition-colors">
+        <div className="bg-white dark:bg-[#1E293B] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-5 max-w-md border border-red-200 dark:border-red-900/40">
+           <div className="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-500/20">
+              <LogOut className="w-10 h-10" />
            </div>
-           <div className="space-y-4">
-             <h2 className="text-2xl font-black text-red-600 uppercase tracking-tight">{heading}</h2>
+           <div className="space-y-3">
+             <h2 className="text-2xl font-black text-red-600 dark:text-red-400 uppercase tracking-tight">{heading}</h2>
              {profile.deletion_reason && (
-               <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-left">
-                 <p className="text-red-800 font-bold text-sm leading-relaxed whitespace-pre-wrap">
+               <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-xl border border-red-100 dark:border-red-900/40 text-left">
+                 <p className="text-red-800 dark:text-red-300 font-bold text-sm leading-relaxed whitespace-pre-wrap">
                    Reason: {profile.deletion_reason}
                  </p>
                </div>
              )}
-             <p className="text-gray-500 font-medium text-sm">
+             <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
                If you have any questions, please contact our support team.
              </p>
            </div>
@@ -91,7 +91,7 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
                href="https://wa.me/8801870866189"
                target="_blank"
                rel="noopener noreferrer"
-              className="w-full inline-block py-4 bg-green-500 text-white rounded-2xl font-black hover:bg-green-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-green-200"
+              className="w-full inline-block py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg"
             >
               Contact WhatsApp Support
             </a>
@@ -99,7 +99,7 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
                href="https://t.me/ahtaskpay_owner"
                target="_blank"
                rel="noopener noreferrer"
-              className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
+              className="w-full inline-block py-3.5 bg-[#0B3D9E] hover:bg-[#07266E] text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg mt-2"
             >
               Telegram Support
             </a>
@@ -107,19 +107,19 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
               href="https://t.me/ahtaskpay" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
+              className="w-full inline-block py-3.5 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg mt-2"
             >
               Telegram Channel
             </a>
            <a 
               href="mailto:ahtaskpay@gmail.com" 
-              className="w-full inline-block py-4 bg-gray-600 text-white rounded-2xl font-black hover:bg-gray-700 transition-all uppercase tracking-widest text-sm shadow-lg shadow-gray-200 mt-2"
+              className="w-full inline-block py-3.5 bg-slate-700 hover:bg-slate-800 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg mt-2"
             >
               Email Support
             </a>
-           <button
-              onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
-             className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all uppercase tracking-widest text-sm mt-4"
+           <button 
+             onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
+             className="w-full py-3.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm mt-3 shadow-lg"
            >
              Log Out
            </button>
@@ -130,22 +130,22 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
   
   if (profile?.isBlocked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-red-50 p-6">
-        <div className="bg-white p-12 rounded-[3rem] shadow-2xl text-center space-y-6 max-w-md border border-red-100">
-           <div className="bg-red-500 w-24 h-24 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-200">
-              <LogOut className="w-12 h-12" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] p-6 transition-colors">
+        <div className="bg-white dark:bg-[#1E293B] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-5 max-w-md border border-red-200 dark:border-red-900/40">
+           <div className="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-500/20">
+              <LogOut className="w-10 h-10" />
            </div>
-           <div className="space-y-4">
-             <h2 className="text-3xl font-black text-red-600 uppercase tracking-tight">Account Blocked</h2>
-             <p className="text-gray-700 font-bold tracking-tight text-lg">Your account has been blocked by the administration.</p>
+           <div className="space-y-3">
+             <h2 className="text-3xl font-black text-red-600 dark:text-red-400 uppercase tracking-tight">Account Blocked</h2>
+             <p className="text-slate-700 dark:text-slate-300 font-bold tracking-tight text-base">Your account has been blocked by the administration.</p>
              {profile.warning && (
-               <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                 <p className="text-orange-800 font-bold text-sm leading-relaxed">
+               <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-xl border border-orange-200 dark:border-orange-900/40">
+                 <p className="text-orange-800 dark:text-orange-300 font-bold text-sm leading-relaxed">
                    Reason: {profile.warning}
                  </p>
                </div>
              )}
-             <p className="text-gray-500 font-medium text-sm">
+             <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
                If you think this is a mistake, please contact our support team.
              </p>
            </div>
@@ -153,7 +153,7 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
               href="https://wa.me/8801870866189" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full inline-block py-4 bg-green-500 text-white rounded-2xl font-black hover:bg-green-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-green-200"
+              className="w-full inline-block py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg"
             >
               Contact WhatsApp Support
             </a>
@@ -161,7 +161,7 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
               href="https://t.me/ahtaskpay_owner" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
+              className="w-full inline-block py-3.5 bg-[#0B3D9E] hover:bg-[#07266E] text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg mt-2"
             >
               Telegram Support
             </a>
@@ -169,19 +169,19 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
               href="https://t.me/ahtaskpay" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full inline-block py-4 bg-blue-500 text-white rounded-2xl font-black hover:bg-blue-600 transition-all uppercase tracking-widest text-sm shadow-lg shadow-blue-200 mt-2"
+              className="w-full inline-block py-3.5 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg mt-2"
             >
               Telegram Channel
             </a>
            <a 
               href="mailto:ahtaskpay@gmail.com" 
-              className="w-full inline-block py-4 bg-gray-600 text-white rounded-2xl font-black hover:bg-gray-700 transition-all uppercase tracking-widest text-sm shadow-lg shadow-gray-200 mt-2"
+              className="w-full inline-block py-3.5 bg-slate-700 hover:bg-slate-800 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm shadow-lg mt-2"
             >
               Email Support
             </a>
            <button 
              onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
-             className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all uppercase tracking-widest text-sm mt-4"
+             className="w-full py-3.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black transition-all uppercase tracking-widest text-sm mt-3 shadow-lg"
            >
              Log Out
            </button>

@@ -118,30 +118,30 @@ export function PostAd() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
+    <div className="max-w-3xl mx-auto space-y-8 pb-12">
+      <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2.5rem] p-8 text-white shadow-xl border border-blue-800/40 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         <div className="relative z-10">
-          <h1 className="text-4xl font-black mb-4 uppercase tracking-tight">Post Advertisement</h1>
-          <p className="text-blue-100 font-medium">Broadcast your product or service right onto the dashboard.</p>
+          <h1 className="text-4xl font-black font-display mb-4 uppercase tracking-tight">Post Advertisement</h1>
+          <p className="text-blue-200 font-medium">Broadcast your product or service right onto the dashboard.</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-2xl flex items-center gap-3 border border-red-100 dark:border-red-900/50 transition-colors">
+          <div className="p-4 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-2xl flex items-center gap-3 border border-red-200 dark:border-red-900/50 transition-colors">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <p className="font-bold text-sm tracking-wide">{error}</p>
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] border border-gray-100 dark:border-slate-700 shadow-xl shadow-gray-50 dark:shadow-none space-y-6 transition-colors">
+        <div className="bg-white dark:bg-[#1E293B] p-8 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-6 transition-colors">
           <div className="space-y-4">
-            <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <ImageIcon className="w-4 h-4" />
               Ad Banner Image
             </label>
-            <div className="relative group rounded-3xl overflow-hidden bg-gray-50 dark:bg-slate-700 border-2 border-dashed border-gray-200 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors">
+            <div className="relative group rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-[#0B3D9E] dark:hover:border-blue-500 transition-colors">
               {formData.image ? (
                 <div className="relative">
                   <img src={formData.image} alt="Ad Preview" className="w-full h-48 object-cover" />
@@ -150,10 +150,10 @@ export function PostAd() {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-48 text-gray-400 dark:text-slate-500 cursor-pointer">
-                  <ImageIcon className="w-12 h-12 mb-4 text-gray-300 dark:text-slate-600 group-hover:text-indigo-400 dark:group-hover:text-indigo-500 transition-colors" />
-                  <p className="font-bold tracking-wide">Upload ad banner</p>
-                  <p className="text-xs mt-2 text-gray-400 dark:text-slate-500 text-center px-4">Recommended size is horizontal (e.g. 1200x600)</p>
+                <div className="flex flex-col items-center justify-center h-48 text-slate-400 dark:text-slate-500 cursor-pointer">
+                  <ImageIcon className="w-12 h-12 mb-4 text-slate-300 dark:text-slate-600 group-hover:text-[#0B3D9E] dark:group-hover:text-blue-400 transition-colors" />
+                  <p className="font-bold tracking-wide text-slate-600 dark:text-slate-300">Upload ad banner</p>
+                  <p className="text-xs mt-2 text-slate-400 dark:text-slate-500 text-center px-4">Recommended size is horizontal (e.g. 1200x600)</p>
                 </div>
               )}
               <input
@@ -177,7 +177,7 @@ export function PostAd() {
           </div>
 
           <div className="space-y-4">
-            <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Link2 className="w-4 h-4" />
               Destination Link
             </label>
@@ -185,15 +185,15 @@ export function PostAd() {
               type="url"
               required
               placeholder="https://example.com"
-              className="w-full p-4 bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl font-bold focus:ring-4 focus:ring-indigo-50 dark:focus:ring-indigo-950/20 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all outline-none dark:text-white"
+              className="w-full p-4 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold focus:ring-4 focus:ring-[#0B3D9E]/15 focus:border-[#0B3D9E] dark:focus:border-blue-500 transition-all outline-none text-slate-900 dark:text-white"
               value={formData.link}
               onChange={e => setFormData({...formData, link: e.target.value})}
             />
-            <p className="text-xs text-gray-400 dark:text-slate-500 font-bold ml-1">Users will be directed to this link when they click your ad</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold ml-1">Users will be directed to this link when they click your ad</p>
           </div>
 
           <div className="space-y-4">
-            <label className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               Duration & Pricing
             </label>
@@ -206,17 +206,17 @@ export function PostAd() {
                   className={cn(
                     "p-4 rounded-2xl text-left transition-all border-2",
                     formData.durationDays === plan.days 
-                      ? "bg-indigo-50 dark:bg-indigo-950/20 border-indigo-500 dark:border-indigo-500" 
-                      : "bg-gray-50 dark:bg-slate-700 border-transparent dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-600 hover:border-gray-200 dark:hover:border-slate-500"
+                      ? "bg-blue-50 dark:bg-blue-950/50 border-[#0B3D9E] dark:border-blue-500" 
+                      : "bg-slate-50 dark:bg-slate-800/70 border-slate-200/70 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
                   )}
                 >
                   <p className={cn(
-                    "text-xl font-black uppercase tracking-tight",
-                    formData.durationDays === plan.days ? "text-indigo-900 dark:text-white" : "text-gray-900 dark:text-slate-100"
+                    "text-xl font-black font-display uppercase tracking-tight",
+                    formData.durationDays === plan.days ? "text-[#07266E] dark:text-white" : "text-slate-900 dark:text-slate-100"
                   )}>{plan.label}</p>
                   <p className={cn(
-                    "text-sm font-bold mt-1",
-                    formData.durationDays === plan.days ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 dark:text-slate-400"
+                    "text-sm font-bold mt-1 tabular-nums",
+                    formData.durationDays === plan.days ? "text-[#0B3D9E] dark:text-[#FB923C]" : "text-slate-500 dark:text-slate-400"
                   )}>{formatCurrency(plan.price)}</p>
                 </button>
               ))}
@@ -226,24 +226,24 @@ export function PostAd() {
 
         {/* Ad Post Rules Notice */}
         {!rulesLoading && adPostRules && (
-          <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/50 p-6 rounded-[2rem] flex items-start gap-4 transition-colors">
-             <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400 shrink-0 mt-1" />
-             <p className="text-sm md:text-base text-yellow-800 dark:text-yellow-200 font-extrabold leading-relaxed whitespace-pre-wrap text-left">
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-6 rounded-[2rem] flex items-start gap-4 transition-colors">
+             <AlertCircle className="w-8 h-8 text-amber-600 dark:text-amber-400 shrink-0 mt-1" />
+             <p className="text-sm md:text-base text-amber-900 dark:text-amber-200 font-extrabold leading-relaxed whitespace-pre-wrap text-left">
                {adPostRules}
              </p>
           </div>
         )}
 
-        <div className="bg-gray-900 dark:bg-slate-950 p-8 rounded-[2rem] text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-2xl transition-colors border border-transparent dark:border-slate-800">
+        <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-8 rounded-[2rem] text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl transition-colors border border-blue-800/40">
           <div>
-            <p className="text-gray-400 dark:text-slate-500 font-bold mb-1">Total Cost</p>
-            <p className="text-4xl font-black">{formatCurrency(grandTotal)}</p>
-            <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mt-2">Will be deducted from Deposit Balance</p>
+            <p className="text-blue-200 font-bold mb-1">Total Cost</p>
+            <p className="text-4xl font-black font-display tabular-nums">{formatCurrency(grandTotal)}</p>
+            <p className="text-sm font-medium text-blue-200/80 mt-2">Will be deducted from Deposit Balance</p>
           </div>
           <button 
             type="submit"
             disabled={loading}
-            className="w-full md:w-auto px-8 py-4 bg-indigo-500 dark:bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-600 dark:hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100 transition-all"
+            className="w-full md:w-auto px-8 py-4 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-orange-500/20"
           >
             {loading ? (
               <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" />

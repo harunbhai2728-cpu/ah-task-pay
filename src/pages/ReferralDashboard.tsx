@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { realSupabase } from '../lib/supabase';
 import { motion } from 'motion/react';
 import { CheckCircle, Clock, Copy, Gift, Share2, Target, Users, Zap, Terminal, AlertCircle } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 export function ReferralDashboard() {
-  const { user, refreshProfile } = useAuth();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [claimLoading, setClaimLoading] = useState(false);
@@ -13,13 +16,16 @@ export function ReferralDashboard() {
   const [sqlCopied, setSqlCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const networkSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (authLoading) return;
     fetchData();
-  }, [user]);
+  }, [user?.id, authLoading]);
 
   useEffect(() => {
-    if (!data?.campaignEndDate || data.isExpired || data.tablesMissing) {
+    if (!data?.campaignEndDate || data?.isExpired || data?.tablesMissing) {
        setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 });
        return;
     }
@@ -45,6 +51,8 @@ export function ReferralDashboard() {
   }, [data]);
 
   const fetchData = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     try {
       setLoading(true);
       setErrorMsg(null);
@@ -56,17 +64,18 @@ export function ReferralDashboard() {
       const { data: { session } } = await realSupabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        console.warn("No authentication token is active.");
+        setErrorMsg("Session expired or unavailable. Please refresh or login again.");
         setLoading(false);
         return;
       }
 
       const res = await fetch('/api/referral/status', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        signal: controller.signal
       });
       
       if (!res.ok) {
-        throw new Error(`HTTP Error Status: ${res.status}`);
+        throw new Error(`Server responded with status ${res.status}. Please try again.`);
       }
 
       const json = await res.json();
@@ -78,8 +87,13 @@ export function ReferralDashboard() {
       }
     } catch (e: any) {
       console.error("Failed to load referral data pipeline:", e);
-      setErrorMsg(e.message || "An unexpected error occurred while fetching your referral dashboard.");
+      if (e?.name === 'AbortError') {
+        setErrorMsg("Request timed out while loading referral data. Please tap Retry Connection.");
+      } else {
+        setErrorMsg(e.message || "An unexpected error occurred while fetching your referral dashboard.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -169,24 +183,24 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#0B3D9E] dark:border-[#F97316]"></div>
       </div>
     );
   }
 
   if (errorMsg) {
     return (
-      <div className="max-w-xl mx-auto p-8 text-center space-y-6 bg-red-50/50 rounded-[2rem] border border-red-100">
-        <div className="inline-flex p-4 bg-red-100 text-red-700 rounded-full">
+      <div className="max-w-xl mx-auto p-8 text-center space-y-6 bg-red-50 dark:bg-red-950/30 rounded-[2rem] border border-red-200 dark:border-red-900/40">
+        <div className="inline-flex p-4 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-black text-red-900">Database Pipeline Interruption</h2>
-        <p className="text-red-700 font-medium text-sm">
+        <h2 className="text-xl font-black text-red-900 dark:text-red-300">Database Pipeline Interruption</h2>
+        <p className="text-red-700 dark:text-red-400 font-medium text-sm">
           {errorMsg}
         </p>
         <button
           onClick={fetchData}
-          className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-red-700 transition"
+          className="px-6 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-xl font-bold uppercase text-xs tracking-wider transition"
         >
           Retry Connection
         </button>
@@ -198,33 +212,33 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
   if (data?.tablesMissing) {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="bg-gradient-to-r from-orange-400 to-amber-500 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-orange-100">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
+        <div className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#F97316] opacity-15 rounded-full blur-3xl"></div>
           <div className="relative z-10 space-y-2">
-            <h1 className="text-3xl font-black flex items-center gap-2">
-              <Terminal className="w-8 h-8" /> One-Time Database Setup Required
+            <h1 className="text-3xl font-black flex items-center gap-2 font-display">
+              <Terminal className="w-8 h-8 text-[#FB923C]" /> One-Time Database Setup Required
             </h1>
-            <p className="text-orange-50 font-semibold">
+            <p className="text-blue-100 font-semibold">
               The Referral System requires auxiliary database tables before you can track rewards.
             </p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-4">
-          <h2 className="text-lg font-black text-gray-800">Migration Instructions</h2>
-          <p className="text-sm text-gray-600 font-semibold leading-relaxed">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+          <h2 className="text-lg font-black text-slate-900 dark:text-white">Migration Instructions</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
             Please copy the PostgreSQL migration script below and execute it in your **Supabase dashboard SQL Editor**:
           </p>
           
           <div className="relative">
-            <pre className="bg-gray-900 text-gray-150 p-5 rounded-2xl text-xs overflow-x-auto font-mono max-h-80 leading-relaxed">
+            <pre className="bg-slate-900 text-slate-100 p-5 rounded-2xl text-xs overflow-x-auto font-mono max-h-80 leading-relaxed border border-slate-700">
               {sqlQuery}
             </pre>
             <button
               onClick={copySqlToClipboard}
               className="absolute top-3 right-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 p-2.5 rounded-xl transition flex items-center gap-1.5 focus:outline-none"
             >
-              {sqlCopied ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              {sqlCopied ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               <span className="text-[10px] font-bold uppercase tracking-wider">{sqlCopied ? 'Copied' : 'Copy'}</span>
             </button>
           </div>
@@ -232,7 +246,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
           <div className="pt-4 flex gap-4">
             <button
               onClick={fetchData}
-              className="flex-1 py-3.5 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-150"
+              className="flex-1 py-3.5 bg-[#F97316] text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-[#EA580C] transition flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
             >
               I Completed the Setup - Recheck Database
             </button>
@@ -244,33 +258,37 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
 
   const validCount = data?.validCount || 0;
   const campaignValidCount = data?.campaignValidCount || 0;
+  const joinedUsers = Array.isArray(data?.joinedUsers) ? data.joinedUsers : [];
+  const totalPages = Math.max(1, Math.ceil(joinedUsers.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedUsers = joinedUsers.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
+      <div className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-7 sm:p-8 text-white relative overflow-hidden shadow-2xl">
+        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#F97316] opacity-15 rounded-full blur-3xl"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-3xl font-black flex items-center gap-2">
-              <Gift className="w-8 h-8" /> Refer & Earn Substantial Rewards
+            <h1 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-2.5 font-display tracking-tight">
+              <Gift className="w-8 h-8 text-[#FB923C]" /> Refer & Earn Substantial Rewards
             </h1>
-            <p className="text-indigo-100 font-medium">
-              Invite your friends and earn a guaranteed {data?.referralBonusAmount || 0} BDT for every valid referral!
+            <p className="text-blue-100 font-medium text-sm sm:text-base">
+              Invite your friends and earn a guaranteed <span className="text-[#FB923C] font-extrabold">{data?.referralBonusAmount || 0} BDT</span> for every valid referral!
             </p>
           </div>
-          <div className="bg-white/20 backdrop-blur-md px-6 py-4 rounded-xl text-center min-w-[200px] border border-white/30">
-            <div className="flex items-center justify-center gap-2 text-indigo-50 font-semibold mb-1">
-              <Clock className="w-4 h-4" /> Remaining Time
+          <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl text-center min-w-[200px] border border-white/20 shrink-0">
+            <div className="flex items-center justify-center gap-2 text-blue-100 font-semibold text-xs uppercase tracking-wider mb-1">
+              <Clock className="w-4 h-4 text-[#FB923C]" /> Remaining Time
             </div>
-            <div className="text-xl md:text-2xl font-black text-white flex justify-center gap-2">
-              {data.isExpired ? (
+            <div className="text-xl md:text-2xl font-black text-white flex justify-center gap-2 tabular-nums">
+              {data?.isExpired ? (
                 <span>Expired</span>
               ) : (
                 <>
-                  <div className="text-center"><span>{timeLeft.days}</span><span className="text-xs block font-medium opacity-80">Days</span></div>:
-                  <div className="text-center"><span>{timeLeft.hours.toString().padStart(2, '0')}</span><span className="text-xs block font-medium opacity-80">Hrs</span></div>:
-                  <div className="text-center"><span>{timeLeft.mins.toString().padStart(2, '0')}</span><span className="text-xs block font-medium opacity-80">Min</span></div>:
-                  <div className="text-center"><span>{timeLeft.secs.toString().padStart(2, '0')}</span><span className="text-xs block font-medium opacity-80">Sec</span></div>
+                  <div className="text-center"><span>{timeLeft.days}</span><span className="text-[10px] block font-medium opacity-80">Days</span></div>:
+                  <div className="text-center"><span>{timeLeft.hours.toString().padStart(2, '0')}</span><span className="text-[10px] block font-medium opacity-80">Hrs</span></div>:
+                  <div className="text-center"><span>{timeLeft.mins.toString().padStart(2, '0')}</span><span className="text-[10px] block font-medium opacity-80">Min</span></div>:
+                  <div className="text-center"><span>{timeLeft.secs.toString().padStart(2, '0')}</span><span className="text-[10px] block font-medium opacity-80">Sec</span></div>
                 </>
               )}
             </div>
@@ -279,69 +297,69 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-[2rem] border border-indigo-50 shadow-sm space-y-6">
-          <h2 className="text-xl font-black text-gray-800 flex items-center gap-2">
-            <Share2 className="w-6 h-6 text-indigo-500" /> Share Referral Link
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-6 transition-colors">
+          <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 font-display">
+            <Share2 className="w-6 h-6 text-[#0B3D9E] dark:text-[#FB923C]" /> Share Referral Link
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-2 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+            <div className="flex items-center gap-2 bg-blue-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-blue-100 dark:border-slate-700">
               <input
                 type="text"
                 readOnly
                 value={`${(data?.referralDomainUrl || 'https://ahtaskpay.onrender.com').replace(/\/+$/, '')}/register?ref=${data?.referralCode || ''}`}
-                className="bg-transparent border-none outline-none font-medium text-indigo-900 w-full"
+                className="bg-transparent border-none outline-none font-semibold text-[#07266E] dark:text-blue-300 w-full text-sm"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2.5">
               <button
                 onClick={handleCopy}
-                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-indigo-700 transition flex items-center justify-center gap-2 focus:outline-none cursor-pointer"
+                className="flex-1 py-3 bg-[#07266E] hover:bg-[#0B3D9E] text-white rounded-xl font-bold uppercase text-xs tracking-wider transition flex items-center justify-center gap-2 focus:outline-none cursor-pointer shadow-md"
               >
-                {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? <CheckCircle className="w-4 h-4 text-[#FB923C]" /> : <Copy className="w-4 h-4" />}
                 {copied ? 'Copied' : 'Copy Link'}
               </button>
               <button
                 onClick={handleShareWhatsApp}
-                className="flex-1 py-3 bg-green-500 text-white rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-green-600 transition flex items-center justify-center gap-2 shadow-lg shadow-green-150 focus:outline-none cursor-pointer"
+                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold uppercase text-xs tracking-wider transition flex items-center justify-center gap-2 shadow-md focus:outline-none cursor-pointer"
               >
-                <Share2 className="w-4 h-4" /> Share on WhatsApp
+                <Share2 className="w-4 h-4" /> Share WhatsApp
               </button>
             </div>
           </div>
           
-          <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 text-orange-850 space-y-2">
-            <h3 className="font-bold flex items-center gap-1 text-orange-900"><Zap className="w-4 h-4" /> Important Rules</h3>
+          <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-xl border border-orange-200/70 dark:border-orange-900/40 text-orange-900 dark:text-orange-200 space-y-2">
+            <h3 className="font-bold flex items-center gap-1.5 text-[#EA580C] dark:text-[#FB923C] text-sm"><Zap className="w-4 h-4" /> Important Rules</h3>
             <ul className="list-disc pl-4 text-xs font-semibold space-y-1">
-              <li>A referral counts as <strong className="text-orange-950">Valid</strong> only when the referred user completes and gets paid for <strong className="text-orange-950">{data?.referralValidationCriteria || 1} microjob(s)</strong>.</li>
+              <li>A referral counts as <strong className="text-orange-950 dark:text-white">Valid</strong> only when the referred user completes and gets paid for <strong className="text-orange-950 dark:text-white">{data?.referralValidationCriteria || 1} microjob(s)</strong>.</li>
               <li>Fake accounts or multiple accounts result in a permanent ban.</li>
               <li>Pending referrals will automatically expire if they are not validated within 1 month (30 days) of joining.</li>
             </ul>
           </div>
         </div>
 
-        <div className="bg-white rounded-[2rem] border border-blue-50 shadow-sm p-6 space-y-6 flex flex-col justify-between">
+        <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm p-6 space-y-6 flex flex-col justify-between transition-colors">
             <div>
-              <h2 className="text-xl font-black text-gray-800 flex items-center gap-2 mb-4">
-                <Users className="w-6 h-6 text-blue-500" /> Your Referrals
+              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 mb-4 font-display">
+                <Users className="w-6 h-6 text-[#0B3D9E] dark:text-[#FB923C]" /> Your Referrals
               </h2>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 rounded-xl p-4 border border-green-100 text-center space-y-1">
-                  <div className="text-2xl font-black text-green-700">{validCount}</div>
-                  <div className="text-xs font-bold text-green-600 uppercase tracking-wider">Valid</div>
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl p-5 border border-emerald-200/70 dark:border-emerald-900/40 text-center space-y-1">
+                  <div className="text-3xl font-black text-emerald-700 dark:text-emerald-400 tabular-nums">{validCount}</div>
+                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-300 uppercase tracking-wider">Valid</div>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-center space-y-1">
-                  <div className="text-2xl font-black text-gray-700">{data?.pendingCount || 0}</div>
-                  <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">Pending Tasks</div>
+                <div className="bg-slate-50 dark:bg-slate-800/70 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 text-center space-y-1">
+                  <div className="text-3xl font-black text-slate-800 dark:text-slate-100 tabular-nums">{data?.pendingCount || 0}</div>
+                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Tasks</div>
                 </div>
               </div>
             </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-black text-gray-800 flex items-center gap-2">
-            <Target className="w-5 h-5 text-purple-500" /> Milestones & Rewards
+      <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden transition-colors">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 font-display">
+            <Target className="w-5 h-5 text-[#F97316]" /> Milestones & Rewards
           </h2>
         </div>
         <div className="p-6 space-y-8">
@@ -350,69 +368,69 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
           <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Target 1: {data?.target1Referrals || 0} Valid Referrals</h3>
-                <p className="text-sm text-gray-500 font-medium">Reward: {data?.target1Reward || 0} BDT added to your balance.</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Target 1: {data?.target1Referrals || 0} Valid Referrals</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Reward: {data?.target1Reward || 0} BDT added to your balance.</p>
               </div>
-              <div className="text-right">
-                <span className="text-2xl font-black text-indigo-600">{campaignValidCount}</span>
-                <span className="text-gray-400 font-bold">/{data?.target1Referrals || 0}</span>
+              <div className="text-right tabular-nums">
+                <span className="text-2xl font-black text-[#0B3D9E] dark:text-blue-400">{campaignValidCount}</span>
+                <span className="text-slate-400 dark:text-slate-500 font-bold">/{data?.target1Referrals || 0}</span>
               </div>
             </div>
-            <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min((campaignValidCount / Math.max(data?.target1Referrals || 1, 1)) * 100, 100)}%` }}
-                className="h-full bg-indigo-500 rounded-full"
+                className="h-full bg-gradient-to-r from-[#07266E] to-[#0B3D9E] rounded-full"
               />
             </div>
             <button
                onClick={() => handleClaim(1)}
-               disabled={campaignValidCount < (data?.target1Referrals || 0) || data.target1Claimed || data.isExpired || claimLoading}
+               disabled={campaignValidCount < (data?.target1Referrals || 0) || data?.target1Claimed || data?.isExpired || claimLoading}
                className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all cursor-pointer ${
-                 data.target1Claimed
-                  ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
-                  : campaignValidCount < (data?.target1Referrals || 0) || data.isExpired
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200'
+                 data?.target1Claimed
+                  ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 cursor-not-allowed border border-emerald-200 dark:border-emerald-900/50'
+                  : campaignValidCount < (data?.target1Referrals || 0) || data?.isExpired
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                    : 'bg-[#07266E] hover:bg-[#0B3D9E] text-white shadow-lg'
                }`}
             >
-              {claimLoading ? 'Processing...' : data.target1Claimed ? 'Claimed' : data.isExpired ? 'Expired' : `Claim ${data?.target1Reward || 0} BDT`}
+              {claimLoading ? 'Processing...' : data?.target1Claimed ? 'Claimed' : data?.isExpired ? 'Expired' : `Claim ${data?.target1Reward || 0} BDT`}
             </button>
           </div>
 
-          <hr className="border-gray-100" />
+          <hr className="border-slate-100 dark:border-slate-700/70" />
 
           {/* Target 2 */}
           <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Target 2: {data?.target2Referrals || 0} Valid Referrals</h3>
-                <p className="text-sm text-gray-500 font-medium">Reward: {data?.target2Reward || 0} BDT added to your balance.</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Target 2: {data?.target2Referrals || 0} Valid Referrals</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Reward: {data?.target2Reward || 0} BDT added to your balance.</p>
               </div>
-              <div className="text-right">
-                <span className="text-2xl font-black text-purple-600">{campaignValidCount}</span>
-                <span className="text-gray-400 font-bold">/{data?.target2Referrals || 0}</span>
+              <div className="text-right tabular-nums">
+                <span className="text-2xl font-black text-[#F97316]">{campaignValidCount}</span>
+                <span className="text-slate-400 dark:text-slate-500 font-bold">/{data?.target2Referrals || 0}</span>
               </div>
             </div>
-            <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min((campaignValidCount / Math.max(data?.target2Referrals || 1, 1)) * 100, 100)}%` }}
-                className="h-full bg-purple-500 rounded-full"
+                className="h-full bg-gradient-to-r from-[#EA580C] to-[#F97316] rounded-full"
               />
             </div>
             <button
                onClick={() => handleClaim(2)}
-               disabled={campaignValidCount < (data?.target2Referrals || 0) || data.target2Claimed || data.isExpired || claimLoading}
+               disabled={campaignValidCount < (data?.target2Referrals || 0) || data?.target2Claimed || data?.isExpired || claimLoading}
                className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all cursor-pointer ${
-                 data.target2Claimed
-                  ? 'bg-green-100 text-green-700 cursor-not-allowed border border-green-200'
-                  : campaignValidCount < (data?.target2Referrals || 0) || data.isExpired
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-200'
+                 data?.target2Claimed
+                  ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 cursor-not-allowed border border-emerald-200 dark:border-emerald-900/50'
+                  : campaignValidCount < (data?.target2Referrals || 0) || data?.isExpired
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                    : 'bg-[#F97316] hover:bg-[#EA580C] text-white shadow-lg shadow-orange-500/20'
                }`}
             >
-              {claimLoading ? 'Processing...' : data.target2Claimed ? 'Claimed' : data.isExpired ? 'Expired' : `Claim ${data?.target2Reward || 0} BDT`}
+              {claimLoading ? 'Processing...' : data?.target2Claimed ? 'Claimed' : data?.isExpired ? 'Expired' : `Claim ${data?.target2Reward || 0} BDT`}
             </button>
           </div>
 
@@ -420,55 +438,59 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
       </div>
 
       {/* My Network Section */}
-      <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-lg font-black text-gray-800 flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-500" /> My Network
+      <div ref={networkSectionRef} className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden transition-colors scroll-mt-6">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 font-display">
+            <Users className="w-5 h-5 text-[#0B3D9E] dark:text-[#FB923C]" /> My Network
           </h2>
-          <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-black">
-            Total Joined: {data?.joinedUsers?.length || 0}
+          <span className="bg-blue-100 dark:bg-blue-950/60 text-[#0B3D9E] dark:text-blue-300 px-3 py-1 rounded-full text-xs font-black tabular-nums">
+            Total Joined: {joinedUsers.length}
           </span>
         </div>
         <div className="p-6">
-          {!data?.joinedUsers || data.joinedUsers.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 font-bold">
+          {joinedUsers.length === 0 ? (
+            <div className="text-center py-10 text-slate-400 dark:text-slate-500 font-bold">
               No one has registered using your referral code yet. Reach out to friends!
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-gray-100 text-xs font-bold uppercase tracking-wider text-gray-400">
-                    <th className="pb-3 text-left pl-2">Name</th>
+                  <tr className="border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    <th className="pb-3 text-left pl-2 w-12">#</th>
+                    <th className="pb-3 text-left">Name</th>
                     <th className="pb-3 text-left">Join Date</th>
                     <th className="pb-3 text-right pr-2">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {data.joinedUsers.map((item: any, idx: number) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition text-sm">
-                      <td className="py-4 pl-2 font-black text-gray-900">
-                        {item.name} <span className="text-xs text-gray-400 font-medium">(@{item.username})</span>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/70">
+                  {paginatedUsers.map((item: any, idx: number) => (
+                    <tr key={item.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition text-sm">
+                      <td className="py-4 pl-2 font-bold text-slate-400 dark:text-slate-500 tabular-nums">
+                        {(safePage - 1) * PAGE_SIZE + idx + 1}
                       </td>
-                      <td className="py-4 text-gray-500 font-bold">
+                      <td className="py-4 font-black text-slate-900 dark:text-white">
+                        {item.name} <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">(@{item.username})</span>
+                      </td>
+                      <td className="py-4 text-slate-500 dark:text-slate-400 font-bold">
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-4 text-right pr-2">
                         {item.status === 'valid' ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-green-100 text-green-700">
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
                               <CheckCircle className="w-3.5 h-3.5" /> Validated
                             </span>
                         ) : item.status === 'expired' || item.status === 'cropped' ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-red-100 text-red-700">
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400">
                               <Clock className="w-3.5 h-3.5" /> Expired
                             </span>
                         ) : (
                             <div className="flex flex-col items-end">
-                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-yellow-100 text-yellow-700">
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400">
                                   <Clock className="w-3.5 h-3.5" /> Pending Job
                                 </span>
                                 {item.expiration && (
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase mt-1">Exp: {new Date(item.expiration).toLocaleDateString()}</span>
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Exp: {new Date(item.expiration).toLocaleDateString()}</span>
                                 )}
                             </div>
                         )}
@@ -480,6 +502,17 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
             </div>
           )}
         </div>
+        {joinedUsers.length > 0 && (
+          <Pagination
+            currentPage={safePage}
+            totalItems={joinedUsers.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="referrals"
+            variant="embedded"
+            scrollTargetRef={networkSectionRef}
+          />
+        )}
       </div>
     </div>
   );

@@ -16,6 +16,9 @@ import { Job } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
+import { Pagination } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 export function BrowseJobs() {
   const { user } = useAuth();
@@ -26,6 +29,7 @@ export function BrowseJobs() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Debouncing the Search Term Input gracefully
   useEffect(() => {
@@ -36,6 +40,10 @@ export function BrowseJobs() {
       clearTimeout(handler);
     };
   }, [searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, sortOrder]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -122,26 +130,30 @@ export function BrowseJobs() {
     return true; // Match is fully handled at database level via query!
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedJobs = filteredJobs.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div className="space-y-8 pb-12">
       {/* Search Header */}
-      <div className="bg-gray-900 dark:bg-slate-950 p-8 rounded-[2.5rem] text-white space-y-6 relative overflow-hidden transition-all border border-transparent dark:border-slate-800">
+      <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-8 rounded-[2.5rem] text-white space-y-6 relative overflow-hidden transition-all border border-blue-800/40 shadow-xl">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <Briefcase className="w-48 h-48 rotate-12" />
         </div>
         
         <div className="relative z-10 space-y-2">
-          <h1 className="text-4xl font-black tracking-tight">Available Jobs</h1>
-          <p className="text-gray-400 dark:text-slate-500 font-medium">Find tasks that match your skills and start earning BDT instantly.</p>
+          <h1 className="text-4xl font-black font-display tracking-tight">Available Jobs</h1>
+          <p className="text-blue-200 font-medium">Find tasks that match your skills and start earning BDT instantly.</p>
         </div>
 
           <div className="relative z-10 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500 dark:text-slate-500" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-blue-200/70" />
               <input
                 type="text"
                 placeholder="Search tasks (e.g. YouTube, Like, Comment)"
-                className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all placeholder:text-gray-500 dark:placeholder:text-slate-600 text-lg font-medium"
+                className="w-full pl-14 pr-6 py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 focus:bg-white/20 focus:border-white/30 focus:outline-none transition-all placeholder:text-blue-200/60 text-white text-lg font-medium"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
@@ -150,42 +162,42 @@ export function BrowseJobs() {
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value as any)}
-                className="w-full h-full px-6 py-4 appearance-none rounded-2xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/10 dark:border-white/5 focus:bg-white/20 dark:focus:bg-white/10 focus:outline-none transition-all text-lg font-bold text-white cursor-pointer"
+                className="w-full h-full px-6 py-4 appearance-none rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 focus:bg-white/20 focus:outline-none transition-all text-lg font-bold text-white cursor-pointer"
               >
-                <option value="newest" className="bg-gray-900 text-white">Newest First</option>
-                <option value="price_asc" className="bg-gray-900 text-white">Low Price To High Price</option>
-                <option value="price_desc" className="bg-gray-900 text-white">High Price To Low Price</option>
+                <option value="newest" className="bg-[#07266E] text-white">Newest First</option>
+                <option value="price_asc" className="bg-[#07266E] text-white">Low Price To High Price</option>
+                <option value="price_desc" className="bg-[#07266E] text-white">High Price To Low Price</option>
               </select>
-              <Filter className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none opacity-50" />
+              <Filter className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none text-blue-200" />
             </div>
           </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-24">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-600 dark:border-indigo-500"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#0B3D9E] dark:border-[#FB923C]"></div>
         </div>
       ) : errorMsg ? (
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 p-6 rounded-2xl transition-colors">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 p-6 rounded-2xl transition-colors">
           <p className="font-bold">Error loading jobs</p>
           <p className="text-sm mt-1">{errorMsg}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredJobs.length === 0 ? (
-            <div className="md:col-span-2 text-center py-24 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 italic text-gray-400 dark:text-slate-500 transition-colors">
+            <div className="md:col-span-2 text-center py-24 bg-white dark:bg-[#1E293B] rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 italic text-slate-400 dark:text-slate-500 transition-colors">
               No jobs found matching your search.
             </div>
           ) : (
-            filteredJobs.map((job, index) => (
+            paginatedJobs.map((job, index) => (
               <motion.div
                 key={job.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: Math.min(index * 0.03, 0.3) }}
               >
                 <Link to={`/job/${job.id}`}>
-                  <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm hover:shadow-xl dark:hover:shadow-none hover:border-indigo-100 dark:hover:border-indigo-900 transition-all group relative overflow-hidden h-full flex flex-col">
+                  <div className="bg-white dark:bg-[#1E293B] p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm hover:shadow-xl dark:hover:shadow-none hover:border-[#0B3D9E]/40 dark:hover:border-blue-500/50 transition-all group relative overflow-hidden h-full flex flex-col">
                     {job.thumbnail && (
                       <div className="mb-6 -mx-8 -mt-8 h-48 overflow-hidden rounded-t-[2.5rem]">
                         <img 
@@ -197,54 +209,54 @@ export function BrowseJobs() {
                     )}
                     <div className="flex justify-between items-start mb-6">
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                           <span className="bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors">
+                        <div className="flex items-center gap-2 flex-wrap">
+                           <span className="bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 border border-blue-200/70 dark:border-blue-800/50 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors">
                               <MapPin className="w-3 h-3" /> Global
                            </span>
                            {job.autoApprove && (
-                            <span className="bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors">
+                            <span className="bg-orange-50 dark:bg-orange-950/40 text-[#F97316] dark:text-[#FB923C] border border-orange-200/70 dark:border-orange-800/50 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 transition-colors">
                                <Zap className="w-3 h-3 saturate-150" /> Instant
                             </span>
                            )}
                            {userSubmissions.get(job.id) === 'pending' && (
-                            <span className="bg-yellow-100 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm border border-yellow-200 dark:border-yellow-900/50 transition-colors">
-                               Pending
+                            <span className="bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm border border-amber-200 dark:border-amber-900/50 transition-colors">
+                              Pending
                             </span>
                            )}
                         </div>
-                        <h3 className="text-2xl font-black text-gray-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors uppercase leading-tight tracking-tight">
+                        <h3 className="text-2xl font-black font-display text-slate-900 dark:text-slate-100 group-hover:text-[#0B3D9E] dark:group-hover:text-blue-400 transition-colors uppercase leading-tight tracking-tight">
                           {job.title}
                         </h3>
                       </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-black text-primary-600 dark:text-indigo-400 leading-none">
+                      <div className="text-right shrink-0 ml-4">
+                        <p className="text-3xl font-black font-display text-[#0B3D9E] dark:text-[#FB923C] leading-none tabular-nums">
                           {formatCurrency(job.pricePerWork)}
                         </p>
-                        <p className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-1">Reward</p>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Reward</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 mb-4 bg-gray-50 dark:bg-slate-700/50 text-gray-600 dark:text-slate-400 px-3 py-1.5 rounded-lg w-fit transition-colors">
-                      <Briefcase className="w-4 h-4 text-gray-400 dark:text-slate-500" />
-                      <span className="text-xs font-bold uppercase tracking-widest">
-                        Submitted: <strong className="dark:text-slate-200">{(job.pendingCount || 0) + (job.approvedCount || 0)}</strong> / {job.maxWorkers}
+                    <div className="flex items-center gap-2 mb-4 bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg w-fit border border-slate-200/60 dark:border-slate-700 transition-colors">
+                      <Briefcase className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      <span className="text-xs font-bold uppercase tracking-widest tabular-nums">
+                        Submitted: <strong className="text-slate-900 dark:text-slate-100">{(job.pendingCount || 0) + (job.approvedCount || 0)}</strong> / {job.maxWorkers}
                       </span>
                     </div>
 
-                    <p className="text-gray-500 dark:text-slate-400 font-medium text-sm line-clamp-3 mb-8 flex-1 transition-colors">
+                    <p className="text-slate-500 dark:text-slate-400 font-medium text-sm line-clamp-3 mb-8 flex-1 transition-colors">
                       {job.description}
                     </p>
 
-                    <div className="flex items-center justify-between pt-6 border-t border-gray-50 dark:border-slate-700 transition-colors">
-                      <div className="flex items-center gap-2 text-gray-400 dark:text-slate-500">
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-700/80 transition-colors">
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
                         <Clock className="w-4 h-4" />
-                        <span className="text-xs font-bold uppercase tracking-widest">
+                        <span className="text-xs font-bold uppercase tracking-widest tabular-nums">
                           {format(job.createdAt ? new Date(job.createdAt) : new Date(), 'MMM dd')}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 group-hover:gap-4 transition-all">
-                        <span className="text-indigo-600 dark:text-indigo-400 font-black text-sm uppercase tracking-widest">View Details</span>
-                        <ArrowRight className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-[#F97316] dark:text-[#FB923C] font-black text-sm uppercase tracking-widest">View Details</span>
+                        <ArrowRight className="w-5 h-5 text-[#F97316] dark:text-[#FB923C]" />
                       </div>
                     </div>
                   </div>
@@ -253,6 +265,16 @@ export function BrowseJobs() {
             ))
           )}
         </div>
+      )}
+
+      {!loading && !errorMsg && filteredJobs.length > 0 && (
+        <Pagination
+          currentPage={safePage}
+          totalItems={filteredJobs.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="jobs"
+        />
       )}
     </div>
   );

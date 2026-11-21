@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowUpRight, 
@@ -18,11 +18,16 @@ import { Transaction } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { BkashLogo, NagadLogo, RechargeLogo, PaymentMethodLogo } from '../components/PaymentMethodLogos';
+import { Pagination } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 export function Withdraw() {
   const { profile, user, systemConfig, refreshProfile } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const historyRef = useRef<HTMLDivElement>(null);
   
   // Dynamic Withdraw Rules States
   const [withdrawRules, setWithdrawRules] = useState('');
@@ -173,34 +178,38 @@ export function Withdraw() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-fadeIn">
         <div className="relative">
-          <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
+          <div className="w-16 h-16 border-4 border-orange-200 dark:border-slate-700 border-t-[#F97316] rounded-full animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-orange-600 animate-pulse" />
+            <Zap className="w-6 h-6 text-[#F97316] animate-pulse" />
           </div>
         </div>
         <div className="text-center space-y-2">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Preparing Withdrawal Gateway</h3>
-          <p className="text-xs text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest animate-pulse">Checking withdrawal limits & fees...</p>
+          <h3 className="text-xl font-bold font-display text-slate-900 dark:text-slate-100">Preparing Withdrawal Gateway</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest animate-pulse">Checking withdrawal limits & fees...</p>
         </div>
       </div>
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(transactions.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedTransactions = transactions.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div className="space-y-10 pb-20">
       <div className="flex items-center gap-4">
-        <div className="bg-orange-600 p-4 rounded-3xl text-white shadow-xl shadow-orange-100 dark:shadow-none transition-all">
+        <div className="bg-[#F97316] p-4 rounded-3xl text-white shadow-xl shadow-orange-500/20 dark:shadow-none transition-all">
            <ArrowUpRight className="w-8 h-8" />
         </div>
         <div>
-           <h1 className="text-3xl font-black text-gray-900 dark:text-slate-100 uppercase tracking-tighter">Exit Capital</h1>
-           <p className="text-gray-400 dark:text-slate-500 font-bold text-xs tracking-widest uppercase italic">Verified Payout Gateway</p>
+           <h1 className="text-3xl font-black font-display text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Exit Capital</h1>
+           <p className="text-slate-500 dark:text-slate-400 font-bold text-xs tracking-widest uppercase italic">Verified Payout Gateway</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Form Section */}
-        <div className="bg-white dark:bg-slate-800 p-8 md:p-10 rounded-[3rem] border border-gray-100 dark:border-slate-700 shadow-2xl shadow-gray-50 dark:shadow-none space-y-8 transition-colors">
+        <div className="bg-white dark:bg-[#1E293B] p-8 md:p-10 rounded-[3rem] border border-slate-200 dark:border-slate-700/80 shadow-lg shadow-slate-200/40 dark:shadow-none space-y-8 transition-colors">
            
            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 p-5 rounded-2xl flex items-start gap-3 transition-colors">
              <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
@@ -210,12 +219,12 @@ export function Withdraw() {
            </div>
 
            <form onSubmit={handleWithdraw} className="space-y-8">
-              <div className="bg-indigo-600 p-8 rounded-[2rem] text-white space-y-2 relative overflow-hidden group">
+              <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-8 rounded-[2rem] text-white space-y-2 relative overflow-hidden group border border-blue-800/40 shadow-xl">
                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                    <Zap className="w-16 h-16" />
                  </div>
-                 <p className="text-xs font-black text-indigo-300 uppercase tracking-widest leading-none mb-1">Withdrawable Balance</p>
-                 <h3 className="text-5xl font-black tracking-tighter tabular-nums">{formatCurrency(Number(profile?.earningBalance) || 0)}</h3>
+                 <p className="text-xs font-black text-blue-200 uppercase tracking-widest leading-none mb-1">Withdrawable Balance</p>
+                 <h3 className="text-5xl font-black font-display tracking-tighter tabular-nums">{formatCurrency(Number(profile?.earningBalance) || 0)}</h3>
               </div>
 
               <div className="space-y-6">
@@ -305,11 +314,11 @@ export function Withdraw() {
                          required
                          min={minWithdraw}
                          placeholder="0.00"
-                         className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-orange-50 dark:focus:ring-orange-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white"
+                         className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-bold outline-none focus:ring-4 focus:ring-[#F97316]/15 focus:border-[#F97316] transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white tabular-nums"
                          value={formData.amount}
                          onChange={e => setFormData({...formData, amount: e.target.value})}
                        />
-                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-gray-400 dark:text-slate-500">৳</span>
+                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400 dark:text-slate-500">৳</span>
                     </div>
                  </div>
 
@@ -317,31 +326,31 @@ export function Withdraw() {
                    <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-100 dark:border-orange-900/50 space-y-2 transition-colors"
+                    className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-200 dark:border-orange-900/50 space-y-2 transition-colors"
                    >
                       <div className="flex justify-between items-center text-xs">
-                         <span className="text-gray-500 dark:text-slate-400 font-bold">Selected Method:</span>
-                         <span className="font-black text-gray-900 dark:text-slate-100">{formData.method}</span>
+                         <span className="text-slate-500 dark:text-slate-400 font-bold">Selected Method:</span>
+                         <span className="font-black text-slate-900 dark:text-slate-100">{formData.method}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
-                         <span className="text-gray-500 dark:text-slate-400 font-bold">Requested Amount:</span>
-                         <span className="font-black text-gray-900 dark:text-slate-100">{formatCurrency(Number(formData.amount))}</span>
+                         <span className="text-slate-500 dark:text-slate-400 font-bold">Requested Amount:</span>
+                         <span className="font-black text-slate-900 dark:text-slate-100 tabular-nums">{formatCurrency(Number(formData.amount))}</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
-                         <span className="text-red-500 dark:text-red-400 font-bold">Platform Fee ({withdrawalFeePercent}%):</span>
-                         <span className="font-black text-red-500 dark:text-red-400">+{formatCurrency(Number(formData.amount) * (withdrawalFeePercent / 100))}</span>
+                         <span className="text-rose-500 dark:text-rose-400 font-bold">Platform Fee ({withdrawalFeePercent}%):</span>
+                         <span className="font-black text-rose-500 dark:text-rose-400 tabular-nums">+{formatCurrency(Number(formData.amount) * (withdrawalFeePercent / 100))}</span>
                       </div>
                       <div className="h-px bg-orange-200 dark:bg-orange-900/50" />
                       <div className="flex justify-between items-center text-sm">
-                         <span className="text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-widest">Total Deduction:</span>
-                         <span className="font-black text-indigo-600 dark:text-indigo-400">{formatCurrency(Number(formData.amount) * (1 + withdrawalFeePercent / 100))}</span>
+                         <span className="text-[#0B3D9E] dark:text-[#FB923C] font-black uppercase tracking-widest">Total Deduction:</span>
+                         <span className="font-black text-[#0B3D9E] dark:text-[#FB923C] tabular-nums">{formatCurrency(Number(formData.amount) * (1 + withdrawalFeePercent / 100))}</span>
                       </div>
                    </motion.div>
                  )}
 
                  {/* Phone Number Input */}
                  <div className="space-y-2">
-                   <label className="text-[10px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest ml-1 flex items-center justify-between">
+                   <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1 flex items-center justify-between">
                      <span>
                        {formData.method === 'bKash' 
                          ? 'বিকাশ পার্সোনাল নম্বর (bKash Number)' 
@@ -349,7 +358,7 @@ export function Withdraw() {
                            ? 'নগদ পার্সোনাল নম্বর (Nagad Number)' 
                            : 'মোবাইল রিচার্জ নম্বর (Any BD SIM)'}
                      </span>
-                     <span className="text-[10px] text-gray-400 font-medium">11 Digits (01xxxxxxxxx)</span>
+                     <span className="text-[10px] text-slate-400 font-medium">11 Digits (01xxxxxxxxx)</span>
                    </label>
                    <input 
                      type="text" 
@@ -357,7 +366,7 @@ export function Withdraw() {
                      placeholder="01xxxxxxxxx"
                      pattern="^01[3-9][0-9]{8}$"
                      title="11 digit Bangladeshi mobile number (01xxxxxxxxx)"
-                     className="w-full p-4 rounded-2xl bg-gray-50 dark:bg-slate-700 border border-gray-100 dark:border-slate-600 font-bold outline-none focus:ring-4 focus:ring-orange-50 dark:focus:ring-orange-950/20 transition-all placeholder:text-gray-300 dark:placeholder:text-slate-500 dark:text-white"
+                     className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-bold outline-none focus:ring-4 focus:ring-[#F97316]/15 focus:border-[#F97316] transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white tabular-nums"
                      value={formData.phone}
                      onChange={e => setFormData({...formData, phone: e.target.value})}
                    />
@@ -374,14 +383,14 @@ export function Withdraw() {
                  <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-green-500 text-white p-5 rounded-2xl font-bold flex items-center gap-3 shadow-lg shadow-green-100 dark:shadow-none"
+                  className="bg-emerald-600 text-white p-5 rounded-2xl font-bold flex items-center gap-3 shadow-lg"
                  >
                     <CheckCircle2 className="w-6 h-6" /> {successMsg}
                  </motion.div>
               ) : (
                 <button 
                   disabled={submitting}
-                  className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-lg hover:bg-orange-700 transition-all shadow-xl shadow-orange-100 dark:shadow-none disabled:opacity-50 flex items-center justify-center gap-3 transition-colors"
+                  className="w-full py-5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-[2rem] font-black text-lg transition-all shadow-xl shadow-orange-500/20 disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
                 >
                   {submitting ? (
                     <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -393,10 +402,10 @@ export function Withdraw() {
         </div>
 
         {/* History Section */}
-        <div className="space-y-6">
+        <div ref={historyRef} className="space-y-6 scroll-mt-6">
            <div className="flex items-center justify-between px-2">
-              <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2 dark:text-slate-100">
-                 <History className="w-6 h-6 text-gray-400 dark:text-slate-500" />
+              <h2 className="text-xl font-black font-display uppercase tracking-tight flex items-center gap-2 text-slate-900 dark:text-slate-100">
+                 <History className="w-6 h-6 text-[#0B3D9E] dark:text-blue-400" />
                  Withdrawal Logs
               </h2>
            </div>
@@ -404,31 +413,31 @@ export function Withdraw() {
            <div className="space-y-4">
               {loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-24 bg-gray-100 dark:bg-slate-800 animate-pulse rounded-[2rem]" />
+                  <div key={i} className="h-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-[2rem]" />
                 ))
               ) : transactions.length === 0 ? (
-                <div className="bg-white dark:bg-slate-800 p-12 rounded-[3rem] border border-dashed border-gray-200 dark:border-slate-700 text-center text-gray-400 dark:text-slate-500 italic transition-colors">
+                <div className="bg-white dark:bg-[#1E293B] p-12 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-700 text-center text-slate-400 dark:text-slate-500 italic transition-colors">
                   No payout events found.
                 </div>
               ) : (
-                transactions.map((tx) => (
-                  <div key={tx.id} className="bg-white dark:bg-slate-800 p-6 rounded-[2.5rem] border border-gray-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:shadow-xl dark:hover:shadow-none transition-all">
+                paginatedTransactions.map((tx) => (
+                  <div key={tx.id} className="bg-white dark:bg-[#1E293B] p-6 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center justify-between group hover:shadow-lg dark:hover:shadow-none transition-all">
                     <div className="flex items-center gap-4">
-                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gray-50 dark:bg-slate-700/60 p-2 shrink-0 border border-gray-100 dark:border-slate-700 shadow-sm">
+                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 dark:bg-slate-800/80 p-2 shrink-0 border border-slate-200/70 dark:border-slate-700 shadow-sm">
                           <PaymentMethodLogo method={tx.method} size="sm" showLabel={false} />
                        </div>
                        <div>
-                          <p className="font-black text-gray-900 dark:text-slate-100 uppercase tracking-tight">{tx.method || 'Withdrawal'} Payout</p>
-                          <p className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase tracking-widest">{format(tx.createdAt ? new Date(tx.createdAt) : new Date(), 'MMM dd, h:mm a')}</p>
+                          <p className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">{tx.method || 'Withdrawal'} Payout</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">{format(tx.createdAt ? new Date(tx.createdAt) : new Date(), 'MMM dd, h:mm a')}</p>
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-xl font-black text-gray-900 dark:text-slate-100">-{formatCurrency(tx.type === 'withdrawal' ? (tx.finalAmount !== undefined ? tx.finalAmount : (tx.amount - (tx.fee || 0))) : tx.amount)}</p>
+                       <p className="text-xl font-black text-slate-900 dark:text-slate-100 tabular-nums">-{formatCurrency(tx.type === 'withdrawal' ? (tx.finalAmount !== undefined ? tx.finalAmount : (tx.amount - (tx.fee || 0))) : tx.amount)}</p>
                        <span className={cn(
                          "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md",
-                         tx.status === 'completed' ? "bg-green-500 text-white" :
-                         tx.status === 'pending' ? "bg-indigo-500 text-white" :
-                         "bg-red-500 text-white"
+                         tx.status === 'completed' ? "bg-emerald-500 text-white" :
+                         tx.status === 'pending' ? "bg-[#0B3D9E] text-white" :
+                         "bg-rose-500 text-white"
                        )}>
                          {tx.status}
                        </span>
@@ -437,6 +446,17 @@ export function Withdraw() {
                 ))
               )}
            </div>
+
+           {!loading && transactions.length > 0 && (
+             <Pagination
+               currentPage={safePage}
+               totalItems={transactions.length}
+               pageSize={PAGE_SIZE}
+               onPageChange={setCurrentPage}
+               itemLabel="withdrawals"
+               scrollTargetRef={historyRef}
+             />
+           )}
         </div>
       </div>
     </div>

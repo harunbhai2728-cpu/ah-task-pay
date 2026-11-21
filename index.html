@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="/app-logo.png" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1E3A8A" />
+    <meta name="theme-color" content="#07266E" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -18,7 +18,7 @@
           if (savedTheme === 'light') {
             document.documentElement.classList.remove('dark');
           } else {
-            // Default to dark mode as requested
+            // Default to dark mode unless light explicitly saved
             document.documentElement.classList.add('dark');
             localStorage.setItem('theme', 'dark');
           }
@@ -26,8 +26,8 @@
       })();
     </script>
     <style>
-      html.dark { background-color: #0f172a; color: #ffffff; }
-      html { background-color: #f9fafb; color: #111827; }
+      html.dark { background-color: #0B1120; color: #f8fafc; }
+      html { background-color: #F8FAFC; color: #0f172a; }
     </style>
   </head>
   <body>

@@ -173,62 +173,62 @@ export function JobDetails() {
 
   if (loading) return (
     <div className="flex justify-center py-24">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0B3D9E] dark:border-[#F97316]"></div>
     </div>
   );
 
   if (fetchError || !job) return (
-    <div className="bg-red-50 p-8 rounded-3xl text-center space-y-4">
+    <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 p-8 rounded-3xl text-center space-y-4">
       <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-      <h2 className="text-xl font-bold text-red-900">{fetchError || "Job not found"}</h2>
-      <button onClick={() => navigate('/browse-jobs')} className="text-red-600 font-bold hover:underline">Back to Browsing</button>
+      <h2 className="text-xl font-bold text-red-900 dark:text-red-300">{fetchError || "Job not found"}</h2>
+      <button onClick={() => navigate('/browse-jobs')} className="text-[#F97316] font-bold hover:underline">Back to Browsing</button>
     </div>
   );
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-12">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 font-bold hover:text-gray-900 transition-colors">
-        <ArrowLeft className="w-5 h-5" /> Back
+      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold hover:text-[#0B3D9E] dark:hover:text-white transition-colors">
+        <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
-      <div className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-8">
+      <div className="bg-white dark:bg-[#1E293B] p-6 sm:p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-8 transition-colors">
         {job.thumbnail && (
-            <div className="-mx-8 md:-mx-12 -mt-8 md:-mt-12 mb-8 h-64 overflow-hidden rounded-t-[2.5rem]">
+            <div className="-mx-6 sm:-mx-10 -mt-6 sm:-mt-10 mb-8 h-64 overflow-hidden rounded-t-[2.5rem] border-b border-slate-200 dark:border-slate-700">
                <img src={job.thumbnail} alt={job.title} className="w-full h-full object-cover" />
             </div>
         )}
-        <div className="flex justify-between items-start gap-4">
-          <div className="space-y-4">
-             <div className="flex items-center gap-2">
-                <span className="bg-green-100 text-green-600 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">Active Job</span>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+          <div className="space-y-3">
+             <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">Active Job</span>
                 {job.autoApprove && (
-                   <span className="bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1">
+                   <span className="bg-orange-100 dark:bg-orange-950/60 text-[#EA580C] dark:text-[#FB923C] px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1">
                       <Zap className="w-3 h-3 saturate-150" /> Instant Payment
                    </span>
                 )}
-                <span className="bg-gray-100 text-gray-500 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">
+                <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">
                   ID: #{job.id.split('-')[0].toUpperCase()}
                 </span>
              </div>
-             <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-tight uppercase">{job.title}</h1>
+             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase font-display">{job.title}</h1>
           </div>
-          <div className="text-right shrink-0">
-             <p className="text-4xl font-black text-primary-600 leading-none">{formatCurrency(job.pricePerWork)}</p>
-             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1">Reward/Task</p>
+          <div className="sm:text-right shrink-0 bg-blue-50 dark:bg-blue-950/40 px-5 py-3 rounded-2xl border border-blue-100 dark:border-blue-900/40">
+             <p className="text-3xl sm:text-4xl font-black text-[#0B3D9E] dark:text-[#FB923C] leading-none tabular-nums">{formatCurrency(job.pricePerWork)}</p>
+             <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1.5">Reward/Task</p>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-gray-900 font-bold text-lg border-b border-gray-100 pb-2">
-             <Info className="w-5 h-5 text-indigo-500" />
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-lg border-b border-slate-100 dark:border-slate-700 pb-2">
+             <Info className="w-5 h-5 text-[#0B3D9E] dark:text-[#FB923C]" />
              Instructions
           </div>
-          <div className="text-gray-600 font-medium leading-relaxed whitespace-pre-wrap text-lg italic bg-gray-50 p-6 rounded-3xl border border-gray-100">
+          <div className="text-slate-700 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-wrap text-base sm:text-lg bg-slate-50 dark:bg-slate-800/70 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700">
             {job.description}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
            <InfoBadge label="Max Workers" value={job.maxWorkers.toString()} />
            <InfoBadge label="Submitted" value={job.completedCount.toString()} />
            {job.approvedCount !== undefined && <InfoBadge label="Approved" value={job.approvedCount.toString()} />}
@@ -242,22 +242,22 @@ export function JobDetails() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`text-white p-12 rounded-[2.5rem] text-center space-y-4 shadow-2xl relative overflow-hidden ${
+            className={`text-white p-10 sm:p-12 rounded-[2.5rem] text-center space-y-4 shadow-2xl relative overflow-hidden ${
               submissionStatus === 'rejected' ? 'bg-red-600' :
-              submissionStatus === 'pending' ? 'bg-yellow-500' :
-              'bg-green-600'
+              submissionStatus === 'pending' ? 'bg-amber-500' :
+              'bg-emerald-600'
             }`}
           >
             <div className="absolute inset-0 opacity-10 pointer-events-none">
               <CheckCircle2 className="w-full h-full" />
             </div>
             <CheckCircle2 className="w-20 h-20 mx-auto" />
-            <h2 className="text-4xl font-black tracking-tight underline decoration-white/30 decoration-8 underline-offset-8">
+            <h2 className="text-3xl sm:text-4xl font-black tracking-tight underline decoration-white/30 decoration-8 underline-offset-8">
               {submissionStatus 
                 ? (submissionStatus === 'rejected' ? 'REJECTED' : submissionStatus === 'pending' ? 'PENDING REVIEW' : 'APPROVED') 
                 : "SUBMITTED!"}
             </h2>
-            <p className="text-xl font-medium text-white/90">
+            <p className="text-lg sm:text-xl font-medium text-white/95">
               {submissionStatus 
                 ? `You have already submitted proof for this job and it is ${submissionStatus}. Check your dashboard for more details.`
                 : (job.autoApprove && pinCode === job.pinCode 
@@ -266,23 +266,23 @@ export function JobDetails() {
             </p>
           </motion.div>
         ) : (
-          <form onSubmit={handleSubmit} className="bg-gray-900 p-8 md:p-12 rounded-[2.5rem] text-white space-y-8 shadow-2xl">
-            <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
-               <Send className="w-8 h-8 text-primary-400" />
+          <form onSubmit={handleSubmit} className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-6 sm:p-10 rounded-[2.5rem] text-white space-y-8 shadow-2xl border border-white/10">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3 font-display">
+               <Send className="w-7 h-7 text-[#FB923C]" />
                Submit Your Proof
             </h2>
             
             <div className="space-y-6 text-left">
               {job.requireTextProof && (
-                <div className="space-y-3">
-                  <label className="text-sm font-black uppercase tracking-widest text-gray-400">
+                <div className="space-y-2.5">
+                  <label className="text-xs font-black uppercase tracking-widest text-blue-200">
                     Text Proof / Explanation
                   </label>
                   <textarea
                     required
                     rows={4}
                     placeholder={job.textProofInstruction || "Type the required information here..."}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 outline-none focus:ring-2 focus:ring-primary-500 transition-all font-medium text-lg"
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl p-5 text-white placeholder:text-blue-200/60 outline-none focus:ring-2 focus:ring-[#F97316] transition-all font-medium text-base"
                     value={proofText}
                     onChange={e => setProofText(e.target.value)}
                   />
@@ -293,15 +293,15 @@ export function JobDetails() {
                 <div className="space-y-4">
                   {Array.from({ length: job.screenshotCount }).map((_, i) => (
                     <div key={i} className="space-y-2">
-                       <label className="text-sm font-black uppercase tracking-widest text-gray-400">
+                       <label className="text-xs font-black uppercase tracking-widest text-blue-200">
                          {job.screenshotProofInstructions?.[i] || job.screenshotProofInstruction || `Instruction for Screenshot ${i + 1}`}
                        </label>
-                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 border-dashed hover:border-white/20 transition-all flex items-center gap-4">
-                        <div className="shrink-0 w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden border border-white/10">
+                      <div className="bg-white/10 border border-white/20 rounded-2xl p-4 border-dashed hover:border-white/40 transition-all flex items-center gap-4">
+                        <div className="shrink-0 w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden border border-white/15">
                           {screenshotUrls[i] ? (
                             <img src={screenshotUrls[i]} alt="preview" className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-gray-500 font-bold">{i + 1}</span>
+                            <span className="text-blue-200 font-bold">{i + 1}</span>
                           )}
                         </div>
                         <input 
@@ -309,7 +309,7 @@ export function JobDetails() {
                           type="file"
                           accept="image/*"
                           onChange={(e) => handleSingleScreenshotChange(e.target.files?.[0] || null, i)}
-                          className="block w-full text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20 cursor-pointer"
+                          className="block w-full text-xs text-blue-100 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-white/15 file:text-white hover:file:bg-white/25 cursor-pointer"
                         />
                       </div>
                     </div>
@@ -318,26 +318,26 @@ export function JobDetails() {
               )}
 
               {job.autoApprove && (
-                <div className="space-y-3 p-6 bg-primary-500/10 border border-primary-500/20 rounded-3xl">
-                   <div className="flex items-center gap-2 mb-2 font-black text-primary-400">
+                <div className="space-y-3 p-6 bg-white/10 border border-[#FB923C]/40 rounded-3xl">
+                   <div className="flex items-center gap-2 mb-2 font-black text-[#FB923C]">
                       <Lock className="w-5 h-5" />
                       INSTANT APPROVAL P-CODE (REQUIRED)
                    </div>
                    <input
                      type="text"
                      placeholder="Enter P-Code from instructions"
-                     className="w-full bg-white/10 border border-white/20 rounded-xl p-4 outline-none focus:ring-2 focus:ring-primary-500 transition-all text-xl font-bold tracking-widest text-center"
+                     className="w-full bg-white/10 border border-white/25 rounded-xl p-4 outline-none focus:ring-2 focus:ring-[#F97316] transition-all text-xl font-bold tracking-widest text-center text-white placeholder:text-blue-200/60"
                      value={pinCode}
                      onChange={e => setPinCode(e.target.value)}
                    />
-                   <p className="text-[10px] text-gray-400 mt-2">Entering the correct P-Code is required for this job to release your reward immediately.</p>
+                   <p className="text-[11px] text-blue-100 mt-2">Entering the correct P-Code is required for this job to release your reward immediately.</p>
                 </div>
               )}
             </div>
 
             {submitError && (
-               <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-200 text-sm font-bold flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
+               <div className="p-4 bg-red-500/20 border border-red-400/50 rounded-2xl text-red-100 text-sm font-bold flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
                   {submitError}
                </div>
             )}
@@ -345,18 +345,18 @@ export function JobDetails() {
             <button
                type="submit"
                disabled={submitting || isPoster === true}
-               className="w-full h-20 bg-white text-gray-900 rounded-3xl font-black text-2xl flex items-center justify-center gap-3 hover:bg-gray-100 transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+               className="w-full py-5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black text-xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
             >
                {submitting ? (
                  <div className="flex items-center gap-2">
-                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-100"></div>
+                   <div className="animate-spin rounded-full h-7 w-7 border-t-2 border-b-2 border-white"></div>
                    <span>Processing...</span>
                  </div>
                ) : (
                  <>
                    {isPoster ? (
                      <div className="flex flex-col items-center">
-                       <span className="text-sm font-black text-red-500 uppercase">You posted this job</span>
+                       <span className="text-xs font-black text-red-100 uppercase">You posted this job</span>
                        <span>CANNOT SUBMIT OWN JOB</span>
                      </div>
                    ) : (
@@ -374,9 +374,9 @@ export function JobDetails() {
 
 function InfoBadge({ label, value }: { label: string, value: string }) {
   return (
-    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{label}</p>
-       <p className="text-lg font-bold text-gray-900 tracking-tight">{value}</p>
+    <div className="p-4 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200/80 dark:border-slate-700 transition-colors">
+       <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{label}</p>
+       <p className="text-lg font-bold text-slate-900 dark:text-white tracking-tight tabular-nums">{value}</p>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { AppNotification } from '../types';
 import { askNotificationPermission } from '../lib/pushNotifications';
 
-export function NotificationBell() {
+export function NotificationBell({ onDark = false }: { onDark?: boolean }) {
   const { profile, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -65,11 +65,15 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={handleBellClick}
-        className="relative p-2 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+        className={`relative p-2 rounded-xl transition-colors ${
+          onDark
+            ? 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
+            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`}
       >
-        <Bell className="w-6 h-6" />
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 ring-2 ring-red-100 dark:ring-red-950/30"></span>
+          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#F97316] rounded-full border-2 border-white dark:border-[#07266E] ring-2 ring-orange-400/30"></span>
         )}
       </button>
 
@@ -80,13 +84,13 @@ export function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-slate-700 py-4 z-50 overflow-hidden transition-colors"
+            className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#1E293B] rounded-2xl shadow-xl shadow-slate-200/60 dark:shadow-none border border-slate-200 dark:border-slate-700 py-4 z-50 overflow-hidden transition-colors"
           >
-            <div className="px-4 pb-3 border-b border-gray-50 dark:border-slate-700 flex items-center justify-between">
-              <h3 className="font-bold text-gray-900 dark:text-slate-100">Notifications</h3>
+            <div className="px-4 pb-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100">Notifications</h3>
               <div className="flex gap-2">
                 {unreadCount > 0 && (
-                  <button onClick={markAllAsRead} className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 px-2 py-1 rounded-lg">
+                  <button onClick={markAllAsRead} className="text-[10px] uppercase font-bold text-[#0B3D9E] dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 px-2 py-1 rounded-lg">
                     Mark Read
                   </button>
                 )}
@@ -100,24 +104,24 @@ export function NotificationBell() {
             
             <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 dark:text-slate-500">
+                <div className="p-8 text-center text-slate-400 dark:text-slate-500">
                   <Bell className="w-8 h-8 opacity-20 mx-auto mb-3" />
                   <p className="text-sm font-medium">No notifications yet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-50 dark:divide-slate-700">
+                <div className="divide-y divide-slate-100 dark:divide-slate-700/70">
                   {notifications.map((notif: AppNotification) => (
                     <div 
                       key={notif.id} 
-                      className={`p-4 transition-colors ${notif.isRead ? 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/50' : 'bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}
+                      className={`p-4 transition-colors cursor-pointer ${notif.isRead ? 'bg-white dark:bg-[#1E293B] hover:bg-slate-50 dark:hover:bg-slate-800/70' : 'bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-50 dark:hover:bg-blue-900/30'}`}
                       onClick={() => !notif.isRead && markAsRead(notif.id)}
                     >
                       <div className="flex gap-3">
                          <div className="mt-1">
                            {notif.isRead ? (
-                             <div className="w-2 h-2 bg-gray-300 dark:bg-slate-600 rounded-full" />
+                             <div className="w-2 h-2 bg-slate-300 dark:bg-slate-600 rounded-full" />
                            ) : (
-                             <div className="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                             <div className="w-2 h-2 bg-[#F97316] rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                            )}
                          </div>
                          <div className="flex-1">

@@ -22,12 +22,12 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const [imageError, setImageError] = useState(false);
 
-  // Sizing maps
+  // Sizing maps tuned for the horizontal AH Task Pay lockup
   const heightClasses = {
-    sm: 'h-8 md:h-9 max-w-[140px]',
-    md: 'h-10 md:h-11 max-w-[180px]',
-    lg: 'h-14 md:h-16 max-w-[240px]',
-    xl: 'h-20 md:h-24 max-w-[320px]',
+    sm: 'h-9 md:h-10 max-w-[165px]',
+    md: 'h-11 md:h-12 max-w-[215px]',
+    lg: 'h-16 md:h-18 max-w-[280px]',
+    xl: 'h-20 md:h-24 max-w-[340px]',
   };
 
   const iconSizes = {
@@ -58,10 +58,10 @@ export function BrandLogo({
 
   return (
     <div className={cn("inline-flex items-center select-none group", className)}>
-      {/* Official Brand Logo with Light Container for Perfect Dark Mode Contrast */}
+      {/* Official Brand Logo with Light Container for Perfect Contrast */}
       <div 
         className={cn(
-          "relative inline-flex items-center justify-center bg-white dark:bg-white/95 px-2.5 py-1 rounded-xl shadow-xs border border-slate-200/60 dark:border-slate-600/50 transition-all duration-300 group-hover:shadow-md group-hover:scale-[1.02]",
+          "relative inline-flex items-center justify-center bg-white dark:bg-white/95 px-3 py-1.5 rounded-xl shadow-xs border border-slate-200/60 dark:border-slate-600/50 transition-all duration-300 group-hover:shadow-md group-hover:scale-[1.02]",
           heightClasses[size]
         )}
       >
@@ -75,15 +75,14 @@ export function BrandLogo({
           />
         ) : (
           <div className="flex items-center gap-1.5 px-2 py-1 font-black text-slate-900">
-            <span className="text-blue-700">AH</span>
-            <span className="text-slate-800">Task</span>
-            <span className="text-amber-500">PAY</span>
+            <span className="text-[#07266E]">AH TASK</span>
+            <span className="text-[#F97316]">PAY</span>
           </div>
         )}
       </div>
 
       {showSubtitle && (
-        <span className="ml-2.5 font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em] text-[10px] hidden sm:inline-block">
+        <span className="ml-2.5 font-bold text-[#0B3D9E] dark:text-blue-400 uppercase tracking-[0.2em] text-[10px] hidden sm:inline-block">
           Microjob & Earn
         </span>
       )}

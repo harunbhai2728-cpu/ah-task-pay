@@ -86,7 +86,13 @@ async function startServer() {
   const getDataStore = () => {
     try {
       if (fs.existsSync(DATA_STORE_PATH)) {
-        return JSON.parse(fs.readFileSync(DATA_STORE_PATH, "utf-8"));
+        const raw = fs.readFileSync(DATA_STORE_PATH, "utf-8").trim();
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            return parsed;
+          }
+        }
       }
     } catch (err) {
       console.error("Error reading data-store.json", err);
@@ -95,14 +101,27 @@ async function startServer() {
   };
 
   const saveDataStore = (store: any) => {
+    const nextContent = JSON.stringify(store, null, 2) + "\n";
+    let tmpPath: string | null = null;
     try {
-      fs.writeFileSync(
-        DATA_STORE_PATH,
-        JSON.stringify(store, null, 2),
-        "utf-8",
+      if (fs.existsSync(DATA_STORE_PATH)) {
+        const currentContent = fs.readFileSync(DATA_STORE_PATH, "utf-8");
+        if (currentContent === nextContent) return;
+      }
+      tmpPath = path.join(
+        path.dirname(DATA_STORE_PATH),
+        `.data-store.${process.pid}.${Date.now()}.tmp`,
       );
+      fs.writeFileSync(tmpPath, nextContent, "utf-8");
+      fs.renameSync(tmpPath, DATA_STORE_PATH);
+      tmpPath = null;
     } catch (err) {
       console.error("Error writing data-store.json", err);
+      if (tmpPath && fs.existsSync(tmpPath)) {
+        try {
+          fs.unlinkSync(tmpPath);
+        } catch {}
+      }
     }
   };
 
@@ -143,14 +162,31 @@ async function startServer() {
         // Re-hydrate store from system_settings
         try {
            const { data: extSnap } = await supabase.from("system_settings").select("setting_key, setting_value").in('setting_key', ['campaign_start_date', 'referral_domain_url', 'custom_banner_presets']);
-           if (extSnap && extSnap.length > 0) {
+            if (extSnap && extSnap.length > 0) {
               const store = getDataStore();
               let changed = false;
               extSnap.forEach((s: any) => {
-                 if (s.setting_key === 'campaign_start_date') { store.campaignStartDate = s.setting_value || null; changed = true; }
-                 if (s.setting_key === 'referral_domain_url') { store.referralDomainUrl = s.setting_value; changed = true; }
+                 if (s.setting_key === 'campaign_start_date') {
+                    const nextVal = s.setting_value || null;
+                    if (store.campaignStartDate !== nextVal) {
+                      store.campaignStartDate = nextVal;
+                      changed = true;
+                    }
+                 }
+                 if (s.setting_key === 'referral_domain_url') {
+                    if (store.referralDomainUrl !== s.setting_value) {
+                      store.referralDomainUrl = s.setting_value;
+                      changed = true;
+                    }
+                 }
                  if (s.setting_key === 'custom_banner_presets') { 
-                    try { store.customBannerPresets = JSON.parse(s.setting_value); changed = true; } catch(e){} 
+                    try {
+                      const nextPresets = JSON.parse(s.setting_value);
+                      if (JSON.stringify(store.customBannerPresets || []) !== JSON.stringify(nextPresets)) {
+                        store.customBannerPresets = nextPresets;
+                        changed = true;
+                      }
+                    } catch(e){} 
                  }
               });
               if (changed) saveDataStore(store);
@@ -350,6 +386,126 @@ async function startServer() {
     } catch (err) {
       console.error("Failed to fetch top jobs:", err);
       res.status(500).json({ error: "Failed to fetch top jobs" });
+    }
+  });
+
+  // Public endpoint for Landing Page Leaderboard & Recent Payouts
+  app.get("/api/landing/leaderboard", async (req, res) => {
+    try {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+      const [
+        { data: profilesData },
+        { data: withdrawalsData },
+        { data: approvedSubsData }
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, displayName, username, earningBalance, role, account_status")
+          .neq("role", "admin")
+          .order("earningBalance", { ascending: false })
+          .limit(30),
+        supabase
+          .from("transactions")
+          .select("id, user_id, amount, method, payment_details, status, created_at")
+          .eq("type", "withdraw")
+          .in("status", ["approved", "completed"])
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("submissions")
+          .select("worker_id")
+          .eq("status", "approved")
+          .limit(500)
+      ]);
+
+      const withdrawByUser = new Map<string, number>();
+      for (const tx of withdrawalsData || []) {
+        if (tx.user_id) {
+          withdrawByUser.set(tx.user_id, (withdrawByUser.get(tx.user_id) || 0) + (Number(tx.amount) || 0));
+        }
+      }
+
+      const tasksByUser = new Map<string, number>();
+      for (const sub of approvedSubsData || []) {
+        if (sub.worker_id) {
+          tasksByUser.set(sub.worker_id, (tasksByUser.get(sub.worker_id) || 0) + 1);
+        }
+      }
+
+      const profileNameMap = new Map<string, string>();
+      const earners = (profilesData || [])
+        .filter((p: any) => p.account_status !== "deleted")
+        .map((p: any) => {
+          const rawName = (p.displayName || p.username || "Member").trim();
+          profileNameMap.set(p.id, rawName);
+          const parts = rawName.split(/\s+/).filter(Boolean);
+          const initials = parts.length >= 2
+            ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+            : rawName.slice(0, 2).toUpperCase();
+          const totalEarned = Math.round(
+            (Number(p.earningBalance) || 0) + (withdrawByUser.get(p.id) || 0)
+          );
+          return {
+            id: p.id,
+            name: rawName,
+            initials: initials || "AH",
+            tasksCount: tasksByUser.get(p.id) || 0,
+            totalEarned,
+          };
+        })
+        .filter((e: any) => e.totalEarned > 0)
+        .sort((a: any, b: any) => b.totalEarned - a.totalEarned)
+        .slice(0, 5)
+        .map((e: any, index: number) => ({
+          rank: index + 1,
+          name: e.name,
+          initials: e.initials,
+          tasksCount: e.tasksCount,
+          totalEarned: e.totalEarned,
+        }));
+
+      const recentList = (withdrawalsData || []).slice(0, 5);
+      const missingUserIds = recentList
+        .map((tx: any) => tx.user_id)
+        .filter((uid: string) => uid && !profileNameMap.has(uid));
+
+      if (missingUserIds.length > 0) {
+        const { data: extraProfiles } = await supabase
+          .from("profiles")
+          .select("id, displayName, username")
+          .in("id", missingUserIds);
+        for (const ep of extraProfiles || []) {
+          profileNameMap.set(ep.id, (ep.displayName || ep.username || "Member").trim());
+        }
+      }
+
+      const recentPayouts = recentList.map((tx: any) => {
+        let details: any = {};
+        try {
+          if (typeof tx.payment_details === "string") {
+            details = JSON.parse(tx.payment_details);
+          } else if (tx.payment_details && typeof tx.payment_details === "object") {
+            details = tx.payment_details;
+          }
+        } catch {
+          details = {};
+        }
+        const method = tx.method || details.method || "bKash";
+        const rawUser = profileNameMap.get(tx.user_id) || "Member";
+        return {
+          id: tx.id,
+          method,
+          amount: Math.round(Number(tx.amount) || 0),
+          recipient: rawUser,
+          createdAt: tx.created_at,
+        };
+      });
+
+      res.json({ topEarners: earners, recentPayouts });
+    } catch (err) {
+      console.error("Failed to fetch leaderboard:", err);
+      res.status(500).json({ error: "Failed to fetch leaderboard" });
     }
   });
   // Smart Optimization: Auto-delete images from database 24 hours after approve/reject to save database bandwidth
@@ -626,33 +782,34 @@ async function startServer() {
           return res.json({ data: null });
         } else if (method === "upsert" || method === "update") {
           const input = args[0];
+          const store = getDataStore();
+          let storeUpdated = false;
 
           if (input.referralDomainUrl !== undefined) {
-            const store = getDataStore();
             store.referralDomainUrl = input.referralDomainUrl;
-            saveDataStore(store);
+            storeUpdated = true;
             await syncSetting("referral_domain_url", store.referralDomainUrl || "");
           }
           if (input.campaignStartDate !== undefined) {
-            const store = getDataStore();
             store.campaignStartDate = input.campaignStartDate === "" ? null : input.campaignStartDate;
-            saveDataStore(store);
+            storeUpdated = true;
             await syncSetting("campaign_start_date", store.campaignStartDate || "");
           }
           if (input.customBannerPresets !== undefined) {
-            const store = getDataStore();
             store.customBannerPresets = input.customBannerPresets;
-            saveDataStore(store);
+            storeUpdated = true;
             await syncSetting("custom_banner_presets", JSON.stringify(store.customBannerPresets || []));
           }
 
           if (input.statsMode !== undefined) {
-            const store = getDataStore();
             store.statsMode = input.statsMode;
             store.manualTotalUsers = input.manualTotalUsers || 0;
             store.manualTotalJobs = input.manualTotalJobs || 0;
             store.manualCompletedTasks = input.manualCompletedTasks || 0;
             store.manualTotalWithdraw = input.manualTotalWithdraw || 0;
+            storeUpdated = true;
+          }
+          if (storeUpdated) {
             saveDataStore(store);
           }
           const mappedUpdate: any = {};

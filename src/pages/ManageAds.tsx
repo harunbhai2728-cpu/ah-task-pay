@@ -4,6 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, cn } from '../lib/utils';
 import { Trash2, Link2, Clock, CheckCircle2, AlertCircle, EyeOff, RefreshCw } from 'lucide-react';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { Pagination } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 const AD_PRICING = [
   { days: 1, label: '১ দিন', price: 50 },
@@ -21,6 +24,7 @@ export function ManageAds() {
   const [renewAd, setRenewAd] = useState<any | null>(null);
   const [renewPlan, setRenewPlan] = useState(AD_PRICING[0].days);
   const [renewing, setRenewing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchAds();
@@ -111,39 +115,42 @@ export function ManageAds() {
   };
 
   if (loading) {
-
      return (
        <div className="flex justify-center p-12">
-         <div className="w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
+         <div className="w-10 h-10 rounded-full border-4 border-blue-200 dark:border-slate-700 border-t-[#0B3D9E] dark:border-t-[#F97316] animate-spin" />
        </div>
      );
   }
 
+  const totalPages = Math.max(1, Math.ceil(ads.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedAds = ads.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-gray-100 border border-gray-100">
-        <h1 className="text-3xl font-black mb-4 uppercase tracking-tight text-gray-900">Posted Ads</h1>
-        <p className="text-gray-500 font-medium">Manage your submitted advertisements. Note that deleting an ad will not refund the fee.</p>
+      <div className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-7 sm:p-8 shadow-xl text-white">
+        <h1 className="text-2xl sm:text-3xl font-extrabold mb-2 uppercase tracking-tight font-display">Posted Ads</h1>
+        <p className="text-blue-100 font-medium text-sm">Manage your submitted advertisements. Note that deleting an ad will not refund the fee.</p>
       </div>
 
       {ads.length === 0 ? (
-        <div className="bg-white rounded-[2rem] p-12 text-center border border-gray-100 shadow-xl">
-           <EyeOff className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-           <p className="text-xl font-bold text-gray-500">No ads found</p>
-           <p className="text-sm text-gray-400 mt-2">You haven't posted any advertisements yet.</p>
+        <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] p-12 text-center border border-slate-200 dark:border-slate-700/80 shadow-sm transition-colors">
+           <EyeOff className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+           <p className="text-xl font-bold text-slate-700 dark:text-slate-200">No ads found</p>
+           <p className="text-sm text-slate-400 dark:text-slate-500 mt-2">You haven't posted any advertisements yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {ads.map(ad => (
-            <div key={ad.id} className="bg-white rounded-[2rem] border border-gray-100 shadow-xl overflow-hidden flex flex-col relative group">
-              <div className="relative h-40 bg-gray-100 shrink-0">
+          {paginatedAds.map(ad => (
+            <div key={ad.id} className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden flex flex-col relative group transition-colors">
+              <div className="relative h-40 bg-slate-100 dark:bg-slate-800 shrink-0">
                  <img src={ad.image} alt="Ad banner" className="w-full h-full object-cover" />
                  <div className="absolute top-4 right-4 flex gap-2">
                    <span className={cn(
                       "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md",
-                      ad.status === 'approved' ? "bg-green-500/90 text-white" :
+                      ad.status === 'approved' ? "bg-emerald-500/90 text-white" :
                       ad.status === 'rejected' ? "bg-red-500/90 text-white" :
-                      "bg-yellow-500/90 text-white"
+                      "bg-amber-500/90 text-white"
                    )}>
                      {ad.status}
                    </span>
@@ -151,31 +158,31 @@ export function ManageAds() {
               </div>
               <div className="p-6 flex-1 space-y-4">
                  <div className="space-y-2">
-                   <p className="text-sm font-bold text-gray-500 flex items-center gap-2">
+                   <p className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
                      <Link2 className="w-4 h-4 shrink-0" />
-                     <a href={ad.link} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline line-clamp-1">{ad.link}</a>
+                     <a href={ad.link} target="_blank" rel="noopener noreferrer" className="text-[#0B3D9E] dark:text-[#FB923C] hover:underline line-clamp-1">{ad.link}</a>
                    </p>
-                   <p className="text-sm font-bold text-gray-500 flex items-center gap-2">
+                   <p className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2">
                      <Clock className="w-4 h-4 shrink-0" />
                      {ad.durationDays} Days Duration
                    </p>
                    {ad.status === 'approved' && ad.expiresAt && (
-                      <p className="text-xs font-black text-gray-400 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                      <p className="text-xs font-black text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/70 p-2.5 rounded-xl border border-slate-200/70 dark:border-slate-700">
                          EXPIRES: {new Date(ad.expiresAt?.toMillis ? ad.expiresAt.toMillis() : ad.expiresAt).toLocaleString()}
                       </p>
                    )}
                  </div>
               </div>
-              <div className="p-4 bg-gray-50 border-t border-gray-100 mt-auto flex gap-2">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/70 border-t border-slate-200/70 dark:border-slate-700 mt-auto flex gap-2">
                  <button 
                    onClick={() => setRenewAd(ad)}
-                   className="flex-1 py-3 bg-indigo-100 text-indigo-600 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-indigo-200 transition-colors flex items-center justify-center gap-2"
+                   className="flex-1 py-3 bg-[#07266E] hover:bg-[#0B3D9E] text-white rounded-xl font-black uppercase tracking-widest text-[10px] transition-colors flex items-center justify-center gap-2"
                  >
                    <RefreshCw className="w-4 h-4" /> Renew
                  </button>
                  <button 
                    onClick={() => setDeleteId(ad.id)}
-                   className="flex-1 py-3 bg-red-100 text-red-600 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-200 transition-colors flex items-center justify-center gap-2"
+                   className="flex-1 py-3 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-100 dark:hover:bg-red-900/60 transition-colors flex items-center justify-center gap-2"
                  >
                    <Trash2 className="w-4 h-4" /> Delete
                  </button>
@@ -183,6 +190,16 @@ export function ManageAds() {
             </div>
           ))}
         </div>
+      )}
+
+      {ads.length > 0 && (
+        <Pagination
+          currentPage={safePage}
+          totalItems={ads.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="ads"
+        />
       )}
 
       <ConfirmModal
@@ -197,10 +214,10 @@ export function ManageAds() {
       {/* Renew Modal */}
       {renewAd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-2xl font-black uppercase tracking-tight text-gray-900">Renew Ad</h2>
-              <p className="text-sm font-medium text-gray-500 mt-1">Select a package to extend your ad duration</p>
+          <div className="bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-[2rem] w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700">
+              <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white font-display">Renew Ad</h2>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Select a package to extend your ad duration</p>
             </div>
             
             <div className="p-6 space-y-6">
@@ -212,35 +229,35 @@ export function ManageAds() {
                     className={cn(
                       "p-4 rounded-2xl text-left transition-all border-2",
                       renewPlan === plan.days 
-                        ? "bg-indigo-50 border-indigo-500" 
-                        : "bg-gray-50 border-transparent hover:bg-gray-100 hover:border-gray-200"
+                        ? "bg-blue-50 dark:bg-blue-950/50 border-[#0B3D9E] dark:border-[#F97316]" 
+                        : "bg-slate-50 dark:bg-slate-800/80 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800"
                     )}
                   >
                     <p className={cn(
                       "text-xl font-black uppercase tracking-tight",
-                      renewPlan === plan.days ? "text-indigo-900" : "text-gray-900"
+                      renewPlan === plan.days ? "text-[#07266E] dark:text-white" : "text-slate-900 dark:text-slate-200"
                     )}>{plan.label}</p>
                     <p className={cn(
-                      "text-sm font-bold mt-1",
-                      renewPlan === plan.days ? "text-indigo-600" : "text-gray-500"
+                      "text-sm font-bold mt-1 tabular-nums",
+                      renewPlan === plan.days ? "text-[#F97316]" : "text-slate-500 dark:text-slate-400"
                     )}>{formatCurrency(plan.price)}</p>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <div className="p-6 bg-slate-50 dark:bg-slate-800/70 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
               <button 
                 disabled={renewing}
                 onClick={() => setRenewAd(null)}
-                className="px-6 py-3 bg-white text-gray-600 font-bold rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                className="px-6 py-3 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button 
                 disabled={renewing}
                 onClick={handleRenew}
-                className="px-6 py-3 bg-indigo-600 text-white font-bold tracking-wide rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold tracking-wide rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-500/20"
               >
                 {renewing && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                 Confirm Renew

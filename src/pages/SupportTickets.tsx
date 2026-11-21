@@ -5,6 +5,9 @@ import { Ticket } from '../types';
 import { LifeBuoy, PlusCircle, AlertCircle, CheckCircle2, MessageSquare, Send } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { Pagination } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 export function SupportTickets() {
   const { user, profile } = useAuth();
@@ -13,6 +16,7 @@ export function SupportTickets() {
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchTickets = async () => {
     if (!user) return;
@@ -84,24 +88,28 @@ export function SupportTickets() {
   };
 
 
+  const totalPages = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedTickets = tickets.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12 w-full px-4 sm:px-0">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-4xl mx-auto space-y-8 pb-12 w-full">
+      <div className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-6 sm:p-8 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-blue-600 p-3 rounded-2xl text-white">
+          <div className="bg-white/10 border border-white/15 p-3.5 rounded-2xl text-[#FB923C]">
             <LifeBuoy className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Support Tickets</h1>
-            <p className="text-gray-500 font-medium">Need help? Open a new ticket.</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-display tracking-tight">Support Tickets</h1>
+            <p className="text-blue-100 font-medium text-sm mt-0.5">Need help? Open a new ticket.</p>
           </div>
         </div>
         
         <button 
           onClick={() => setIsFormOpen(!isFormOpen)}
-          className="px-6 py-3 bg-gray-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-xl"
+          className="px-6 py-3.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/25 shrink-0"
         >
-          {isFormOpen ? 'Cancel' : <><PlusCircle className="w-5 h-5" /> New Ticket</>}
+          {isFormOpen ? 'Cancel' : <><PlusCircle className="w-4 h-4" /> New Ticket</>}
         </button>
       </div>
 
@@ -113,26 +121,26 @@ export function SupportTickets() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-[2.5rem] shadow-xl border border-blue-100 mb-8 space-y-6 block">
+            <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1E293B] p-6 sm:p-8 rounded-[2.5rem] shadow-xl border border-slate-200 dark:border-slate-700/80 mb-8 space-y-6 block transition-colors">
               <div className="space-y-2">
-                <label className="text-sm font-black text-gray-700 ml-1 uppercase tracking-widest">Subject line</label>
+                <label className="text-xs font-black text-slate-600 dark:text-slate-300 ml-1 uppercase tracking-widest">Subject line</label>
                 <input 
                   type="text"
                   required
                   placeholder="e.g. My submission was unfairly rejected"
-                  className="w-full px-5 py-4 border border-gray-200 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-5 py-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-[#0B3D9E] placeholder:text-slate-400"
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-black text-gray-700 ml-1 uppercase tracking-widest">Detailed description</label>
+                <label className="text-xs font-black text-slate-600 dark:text-slate-300 ml-1 uppercase tracking-widest">Detailed description</label>
                 <textarea 
                   required
                   rows={4}
                   placeholder="Provide any details such as Job ID, etc..."
-                  className="w-full px-5 py-4 border border-gray-200 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-5 py-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white rounded-2xl outline-none focus:ring-2 focus:ring-[#0B3D9E] resize-none placeholder:text-slate-400"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                 />
@@ -140,7 +148,7 @@ export function SupportTickets() {
 
               <button 
                 disabled={submitting}
-                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 disabled:opacity-50"
+                className="w-full py-4 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-orange-500/25 disabled:opacity-50 transition-all"
               >
                 {submitting ? 'Submitting...' : 'Submit Ticket'}
               </button>
@@ -151,26 +159,26 @@ export function SupportTickets() {
 
       <div className="space-y-4">
         {tickets.length === 0 ? (
-          <div className="bg-white p-12 rounded-[3rem] border border-dashed border-gray-200 text-center text-gray-400 font-bold italic">
+          <div className="bg-white dark:bg-[#1E293B] p-12 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-700 text-center text-slate-500 dark:text-slate-400 font-bold italic">
             You haven't opened any tickets yet.
           </div>
         ) : (
-          tickets.map(ticket => (
-            <div key={ticket.id} className="bg-white p-6 sm:p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-4">
+          paginatedTickets.map(ticket => (
+            <div key={ticket.id} className="bg-white dark:bg-[#1E293B] p-6 sm:p-8 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-4 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-gray-900 leading-tight">{ticket.subject}</h3>
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Submitted: {ticket.createdAt ? new Date(ticket.createdAt as any).toLocaleString() : ''}</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{ticket.subject}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Submitted: {ticket.createdAt ? new Date(ticket.createdAt as any).toLocaleString() : ''}</p>
                 </div>
                 <div className={cn(
                   "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest self-start",
-                  ticket.status === 'resolved' ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600"
+                  ticket.status === 'resolved' ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400" : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
                 )}>
                   {ticket.status === 'resolved' ? 'Resolved' : 'Open'}
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-2xl text-gray-700 text-sm">
+              <div className="bg-slate-50 dark:bg-slate-800/70 p-4 rounded-2xl text-slate-700 dark:text-slate-200 text-sm border border-slate-200/70 dark:border-slate-700">
                 {Array.isArray(ticket.replies) && ticket.replies.length > 0 ? ticket.replies[0].text : 'No description'}
               </div>
 
@@ -178,10 +186,12 @@ export function SupportTickets() {
                 <div className="mt-4 space-y-3">
                   {ticket.replies.slice(1).map((reply: any, i: number) => (
                     <div key={i} className={cn(
-                      "p-4 rounded-xl text-sm font-medium",
-                      reply.sender === 'admin' ? "bg-blue-50 border border-blue-100 mr-8" : "bg-gray-100 border border-gray-200 ml-8"
+                      "p-4 rounded-2xl text-sm font-medium",
+                      reply.sender === 'admin'
+                        ? "bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 text-slate-800 dark:text-blue-100 mr-6 sm:mr-10"
+                        : "bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 ml-6 sm:ml-10"
                     )}>
-                       <div className="flex items-center gap-2 font-black text-[10px] uppercase tracking-widest mb-1 opacity-50">
+                       <div className="flex items-center gap-2 font-black text-[10px] uppercase tracking-widest mb-1 text-[#0B3D9E] dark:text-[#FB923C]">
                           {reply.sender === 'admin' ? <><MessageSquare className="w-3 h-3" /> Admin</> : 'You'}
                        </div>
                        {reply.text}
@@ -191,11 +201,11 @@ export function SupportTickets() {
               )}
 
               {ticket.adminReply && (!Array.isArray(ticket.replies) || ticket.replies.length === 0) && (
-                <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mt-4 mr-8">
-                  <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest mb-2">
+                <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 p-4 rounded-2xl mt-4 mr-6 sm:mr-10">
+                  <div className="flex items-center gap-2 text-[#0B3D9E] dark:text-[#FB923C] font-black text-[10px] uppercase tracking-widest mb-2">
                     <MessageSquare className="w-3 h-3" /> Admin Reply
                   </div>
-                  <p className="text-gray-800 text-sm font-medium">{ticket.adminReply}</p>
+                  <p className="text-slate-800 dark:text-blue-100 text-sm font-medium">{ticket.adminReply}</p>
                 </div>
               )}
               
@@ -208,6 +218,16 @@ export function SupportTickets() {
           ))
         )}
       </div>
+
+      {tickets.length > 0 && (
+        <Pagination
+          currentPage={safePage}
+          totalItems={tickets.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="tickets"
+        />
+      )}
     </div>
   );
 }
@@ -256,11 +276,11 @@ const ReplyBox = ({ ticketId, onOptimisticReply }: { ticketId: string, onOptimis
         value={replyMessage}
         onChange={e => setReplyMessage(e.target.value)}
         placeholder="Type a message..."
-        className="flex-1 px-4 py-2 border border-gray-200 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white rounded-xl outline-none focus:ring-2 focus:ring-[#0B3D9E] text-sm placeholder:text-slate-400"
       />
       <button 
         disabled={sending || !replyMessage.trim()}
-        className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center justify-center shadow-lg shadow-blue-100"
+        className="px-5 py-3 bg-[#07266E] hover:bg-[#0B3D9E] text-white rounded-xl disabled:opacity-50 transition-all flex items-center justify-center shadow-md"
       >
         <Send className="w-4 h-4" />
       </button>

@@ -1,11 +1,15 @@
 {
-  "system_config": [
-    {
-      "id": "config",
-      "test_val": "successful_test",
-      "notice": "Test notice alert"
-    }
-  ],
+  "system_config": [],
   "tickets": [],
-  "advertisements": []
+  "advertisements": [],
+  "referralDomainUrl": "https://ahtaskpay.onrender.com",
+  "campaignStartDate": "2026-06-01T12:36",
+  "customBannerPresets": [
+    "https://gopolnxinguglnueohmk.supabase.co/storage/v1/object/public/public_assets/banner_d66jocpqi5i_1795251672516.png"
+  ],
+  "statsMode": "realtime",
+  "manualTotalUsers": 0,
+  "manualTotalJobs": 0,
+  "manualCompletedTasks": 0,
+  "manualTotalWithdraw": 0
 }
