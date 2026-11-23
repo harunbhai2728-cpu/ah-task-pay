@@ -1,21 +1,39 @@
-export const sendTelegramNotification = async (message: string) => {
-  const BOT_TOKEN = '8637637985:AAEHJX0E6HdP0wDAYtQwt24l9DosqQw5_QE';
-  const CHAT_ID = '8968701306';
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-  
+import { realSupabase } from './supabase';
+
+export type TelegramTopicKey =
+  | 'submission'
+  | 'withdraw'
+  | 'deposit'
+  | 'registration'
+  | 'profile_update'
+  | 'support'
+  | 'job_post'
+  | 'ad_post'
+  | 'balance_transfer'
+  | 'redeem_code'
+  | 'referral';
+
+export const notifyTelegramEvent = async (
+  topic: TelegramTopicKey,
+  data: Record<string, unknown>,
+) => {
   try {
-    await fetch(url, {
+    const {
+      data: { session },
+    } = await realSupabase.auth.getSession();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    await fetch('/api/telegram/event', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-      }),
+      headers,
+      body: JSON.stringify({ topic, data }),
     });
   } catch (error) {
-    console.error('Failed to send Telegram notification:', error);
+    console.error('Failed to trigger Telegram event:', error);
   }
 };

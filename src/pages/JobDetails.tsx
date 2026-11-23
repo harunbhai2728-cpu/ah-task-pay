@@ -138,17 +138,6 @@ export function JobDetails() {
       }]);
       if (insertErr) throw insertErr;
 
-      // Telegram Notification
-      import('../lib/telegram').then(({ sendTelegramNotification }) => {
-        sendTelegramNotification(
-          `📝 <b>New Job Submission</b>\n\n` +
-          `<b>Job ID:</b> ${job.id}\n` +
-          `<b>Job Title:</b> ${job.title}\n` +
-          `<b>Worker:</b> ${profile?.displayName || user.user_metadata?.name || 'User'} (ID: ${profile?.serialNumber || user.id})`
-        );
-      });
-
-
       setSuccess(true);
       if (isAutoApprove) {
         setTimeout(() => navigate('/dashboard'), 2000);

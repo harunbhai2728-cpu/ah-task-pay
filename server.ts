@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { createServer as createViteServer } from "vite";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
@@ -46,7 +47,7 @@ async function startServer() {
     "placeholder_key";
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  const DATA_STORE_PATH = path.join(process.cwd(), "data-store.json");
+  const DATA_STORE_PATH = path.join(os.tmpdir(), "ahtaskpay-data-store.json");
   let hasSupabaseRedeemTables = false;
   let hasSupabaseSettingsTable = false;
 
@@ -125,6 +126,499 @@ async function startServer() {
     }
   };
 
+  // Telegram Multi-Bot & Topic Notification Engine
+  const TELEGRAM_TOPIC_KEYS = [
+    "submission",
+    "withdraw",
+    "deposit",
+    "registration",
+    "profile_update",
+    "support",
+    "job_post",
+    "ad_post",
+    "balance_transfer",
+    "redeem_code",
+    "referral",
+  ] as const;
+  type TelegramTopicKey = (typeof TELEGRAM_TOPIC_KEYS)[number];
+
+  interface TelegramBotConfig {
+    id: string;
+    name: string;
+    botToken: string;
+    chatId: string;
+    threadId?: string;
+    enabled: boolean;
+    sendMode: "all" | "selected";
+    topics: Record<string, boolean>;
+  }
+
+  interface TelegramTopicControl {
+    enabled: boolean;
+    customTemplate: string;
+  }
+
+  interface TelegramSettings {
+    globalEnabled: boolean;
+    bots: TelegramBotConfig[];
+    topics: Record<TelegramTopicKey, TelegramTopicControl>;
+  }
+
+  const DEFAULT_TELEGRAM_TOPIC_TEMPLATES: Record<TelegramTopicKey, string> = {
+    submission:
+      "📝 <b>New Job Submission</b>\n\n<b>Job:</b> {jobTitle} (ID: {jobId})\n<b>Worker:</b> {user} (ID: {serial})\n<b>Reward:</b> {amount} BDT\n<b>Status:</b> {status}",
+    withdraw:
+      "💸 <b>New Withdrawal Request</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Amount:</b> {amount} BDT (Net: {netAmount} BDT)\n<b>Method:</b> {method}\n<b>Phone:</b> {phone}",
+    deposit:
+      "💰 <b>New Deposit Request</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Amount:</b> {amount} BDT\n<b>Method:</b> {method}\n<b>Phone:</b> {phone}\n<b>TrxID:</b> {trxId}",
+    registration:
+      "🎉 <b>New Account Registration</b>\n\n<b>Name:</b> {user}\n<b>Email:</b> {email}\n<b>Phone:</b> {phone}\n<b>Details:</b> {details}",
+    profile_update:
+      "👤 <b>Account Info Updated</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Email:</b> {email}\n<b>Updated Details:</b> {details}",
+    support:
+      "🎫 <b>Support Message</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Subject:</b> {subject}\n<b>Sender:</b> {sender}\n<b>Status:</b> {status}\n<b>Message:</b> {message}",
+    job_post:
+      "💼 <b>New Job Posted</b>\n\n<b>Poster:</b> {user} (ID: {serial})\n<b>Title:</b> {jobTitle}\n<b>Budget:</b> {amount} BDT\n<b>Details:</b> {details}",
+    ad_post:
+      "📢 <b>New Advertisement Request</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Price:</b> {amount} BDT\n<b>Details:</b> {details}",
+    balance_transfer:
+      "🔄 <b>Wallet Balance Transfer</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Amount:</b> {amount} BDT (Net: {netAmount} BDT)\n<b>Details:</b> {details}",
+    redeem_code:
+      "🎁 <b>Redeem Code Claimed</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Code:</b> {code}\n<b>Reward:</b> {amount} BDT",
+    referral:
+      "🤝 <b>Referral Activity</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Details:</b> {details}",
+  };
+
+  const getDefaultTelegramSettings = (): TelegramSettings => {
+    const topics = {} as Record<TelegramTopicKey, TelegramTopicControl>;
+    TELEGRAM_TOPIC_KEYS.forEach((key) => {
+      topics[key] = { enabled: true, customTemplate: "" };
+    });
+    return {
+      globalEnabled: true,
+      bots: [],
+      topics,
+    };
+  };
+
+  const normalizeTelegramSettings = (raw: any): TelegramSettings => {
+    const defaults = getDefaultTelegramSettings();
+    if (!raw || typeof raw !== "object") return defaults;
+
+    const bots: TelegramBotConfig[] = Array.isArray(raw.bots)
+      ? raw.bots
+          .filter((b: any) => b && typeof b === "object")
+          .slice(0, 25)
+          .map((b: any, idx: number) => {
+            const topicMap: Record<string, boolean> = {};
+            TELEGRAM_TOPIC_KEYS.forEach((k) => {
+              topicMap[k] =
+                b.topics && typeof b.topics[k] === "boolean" ? b.topics[k] : true;
+            });
+            return {
+              id:
+                typeof b.id === "string" && b.id.trim()
+                  ? b.id.trim().slice(0, 64)
+                  : `bot-${Date.now()}-${idx}`,
+              name:
+                typeof b.name === "string" && b.name.trim()
+                  ? b.name.trim().slice(0, 80)
+                  : `Bot ${idx + 1}`,
+              botToken:
+                typeof b.botToken === "string" ? b.botToken.trim().slice(0, 200) : "",
+              chatId:
+                typeof b.chatId === "string" || typeof b.chatId === "number"
+                  ? String(b.chatId).trim().slice(0, 100)
+                  : "",
+              threadId:
+                typeof b.threadId === "string" || typeof b.threadId === "number"
+                  ? String(b.threadId).trim().slice(0, 40)
+                  : "",
+              enabled: b.enabled !== false,
+              sendMode: b.sendMode === "selected" ? "selected" : "all",
+              topics: topicMap,
+            };
+          })
+      : [];
+
+    const topics = { ...defaults.topics };
+    if (raw.topics && typeof raw.topics === "object") {
+      TELEGRAM_TOPIC_KEYS.forEach((k) => {
+        const t = raw.topics[k];
+        if (t && typeof t === "object") {
+          topics[k] = {
+            enabled: t.enabled !== false,
+            customTemplate:
+              typeof t.customTemplate === "string"
+                ? t.customTemplate.slice(0, 2000)
+                : "",
+          };
+        }
+      });
+    }
+
+    return {
+      globalEnabled: raw.globalEnabled !== false,
+      bots,
+      topics,
+    };
+  };
+
+  const getTelegramSettings = (): TelegramSettings => {
+    const store = getDataStore();
+    return normalizeTelegramSettings(store.telegramSettings);
+  };
+
+  const saveTelegramSettings = async (settings: TelegramSettings) => {
+    const normalized = normalizeTelegramSettings(settings);
+    const store = getDataStore();
+    store.telegramSettings = normalized;
+    saveDataStore(store);
+    if (hasSupabaseSettingsTable) {
+      await syncSetting("telegram_settings", JSON.stringify(normalized));
+    }
+    return normalized;
+  };
+
+  const escapeTelegramHtml = (val: unknown): string => {
+    const str = val === undefined || val === null ? "" : String(val);
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  };
+
+  const renderTelegramTemplate = (
+    topic: TelegramTopicKey,
+    customTemplate: string,
+    payload: Record<string, unknown>,
+  ): string => {
+    const template =
+      customTemplate && customTemplate.trim()
+        ? customTemplate.trim()
+        : DEFAULT_TELEGRAM_TOPIC_TEMPLATES[topic];
+
+    const values: Record<string, string> = {
+      user: escapeTelegramHtml(payload.user ?? "User"),
+      serial: escapeTelegramHtml(payload.serial ?? "N/A"),
+      email: escapeTelegramHtml(payload.email ?? "N/A"),
+      phone: escapeTelegramHtml(payload.phone ?? "N/A"),
+      amount: escapeTelegramHtml(payload.amount ?? "0"),
+      netAmount: escapeTelegramHtml(payload.netAmount ?? payload.amount ?? "0"),
+      fee: escapeTelegramHtml(payload.fee ?? "0"),
+      method: escapeTelegramHtml(payload.method ?? "N/A"),
+      trxId: escapeTelegramHtml(payload.trxId ?? "N/A"),
+      jobTitle: escapeTelegramHtml(payload.jobTitle ?? "N/A"),
+      jobId: escapeTelegramHtml(payload.jobId ?? "N/A"),
+      subject: escapeTelegramHtml(payload.subject ?? "N/A"),
+      message: escapeTelegramHtml(payload.message ?? ""),
+      sender: escapeTelegramHtml(payload.sender ?? "User"),
+      status: escapeTelegramHtml(payload.status ?? "pending"),
+      details: escapeTelegramHtml(payload.details ?? ""),
+      code: escapeTelegramHtml(payload.code ?? "N/A"),
+      time: escapeTelegramHtml(
+        payload.time ?? new Date().toLocaleString("en-GB", { timeZone: "Asia/Dhaka" }),
+      ),
+    };
+
+    return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) =>
+      key in values ? values[key] : match,
+    );
+  };
+
+  const isValidTelegramBotToken = (token: string): boolean => {
+    return /^[0-9]{5,20}:[A-Za-z0-9_-]{20,100}$/.test(token.trim());
+  };
+
+  const sendTelegramApiMessage = async (
+    botToken: string,
+    chatId: string,
+    text: string,
+    threadId?: string,
+  ): Promise<{ ok: boolean; error?: string }> => {
+    const cleanToken = botToken.trim();
+    const cleanChatId = chatId.trim();
+    if (!cleanToken || !cleanChatId) {
+      return { ok: false, error: "Bot token and Chat ID are required" };
+    }
+    if (!isValidTelegramBotToken(cleanToken)) {
+      return { ok: false, error: "Invalid Telegram bot token format" };
+    }
+
+    const url = `https://api.telegram.org/bot${cleanToken}/sendMessage`;
+    const bodyPayload: Record<string, unknown> = {
+      chat_id: cleanChatId,
+      text: text.slice(0, 4096),
+      parse_mode: "HTML",
+    };
+    if (threadId && threadId.trim() && /^\d+$/.test(threadId.trim())) {
+      bodyPayload.message_thread_id = Number(threadId.trim());
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyPayload),
+      });
+      const json: any = await response.json().catch(() => ({}));
+      if (!response.ok || !json.ok) {
+        return {
+          ok: false,
+          error: json?.description || `Telegram API error (${response.status})`,
+        };
+      }
+      return { ok: true };
+    } catch (err: any) {
+      return { ok: false, error: err?.message || "Network error sending to Telegram" };
+    }
+  };
+
+  const dispatchTelegramEvent = async (
+    topic: TelegramTopicKey,
+    payload: Record<string, unknown>,
+  ) => {
+    try {
+      const settings = getTelegramSettings();
+      if (!settings.globalEnabled) return;
+      const topicConfig = settings.topics[topic];
+      if (topicConfig && !topicConfig.enabled) return;
+
+      const messageText = renderTelegramTemplate(
+        topic,
+        topicConfig?.customTemplate || "",
+        payload,
+      );
+
+      let targetBots = settings.bots.filter(
+        (bot) =>
+          bot.enabled &&
+          bot.botToken &&
+          bot.chatId &&
+          (bot.sendMode !== "selected" || bot.topics?.[topic] === true),
+      );
+
+      if (
+        targetBots.length === 0 &&
+        settings.bots.length === 0 &&
+        process.env.TELEGRAM_BOT_TOKEN &&
+        process.env.TELEGRAM_CHAT_ID
+      ) {
+        targetBots = [
+          {
+            id: "env-fallback",
+            name: "Env Bot",
+            botToken: process.env.TELEGRAM_BOT_TOKEN,
+            chatId: process.env.TELEGRAM_CHAT_ID,
+            enabled: true,
+            sendMode: "all",
+            topics: {},
+          },
+        ];
+      }
+
+      if (targetBots.length === 0) return;
+
+      await Promise.allSettled(
+        targetBots.map((bot) =>
+          sendTelegramApiMessage(bot.botToken, bot.chatId, messageText, bot.threadId),
+        ),
+      );
+    } catch (err) {
+      console.error(`Telegram dispatch error (${topic}):`, err);
+    }
+  };
+
+  const verifyStrictAdmin = async (req: express.Request) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return null;
+    const token = authHeader.replace(/^Bearer /i, "").trim();
+    if (!token) return null;
+
+    const { data, error } = await supabase.auth.getUser(token);
+    const user = data?.user;
+    if (error || !user) return null;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const isMaster = [
+      "superadmin@taskpay.systems",
+      "harunurrashid93427@gmail.com",
+      "harunbhai2728@gmail.com",
+    ].includes(user.email?.toLowerCase() || "");
+
+    if (profile?.role !== "admin" && !isMaster) {
+      return null;
+    }
+    return user;
+  };
+
+  const notifiedRegistrations = new Set<string>();
+
+  const lookupProfileForTelegram = async (userId?: string) => {
+    if (!userId) return null;
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, displayName, username, email, phone, serialNumber")
+        .eq("id", userId)
+        .maybeSingle();
+      return data;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleProxyTelegramEvents = async (
+    table: string,
+    method: string,
+    rawPayload: any,
+    user: any,
+    dbEq: any,
+  ) => {
+    try {
+      if (!rawPayload || typeof rawPayload !== "object") return;
+      const item = Array.isArray(rawPayload) ? rawPayload[0] : rawPayload;
+      if (!item || typeof item !== "object") return;
+
+      if (table === "submissions" && method === "insert") {
+        const actor = await lookupProfileForTelegram(user?.id);
+        await dispatchTelegramEvent("submission", {
+          jobId: item.jobId || item.job_id || "N/A",
+          jobTitle: item.jobTitle || "Micro Job",
+          user: item.workerName || actor?.displayName || user?.email || "Worker",
+          serial: item.workerSerial || actor?.serialNumber || user?.id || "N/A",
+          amount: item.reward ?? 0,
+          status: item.status || "pending",
+        });
+      } else if (table === "transactions" && method === "insert") {
+        const actor = await lookupProfileForTelegram(item.userId || user?.id);
+        const rawType = String(item.type || "").toLowerCase();
+        if (rawType === "deposit") {
+          await dispatchTelegramEvent("deposit", {
+            user: item.userName || actor?.displayName || user?.email || "User",
+            serial: item.userSerial || actor?.serialNumber || user?.id || "N/A",
+            amount: item.amount ?? 0,
+            method: item.method || item.payment_method || "N/A",
+            phone: item.phone || actor?.phone || "N/A",
+            trxId: item.transactionId || item.referenceId || "N/A",
+          });
+        } else if (rawType === "withdrawal" || rawType === "withdraw") {
+          await dispatchTelegramEvent("withdraw", {
+            user: item.userName || actor?.displayName || user?.email || "User",
+            serial: item.userSerial || actor?.serialNumber || user?.id || "N/A",
+            amount: item.amount ?? 0,
+            netAmount: item.finalAmount ?? item.amount ?? 0,
+            fee: item.fee ?? 0,
+            method: item.method || item.payment_method || "N/A",
+            phone: item.phone || actor?.phone || "N/A",
+          });
+        }
+      } else if (table === "tickets" && (method === "insert" || method === "update")) {
+        const targetId = item.userId || user?.id;
+        const actor = await lookupProfileForTelegram(targetId);
+        if (method === "insert") {
+          const initialMsg = Array.isArray(item.replies) && item.replies[0]?.text
+            ? item.replies[0].text
+            : "";
+          await dispatchTelegramEvent("support", {
+            user: actor?.displayName || user?.email || "User",
+            serial: item.userSerial || actor?.serialNumber || targetId || "N/A",
+            subject: item.subject || "Support Ticket",
+            sender: "User",
+            status: item.status || "open",
+            message: initialMsg || "New support ticket created",
+          });
+        } else if (method === "update") {
+          let ticketSubject = item.subject || "Support Ticket";
+          let ticketOwnerSerial = actor?.serialNumber || "N/A";
+          let ticketOwnerName = actor?.displayName || user?.email || "User";
+          if (dbEq && dbEq[0] === "id" && dbEq[1]) {
+            const { data: ticketRow } = await supabase
+              .from("tickets")
+              .select("subject, user_id, user_serial")
+              .eq("id", dbEq[1])
+              .maybeSingle();
+            if (ticketRow) {
+              ticketSubject = ticketRow.subject || ticketSubject;
+              ticketOwnerSerial = ticketRow.user_serial || ticketOwnerSerial;
+              if (ticketRow.user_id && ticketRow.user_id !== user?.id) {
+                const owner = await lookupProfileForTelegram(ticketRow.user_id);
+                if (owner?.displayName) ticketOwnerName = owner.displayName;
+              }
+            }
+          }
+          const latestReply =
+            Array.isArray(item.replies) && item.replies.length > 0
+              ? item.replies[item.replies.length - 1]
+              : null;
+          if (latestReply || item.adminReply || item.status) {
+            await dispatchTelegramEvent("support", {
+              user: ticketOwnerName,
+              serial: ticketOwnerSerial,
+              subject: ticketSubject,
+              sender:
+                latestReply?.sender === "admin" || item.adminReply
+                  ? "Admin"
+                  : "User",
+              status: item.status || "open",
+              message:
+                latestReply?.text ||
+                item.adminReply ||
+                `Ticket status updated to ${item.status}`,
+            });
+          }
+        }
+      } else if (table === "jobs" && method === "insert") {
+        const actor = await lookupProfileForTelegram(item.posterId || user?.id);
+        await dispatchTelegramEvent("job_post", {
+          user: item.posterName || actor?.displayName || user?.email || "User",
+          serial: item.posterSerial || actor?.serialNumber || user?.id || "N/A",
+          jobTitle: item.title || "New Job",
+          amount: item.grandTotal ?? item.totalBudget ?? 0,
+          details: `Reward: ${item.pricePerWork ?? 0} BDT x ${item.maxWorkers ?? 1} workers`,
+        });
+      } else if (table === "advertisements" && method === "insert") {
+        const actor = await lookupProfileForTelegram(item.userId || user?.id);
+        await dispatchTelegramEvent("ad_post", {
+          user: actor?.displayName || user?.email || "User",
+          serial: item.userSerial || actor?.serialNumber || user?.id || "N/A",
+          amount: item.price ?? 0,
+          details: `Duration: ${item.durationDays ?? 1} days | Link: ${item.link || "N/A"}`,
+        });
+      } else if (table === "profiles" && method === "update") {
+        const changedFields: string[] = [];
+        if (item.displayName !== undefined) changedFields.push(`Name: ${item.displayName}`);
+        if (item.username !== undefined) changedFields.push(`Username: ${item.username}`);
+        if (item.phone !== undefined) changedFields.push(`Phone: ${item.phone}`);
+        if (item.email !== undefined) changedFields.push(`Email: ${item.email}`);
+        if (item.account_status === "pending_deletion") {
+          changedFields.push(
+            `Account Deletion Requested (${item.deletion_reason || "No reason"})`,
+          );
+        }
+        if (changedFields.length > 0) {
+          const targetId =
+            dbEq && dbEq[0] === "id" && dbEq[1] ? String(dbEq[1]) : user?.id;
+          const actor = await lookupProfileForTelegram(targetId);
+          await dispatchTelegramEvent("profile_update", {
+            user: actor?.displayName || item.displayName || user?.email || "User",
+            serial: actor?.serialNumber || targetId || "N/A",
+            email: actor?.email || item.email || user?.email || "N/A",
+            details: changedFields.join(", "),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("handleProxyTelegramEvents error:", err);
+    }
+  };
+
   // Removed old system_config warning backup sync logic, we now use system_configuration table.
 
   // Run Supabase availability checks in the background without blocking server connection listeners
@@ -161,7 +655,7 @@ async function startServer() {
         
         // Re-hydrate store from system_settings
         try {
-           const { data: extSnap } = await supabase.from("system_settings").select("setting_key, setting_value").in('setting_key', ['campaign_start_date', 'referral_domain_url', 'custom_banner_presets']);
+           const { data: extSnap } = await supabase.from("system_settings").select("setting_key, setting_value").in('setting_key', ['campaign_start_date', 'referral_domain_url', 'custom_banner_presets', 'telegram_settings', 'landing_stats_config']);
             if (extSnap && extSnap.length > 0) {
               const store = getDataStore();
               let changed = false;
@@ -187,6 +681,41 @@ async function startServer() {
                         changed = true;
                       }
                     } catch(e){} 
+                 }
+                 if (s.setting_key === 'telegram_settings') {
+                    try {
+                      const nextTg = normalizeTelegramSettings(JSON.parse(s.setting_value));
+                      if (JSON.stringify(store.telegramSettings || {}) !== JSON.stringify(nextTg)) {
+                        store.telegramSettings = nextTg;
+                        changed = true;
+                      }
+                    } catch(e){}
+                 }
+                 if (s.setting_key === 'landing_stats_config') {
+                    try {
+                      const parsed = JSON.parse(s.setting_value);
+                      if (parsed && typeof parsed === 'object') {
+                        const nextMode = parsed.statsMode || 'realtime';
+                        const nextUsers = Number(parsed.manualTotalUsers) || 0;
+                        const nextJobs = Number(parsed.manualTotalJobs) || 0;
+                        const nextTasks = Number(parsed.manualCompletedTasks) || 0;
+                        const nextWithdraw = Number(parsed.manualTotalWithdraw) || 0;
+                        if (
+                          store.statsMode !== nextMode ||
+                          (store.manualTotalUsers || 0) !== nextUsers ||
+                          (store.manualTotalJobs || 0) !== nextJobs ||
+                          (store.manualCompletedTasks || 0) !== nextTasks ||
+                          (store.manualTotalWithdraw || 0) !== nextWithdraw
+                        ) {
+                          store.statsMode = nextMode;
+                          store.manualTotalUsers = nextUsers;
+                          store.manualTotalJobs = nextJobs;
+                          store.manualCompletedTasks = nextTasks;
+                          store.manualTotalWithdraw = nextWithdraw;
+                          changed = true;
+                        }
+                      }
+                    } catch(e){}
                  }
               });
               if (changed) saveDataStore(store);
@@ -648,6 +1177,8 @@ async function startServer() {
       let dbOr = orArgs;
       let dbLimit = limit;
       let memFilter: ((item: any) => boolean) | null = null;
+      const rawPayloadSnapshot =
+        args && args[0] ? JSON.parse(JSON.stringify(args[0])) : null;
 
       // Security & Idempotency Lock
       const isWrite = method && method !== "select";
@@ -808,6 +1339,16 @@ async function startServer() {
             store.manualCompletedTasks = input.manualCompletedTasks || 0;
             store.manualTotalWithdraw = input.manualTotalWithdraw || 0;
             storeUpdated = true;
+            await syncSetting(
+              "landing_stats_config",
+              JSON.stringify({
+                statsMode: store.statsMode,
+                manualTotalUsers: store.manualTotalUsers,
+                manualTotalJobs: store.manualTotalJobs,
+                manualCompletedTasks: store.manualCompletedTasks,
+                manualTotalWithdraw: store.manualTotalWithdraw,
+              }),
+            );
           }
           if (storeUpdated) {
             saveDataStore(store);
@@ -2294,6 +2835,16 @@ async function startServer() {
         }
       }
 
+      if (isWrite && rawPayloadSnapshot) {
+        void handleProxyTelegramEvents(
+          table,
+          method,
+          rawPayloadSnapshot,
+          user,
+          dbEq,
+        );
+      }
+
       res.json({ data: modifiedData });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -2583,6 +3134,25 @@ async function startServer() {
               diag: { existingProfile, updates, profileUpdates },
             });
         }
+      }
+
+      const changedSummary: string[] = [];
+      if (isDisplayNameChanged) changedSummary.push(`Name: ${updates.displayName}`);
+      if (isUsernameChanged) changedSummary.push(`Username: ${updates.username}`);
+      if (isPhoneChanged) changedSummary.push(`Phone: ${updates.phone}`);
+      if (isEmailChanged) changedSummary.push(`Email: ${updates.email}`);
+      if (isPasswordChanged) changedSummary.push("Password updated by Admin");
+      if (changedSummary.length > 0) {
+        void dispatchTelegramEvent("profile_update", {
+          user:
+            updates.displayName ||
+            existingProfile.displayName ||
+            existingProfile.name ||
+            "User",
+          serial: existingProfile.serialNumber || targetUserId,
+          email: updates.email || existingProfile.email || "N/A",
+          details: changedSummary.join(", "),
+        });
       }
 
       res.json({
@@ -3893,6 +4463,13 @@ async function startServer() {
       });
       saveRedeemCodeUsagesToStore(localUsages);
 
+      void dispatchTelegramEvent("redeem_code", {
+        user: user.email || "User",
+        serial: user.id,
+        code: activeCode.code,
+        amount: claimAmount,
+      });
+
       return res.json({
         success: true,
         amount: claimAmount,
@@ -4553,15 +5130,231 @@ async function startServer() {
     }
   });
 
-  app.post("/api/referral/register", async (req, res) =>
-    registerReferral(req, res),
-  );
+  app.get("/api/admin/telegram/settings", async (req, res) => {
+    try {
+      const adminUser = await verifyStrictAdmin(req);
+      if (!adminUser) {
+        return res.status(403).json({ error: "Admin authorization required" });
+      }
+      const settings = getTelegramSettings();
+      return res.json({
+        settings,
+        defaultTemplates: DEFAULT_TELEGRAM_TOPIC_TEMPLATES,
+        envFallbackConfigured: Boolean(
+          process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID,
+        ),
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put("/api/admin/telegram/settings", async (req, res) => {
+    try {
+      const adminUser = await verifyStrictAdmin(req);
+      if (!adminUser) {
+        return res.status(403).json({ error: "Admin authorization required" });
+      }
+      const incoming = req.body?.settings;
+      if (!incoming || typeof incoming !== "object") {
+        return res.status(400).json({ error: "Invalid settings payload" });
+      }
+      const saved = await saveTelegramSettings(incoming);
+      return res.json({ success: true, settings: saved });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/telegram/test", async (req, res) => {
+    try {
+      const adminUser = await verifyStrictAdmin(req);
+      if (!adminUser) {
+        return res.status(403).json({ error: "Admin authorization required" });
+      }
+      const { botToken, chatId, threadId, topic } = req.body || {};
+      if (typeof botToken !== "string" || (!chatId && chatId !== 0)) {
+        return res.status(400).json({ error: "Bot Token and Chat ID are required" });
+      }
+
+      const topicKey: TelegramTopicKey = TELEGRAM_TOPIC_KEYS.includes(topic)
+        ? topic
+        : "deposit";
+      const settings = getTelegramSettings();
+      const customTpl = settings.topics?.[topicKey]?.customTemplate || "";
+
+      const sampleText =
+        topic && TELEGRAM_TOPIC_KEYS.includes(topic)
+          ? renderTelegramTemplate(topicKey, customTpl, {
+              user: "Test User",
+              serial: "11111",
+              email: "test@example.com",
+              phone: "01700000000",
+              amount: "500",
+              netAmount: "450",
+              fee: "50",
+              method: "bKash",
+              trxId: "TEST123456",
+              jobTitle: "Sample Microjob",
+              jobId: "JOB-TEST",
+              subject: "Test Support Ticket",
+              message: "This is a test message from Admin Panel.",
+              sender: "Admin",
+              status: "active",
+              details: "Telegram bot connection verified successfully",
+              code: "TESTCODE",
+            })
+          : `✅ <b>AH Task Pay Telegram Test</b>\n\nBot connection verified by Admin (${escapeTelegramHtml(adminUser.email || "Admin")}).`;
+
+      const result = await sendTelegramApiMessage(
+        String(botToken),
+        String(chatId),
+        sampleText,
+        threadId ? String(threadId) : undefined,
+      );
+      if (!result.ok) {
+        return res.status(400).json({ error: result.error || "Telegram test failed" });
+      }
+      return res.json({ success: true, message: "Test message sent successfully!" });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/telegram/event", async (req, res) => {
+    try {
+      const { topic, data } = req.body || {};
+      if (
+        !topic ||
+        !["registration", "profile_update", "balance_transfer"].includes(topic)
+      ) {
+        return res.status(400).json({ error: "Unsupported Telegram event topic" });
+      }
+
+      const payload = data && typeof data === "object" ? data : {};
+
+      if (topic === "registration") {
+        const regUserId = typeof payload.userId === "string" ? payload.userId.trim() : "";
+        if (!regUserId || notifiedRegistrations.has(regUserId)) {
+          return res.json({ success: true });
+        }
+
+        let verifiedEmail = "";
+        let verifiedName = "";
+        let verifiedPhone = "";
+
+        try {
+          const { data: authUserRes } = await supabase.auth.admin.getUserById(regUserId);
+          if (authUserRes?.user) {
+            const createdMs = Date.parse(authUserRes.user.created_at || "");
+            if (!isNaN(createdMs) && Date.now() - createdMs > 10 * 60 * 1000) {
+              return res.status(403).json({ error: "Registration window expired" });
+            }
+            verifiedEmail = authUserRes.user.email || "";
+            verifiedName =
+              authUserRes.user.user_metadata?.full_name ||
+              authUserRes.user.user_metadata?.username ||
+              "";
+            verifiedPhone = authUserRes.user.user_metadata?.phone || "";
+          }
+        } catch {}
+
+        const profileRow = await lookupProfileForTelegram(regUserId);
+        if (!verifiedEmail && !profileRow) {
+          return res.status(404).json({ error: "Registered account not found" });
+        }
+
+        if (notifiedRegistrations.size > 500) {
+          notifiedRegistrations.clear();
+        }
+        notifiedRegistrations.add(regUserId);
+
+        void dispatchTelegramEvent("registration", {
+          user:
+            profileRow?.displayName ||
+            verifiedName ||
+            (typeof payload.user === "string" ? payload.user : "New User"),
+          serial: profileRow?.serialNumber || regUserId,
+          email: profileRow?.email || verifiedEmail || "N/A",
+          phone: profileRow?.phone || verifiedPhone || "N/A",
+          details: payload.referredBy
+            ? `Username: ${profileRow?.username || payload.username || "N/A"} | Referred By: ${payload.referredBy}`
+            : `Username: ${profileRow?.username || payload.username || "N/A"}`,
+        });
+
+        return res.json({ success: true });
+      }
+
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      const token = authHeader.replace(/^Bearer /i, "").trim();
+      const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+      const authUser = authData?.user;
+      if (authErr || !authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const actor = await lookupProfileForTelegram(authUser.id);
+      if (topic === "profile_update") {
+        void dispatchTelegramEvent("profile_update", {
+          user: actor?.displayName || authUser.email || "User",
+          serial: actor?.serialNumber || authUser.id,
+          email: actor?.email || authUser.email || "N/A",
+          details:
+            typeof payload.details === "string" && payload.details.trim()
+              ? payload.details.trim().slice(0, 200)
+              : "Account settings updated",
+        });
+      } else if (topic === "balance_transfer") {
+        void dispatchTelegramEvent("balance_transfer", {
+          user: actor?.displayName || authUser.email || "User",
+          serial: actor?.serialNumber || authUser.id,
+          amount: Number(payload.amount || 0),
+          netAmount: Number(payload.netAmount || payload.amount || 0),
+          details:
+            typeof payload.details === "string"
+              ? payload.details.slice(0, 200)
+              : "Wallet transfer",
+        });
+      }
+
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/referral/register", async (req, res) => {
+    const origJson = res.json.bind(res);
+    res.json = ((body: any) => {
+      if (res.statusCode < 400 && body && !body.error) {
+        void dispatchTelegramEvent("referral", {
+          user: req.body?.newUserId || "New User",
+          serial: req.body?.referrerCode || "N/A",
+          details: `New referral linked using code ${req.body?.referrerCode || "N/A"}`,
+        });
+      }
+      return origJson(body);
+    }) as any;
+    return registerReferral(req, res);
+  });
   app.get("/api/referral/status", async (req, res) =>
     getReferralStatus(req, res),
   );
-  app.post("/api/referral/claim", async (req, res) =>
-    claimReferralReward(req, res),
-  );
+  app.post("/api/referral/claim", async (req, res) => {
+    const origJson = res.json.bind(res);
+    res.json = ((body: any) => {
+      if (res.statusCode < 400 && body && !body.error) {
+        void dispatchTelegramEvent("referral", {
+          user: req.body?.userId || "User",
+          serial: req.body?.userId || "N/A",
+          details: `Referral reward claimed (${body.reward || body.amount || "bonus"} BDT)`,
+        });
+      }
+      return origJson(body);
+    }) as any;
+    return claimReferralReward(req, res);
+  });
   app.post("/api/admin/reset-referral-claims", async (req, res) =>
     resetAllReferralClaims(req, res),
   );

@@ -1,39 +1,52 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 dotenv.config();
 
-function getReferralDomainUrl() {
-    try {
-        const p = path.join(process.cwd(), 'data-store.json');
-        if (fs.existsSync(p)) {
-            const data = JSON.parse(fs.readFileSync(p, 'utf-8'));
-            return data.referralDomainUrl || 'https://ahtaskpay.onrender.com';
-        }
-    } catch (e) {
-        console.error("Error reading data-store.json for referralDomainUrl:", e);
-    }
-    return 'https://ahtaskpay.onrender.com';
-}
-
-function getCampaignStartDate() {
-    try {
-        const p = path.join(process.cwd(), 'data-store.json');
-        if (fs.existsSync(p)) {
-            const data = JSON.parse(fs.readFileSync(p, 'utf-8'));
-            return data.campaignStartDate || null;
-        }
-    } catch (e) {
-        console.error("Error reading data-store.json for campaignStartDate:", e);
-    }
-    return null;
-}
+const RUNTIME_STORE_PATH = path.join(os.tmpdir(), 'ahtaskpay-data-store.json');
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'placeholder_key';
 console.log("referralLogic Supabase URL used:", supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+async function getReferralDomainUrl(): Promise<string> {
+    try {
+        if (fs.existsSync(RUNTIME_STORE_PATH)) {
+            const data = JSON.parse(fs.readFileSync(RUNTIME_STORE_PATH, 'utf-8'));
+            if (data.referralDomainUrl) return data.referralDomainUrl;
+        }
+        const { data: row } = await supabase
+            .from('system_settings')
+            .select('setting_value')
+            .eq('setting_key', 'referral_domain_url')
+            .maybeSingle();
+        if (row?.setting_value) return row.setting_value;
+    } catch (e) {
+        console.error("Error reading referralDomainUrl:", e);
+    }
+    return 'https://ahtaskpay.onrender.com';
+}
+
+async function getCampaignStartDate(): Promise<string | null> {
+    try {
+        if (fs.existsSync(RUNTIME_STORE_PATH)) {
+            const data = JSON.parse(fs.readFileSync(RUNTIME_STORE_PATH, 'utf-8'));
+            if (data.campaignStartDate !== undefined) return data.campaignStartDate || null;
+        }
+        const { data: row } = await supabase
+            .from('system_settings')
+            .select('setting_value')
+            .eq('setting_key', 'campaign_start_date')
+            .maybeSingle();
+        if (row?.setting_value) return row.setting_value || null;
+    } catch (e) {
+        console.error("Error reading campaignStartDate:", e);
+    }
+    return null;
+}
 
 export async function registerReferral(req: any, res: any) {
     try {
@@ -184,7 +197,7 @@ export async function getReferralStatus(req: any, res: any) {
 
         let isExpired = false;
         const campaignEndDate = config?.campaign_end_date || null;
-        const campaignStartDate = getCampaignStartDate();
+        const campaignStartDate = await getCampaignStartDate();
         const validityDays = Number(config?.referral_validity_days ?? 30);
 
         if (campaignEndDate) {
@@ -398,7 +411,7 @@ export async function getReferralStatus(req: any, res: any) {
             referralCode: code,
             isExpired,
             joinedUsers,
-            referralDomainUrl: getReferralDomainUrl()
+            referralDomainUrl: await getReferralDomainUrl()
         });
 
     } catch (e: any) {
@@ -455,7 +468,7 @@ export async function claimReferralReward(req: any, res: any) {
         if (target === 1 && profile.target_1_claimed) return res.status(400).json({ error: 'Target 1 already claimed.' });
         if (target === 2 && profile.target_2_claimed) return res.status(400).json({ error: 'Target 2 already claimed.' });
 
-        const campaignStartDate = getCampaignStartDate();
+        const campaignStartDate = await getCampaignStartDate();
 
         // Count valid referrals
         let query = supabase

@@ -265,6 +265,14 @@ export function Dashboard() {
         }).eq('id', user.id);
         
         if (updateError) throw updateError;
+
+        import('../lib/telegram').then(({ notifyTelegramEvent }) => {
+          notifyTelegramEvent('balance_transfer', {
+            amount: amt,
+            netAmount: finalAmt,
+            details: 'Earning Wallet to Deposit Wallet',
+          });
+        });
       } else {
         if (amt > currentDeposit) throw new Error("Insufficient Deposit Balance");
         const feePercent = systemConfig?.transferDepositToEarningFee || 0;
@@ -277,6 +285,14 @@ export function Dashboard() {
         }).eq('id', user.id);
         
         if (updateError) throw updateError;
+
+        import('../lib/telegram').then(({ notifyTelegramEvent }) => {
+          notifyTelegramEvent('balance_transfer', {
+            amount: amt,
+            netAmount: finalAmt,
+            details: 'Deposit Wallet to Earning Wallet',
+          });
+        });
       }
       
       await refreshProfile();

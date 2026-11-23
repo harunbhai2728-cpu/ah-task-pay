@@ -31,7 +31,8 @@ import {
   Gift,
   ChevronLeft,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Bot
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Transaction, UserProfile, Job, Submission, Ticket } from '../types';
@@ -41,6 +42,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { compressImage } from '../lib/imageCompress';
 import { BrandLogo } from '../components/BrandLogo';
+import { AdminTelegramControl } from '../components/AdminTelegramControl';
 import toast from 'react-hot-toast';
 
 const createAdminDb = (supabaseClient: any) => {
@@ -87,7 +89,7 @@ const createAdminDb = (supabaseClient: any) => {
 export function AdminPanel() {
   const adminDb = createAdminDb(supabase);
   const { isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'transactions' | 'users' | 'jobs' | 'submissions' | 'settings' | 'tickets' | 'ads' | 'redeem_codes' | 'deletions'>('transactions');
+  const [activeTab, setActiveTab] = useState<'transactions' | 'users' | 'jobs' | 'submissions' | 'settings' | 'telegram' | 'tickets' | 'ads' | 'redeem_codes' | 'deletions'>('transactions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -616,6 +618,41 @@ export function AdminPanel() {
       toast.error(err.message || 'Failed to update settings', { id: loadingToast });
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  const handleSaveBannerPreset = async (bannerUrl: string) => {
+    if (!bannerUrl) return;
+    const currentPresets = config.customBannerPresets || [];
+    if (currentPresets.includes(bannerUrl)) {
+      toast.error("Already saved as preset");
+      return;
+    }
+    const updated = [...currentPresets, bannerUrl];
+    setConfig(prev => ({ ...prev, customBannerPresets: updated }));
+    try {
+      const { error } = await adminDb.from('system_config').upsert({ id: 'config', customBannerPresets: updated });
+      if (error) throw error;
+      toast.success("Saved as preset!");
+    } catch (err: any) {
+      setConfig(prev => ({ ...prev, customBannerPresets: currentPresets }));
+      toast.error(err.message || "Failed to save preset");
+    }
+  };
+
+  const handleRemoveBannerPreset = async (presetUrl: string) => {
+    if (!presetUrl) return;
+    const currentPresets = config.customBannerPresets || [];
+    if (!currentPresets.includes(presetUrl)) return;
+    const updated = currentPresets.filter((p: string) => p !== presetUrl);
+    setConfig(prev => ({ ...prev, customBannerPresets: updated }));
+    try {
+      const { error } = await adminDb.from('system_config').upsert({ id: 'config', customBannerPresets: updated });
+      if (error) throw error;
+      toast.success("Preset removed");
+    } catch (err: any) {
+      setConfig(prev => ({ ...prev, customBannerPresets: currentPresets }));
+      toast.error(err.message || "Failed to remove preset");
     }
   };
 
@@ -1661,7 +1698,7 @@ export function AdminPanel() {
       </div>
 
       <div className="flex bg-white dark:bg-[#1E293B] p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-x-auto gap-2 transition-colors">
-        {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'deletions', 'settings'] as const).map(tab => {
+        {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'deletions', 'telegram', 'settings'] as const).map(tab => {
           let hasPending = false;
           if (tab === 'transactions') {
             hasPending = transactions.some(t => t.status === 'pending');
@@ -2661,13 +2698,25 @@ export function AdminPanel() {
           </div>
         )}
 
+        {activeTab === 'telegram' && <AdminTelegramControl />}
+
         {activeTab === 'settings' && (
           <div className="p-6 sm:p-8 space-y-8">
-            <div className="flex items-center gap-3 mb-6 transition-colors">
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-2xl text-[#0B3D9E] dark:text-blue-400">
-                <Settings className="w-7 h-7" />
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-2xl text-[#0B3D9E] dark:text-blue-400">
+                  <Settings className="w-7 h-7" />
+                </div>
+                <h2 className="font-display text-2xl font-black text-slate-900 dark:text-white uppercase">System Configuration</h2>
               </div>
-              <h2 className="font-display text-2xl font-black text-slate-900 dark:text-white uppercase">System Configuration</h2>
+              <button
+                type="button"
+                onClick={() => setActiveTab('telegram')}
+                className="px-5 py-3 bg-[#07266E] hover:bg-[#0B3D9E] dark:bg-[#F97316] dark:hover:bg-[#EA580C] text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md transition-colors cursor-pointer"
+              >
+                <Bot className="w-4 h-4" />
+                Telegram Bot Controls
+              </button>
             </div>
 
             <form onSubmit={handleUpdateConfig} className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -3018,21 +3067,24 @@ export function AdminPanel() {
                         >
                           Remove Image
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const currentPresets = config.customBannerPresets || [];
-                            if (!currentPresets.includes(config.loginBannerUrl)) {
-                                setConfig({ ...config, customBannerPresets: [...currentPresets, config.loginBannerUrl] });
-                                toast.success("Saved as preset!");
-                            } else {
-                                toast.error("Already saved as preset");
-                            }
-                          }}
-                          className="bg-[#0B3D9E] hover:bg-[#07266E] text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
-                        >
-                          Save as Preset
-                        </button>
+                        {(config.customBannerPresets || []).includes(config.loginBannerUrl) ? (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBannerPreset(config.loginBannerUrl)}
+                            className="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Remove Preset
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSaveBannerPreset(config.loginBannerUrl)}
+                            className="bg-[#0B3D9E] hover:bg-[#07266E] text-white px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
+                          >
+                            Save as Preset
+                          </button>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -3116,32 +3168,49 @@ export function AdminPanel() {
 
                   {/* Curated Preset Banners Gallery */}
                   <div className="space-y-4 pt-2">
-                     <span className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest pl-1">My Presets Gallery</span>
+                     <div className="flex flex-wrap items-center justify-between gap-2">
+                       <span className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest pl-1">My Presets Gallery</span>
+                       {config.loginBannerUrl && (config.customBannerPresets || []).includes(config.loginBannerUrl) && (
+                         <button
+                           type="button"
+                           onClick={() => handleRemoveBannerPreset(config.loginBannerUrl)}
+                           className="inline-flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white border border-rose-200 dark:border-rose-800/60 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                         >
+                           <Trash2 className="w-3.5 h-3.5" />
+                           Remove Preset
+                         </button>
+                       )}
+                     </div>
                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
                         {config.customBannerPresets && config.customBannerPresets.length > 0 ? (
                           config.customBannerPresets.map((presetUrl, idx) => (
-                            <div key={idx} className="relative group aspect-video rounded-xl overflow-hidden transition-all hover:scale-105 border-transparent">
+                            <div
+                              key={`${presetUrl}-${idx}`}
+                              className={cn(
+                                "flex flex-col rounded-xl overflow-hidden border bg-white dark:bg-slate-800/70 transition-all shadow-sm",
+                                config.loginBannerUrl === presetUrl
+                                  ? "border-[#0B3D9E] ring-2 ring-[#0B3D9E]/30 dark:border-[#F97316] dark:ring-[#F97316]/30"
+                                  : "border-slate-200 dark:border-slate-700"
+                              )}
+                            >
                               <button
                                 type="button"
                                 onClick={() => setConfig({ ...config, loginBannerUrl: presetUrl })}
-                                className={cn(
-                                  "w-full h-full rounded-xl border-2 overflow-hidden cursor-pointer",
-                                  config.loginBannerUrl === presetUrl ? "border-[#0B3D9E] ring-2 ring-[#0B3D9E]/30 dark:border-[#F97316] dark:ring-[#F97316]/30" : "border-transparent"
-                                )}
+                                className="w-full aspect-video overflow-hidden cursor-pointer focus:outline-none"
+                                title="Select this preset banner"
                               >
-                                <img src={presetUrl} alt="Preset" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <img src={presetUrl} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                               </button>
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const updated = config.customBannerPresets.filter((p: string) => p !== presetUrl);
-                                  setConfig({ ...config, customBannerPresets: updated });
-                                  toast.success("Preset removed");
+                                  handleRemoveBannerPreset(presetUrl);
                                 }}
-                                className="absolute top-1 right-1 bg-rose-600 hover:bg-rose-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md cursor-pointer"
+                                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-600 dark:hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white text-[11px] font-black uppercase tracking-wider border-t border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                               >
                                 <Trash2 className="w-3 h-3" />
+                                Remove Preset
                               </button>
                             </div>
                           ))

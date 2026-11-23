@@ -122,18 +122,6 @@ export function Deposit() {
 
       if (insertErr) throw new Error(insertErr);
       
-      // Telegram Notification
-      import('../lib/telegram').then(({ sendTelegramNotification }) => {
-        sendTelegramNotification(
-          `💰 <b>New Deposit Request</b>\n\n` +
-          `<b>User:</b> ${profile?.displayName || user.user_metadata?.name || 'User'} (ID: ${profile?.serialNumber || user.id})\n` +
-          `<b>Amount:</b> ${formData.amount} BDT\n` +
-          `<b>Method:</b> ${formData.method}\n` +
-          `<b>Phone:</b> ${formData.phone}\n` +
-          `<b>TrxID:</b> ${formData.transactionId}`
-        );
-      });
-      
       const { data: userRef } = await fetch('/api/proxy', {
            method: 'POST', headers: authArgs,
            body: JSON.stringify({ table: 'profiles', method: 'select', args: ['*'], eq: ['id', user.id], single: true })

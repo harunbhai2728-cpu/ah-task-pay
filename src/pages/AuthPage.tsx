@@ -175,6 +175,15 @@ export function AuthPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }
                console.error("Referral reg error", e);
             }
           }
+
+          import('../lib/telegram').then(({ notifyTelegramEvent }) => {
+            notifyTelegramEvent('registration', {
+              userId: data.user!.id,
+              user: cleanName,
+              username: cleanUsername,
+              referredBy: referredBy || undefined,
+            });
+          });
         }
       }
     } catch (err: any) {

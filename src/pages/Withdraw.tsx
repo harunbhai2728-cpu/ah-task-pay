@@ -138,18 +138,6 @@ export function Withdraw() {
       }).then(r => r.json());
       if (txErr) throw new Error(txErr);
 
-      // Telegram Notification
-      import('../lib/telegram').then(({ sendTelegramNotification }) => {
-        sendTelegramNotification(
-          `💸 <b>New Withdrawal Request</b>\n\n` +
-          `<b>User:</b> ${profile.displayName || user.user_metadata?.name || 'User'} (ID: ${profile.serialNumber || user.id})\n` +
-          `<b>Amount:</b> ${totalDeduction} BDT (Net: ${amt} BDT)\n` +
-          `<b>Method:</b> ${formData.method}\n` +
-          `<b>Phone:</b> ${formData.phone}`
-        );
-      });
-
-
       // Immediately deduct from balance (will be refunded if rejected)
       const { error: updateErr } = await fetch('/api/proxy', {
         method: 'POST', headers: authArgs,

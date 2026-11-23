@@ -81,6 +81,12 @@ export default function ProfileSettings() {
       });
       if (error) throw error;
       
+      import('../lib/telegram').then(({ notifyTelegramEvent }) => {
+        notifyTelegramEvent('profile_update', {
+          details: 'User changed account password',
+        });
+      });
+
       setSuccess('Password changed successfully!');
       setNewPassword('');
       setConfirmPassword('');
