@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Bell,
   Save,
+  ChevronDown,
+  Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
@@ -22,9 +24,13 @@ export type TelegramTopicKey =
   | 'withdraw'
   | 'deposit'
   | 'registration'
+  | 'login'
   | 'profile_update'
+  | 'account_deletion'
   | 'support'
   | 'job_post'
+  | 'job_edit'
+  | 'job_delete_request'
   | 'ad_post'
   | 'balance_transfer'
   | 'redeem_code'
@@ -86,15 +92,29 @@ const TOPIC_LIST: TopicMeta[] = [
     key: 'registration',
     label: 'Account Registration',
     bnLabel: 'একাউন্ট রেজিষ্ট্রেশন',
-    description: 'New user registers an account',
-    placeholders: ['{user}', '{serial}', '{email}', '{phone}', '{details}', '{time}'],
+    description: 'New user registers an account (includes Registration IP)',
+    placeholders: ['{user}', '{serial}', '{email}', '{phone}', '{ip}', '{details}', '{time}'],
+  },
+  {
+    key: 'login',
+    label: 'User Login & IP',
+    bnLabel: 'ইউজার লগইন ও আইপি',
+    description: 'User logs in to the website (includes Login IP & Location)',
+    placeholders: ['{user}', '{serial}', '{email}', '{ip}', '{details}', '{time}'],
   },
   {
     key: 'profile_update',
     label: 'Account Info Change',
-    bnLabel: 'একাউন্টের তথ্য পরিবর্তন',
-    description: 'Name, email, phone, username, password, or deletion request',
-    placeholders: ['{user}', '{serial}', '{email}', '{details}', '{time}'],
+    bnLabel: 'তথ্য পরিবর্তন রিকোয়েস্ট',
+    description: 'Email, phone, username change requests, name or password updates',
+    placeholders: ['{user}', '{serial}', '{email}', '{ip}', '{details}', '{time}'],
+  },
+  {
+    key: 'account_deletion',
+    label: 'Account Deletion Request',
+    bnLabel: 'একাউন্ট ডিলিট রিকোয়েস্ট',
+    description: 'User submits account deletion request or admin deletes account',
+    placeholders: ['{user}', '{serial}', '{email}', '{ip}', '{status}', '{details}', '{time}'],
   },
   {
     key: 'support',
@@ -111,10 +131,24 @@ const TOPIC_LIST: TopicMeta[] = [
     placeholders: ['{user}', '{serial}', '{jobTitle}', '{amount}', '{details}', '{time}'],
   },
   {
+    key: 'job_edit',
+    label: 'Job Edit / Update',
+    bnLabel: 'জব এডিট / আপডেট',
+    description: 'Employer updates job reward, slots, or details',
+    placeholders: ['{user}', '{serial}', '{jobTitle}', '{jobId}', '{details}', '{time}'],
+  },
+  {
+    key: 'job_delete_request',
+    label: 'Job Delete Request',
+    bnLabel: 'জব ডিলিট রিকোয়েস্ট',
+    description: 'Employer requests job deletion or cancels a pending job',
+    placeholders: ['{user}', '{serial}', '{jobTitle}', '{jobId}', '{status}', '{details}', '{time}'],
+  },
+  {
     key: 'ad_post',
-    label: 'Ad Post Request',
-    bnLabel: 'বিজ্ঞাপন পোস্ট',
-    description: 'User submits a new banner advertisement',
+    label: 'Ad Post / Renew Request',
+    bnLabel: 'বিজ্ঞাপন পোস্ট / রিনিউ',
+    description: 'User submits or renews a banner advertisement',
     placeholders: ['{user}', '{serial}', '{amount}', '{details}', '{time}'],
   },
   {
@@ -162,6 +196,7 @@ export function AdminTelegramControl() {
   const [testingTopic, setTestingTopic] = useState<boolean>(false);
   const [visibleTokens, setVisibleTokens] = useState<Record<string, boolean>>({});
   const [selectedTopicKey, setSelectedTopicKey] = useState<TelegramTopicKey>('submission');
+  const [showControls, setShowControls] = useState(false);
 
   const getToken = async () => {
     const {
@@ -363,6 +398,16 @@ export function AdminTelegramControl() {
               Manage multiple Telegram bots, Bot Tokens, Chat IDs, and per-topic message formatting.
             </p>
             <div className="flex flex-wrap gap-2 mt-3">
+              <span
+                className={cn(
+                  'px-3 py-1 rounded-lg border text-[11px] font-bold',
+                  settings.globalEnabled
+                    ? 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200'
+                    : 'bg-rose-500/20 border-rose-400/30 text-rose-200',
+                )}
+              >
+                Master: {settings.globalEnabled ? 'ON' : 'OFF'}
+              </span>
               <span className="px-3 py-1 rounded-lg bg-white/10 border border-white/15 text-[11px] font-bold">
                 Active Bots: {activeBotsCount} / {settings.bots.length}
               </span>
@@ -379,44 +424,88 @@ export function AdminTelegramControl() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 shrink-0">
-          <label className="flex items-center gap-3 bg-white/10 border border-white/15 px-4 py-2.5 rounded-2xl cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={settings.globalEnabled}
-              onChange={(e) =>
-                setSettings((prev) => ({ ...prev, globalEnabled: e.target.checked }))
-              }
+          <button
+            type="button"
+            onClick={() => setShowControls((prev) => !prev)}
+            className="px-5 py-3 bg-white/15 hover:bg-white/25 border border-white/25 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-md"
+          >
+            {showControls ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            <span>{showControls ? 'Hide Settings' : 'Show Settings'}</span>
+            <ChevronDown
+              className={cn(
+                'w-4 h-4 transition-transform duration-200',
+                showControls && 'rotate-180',
+              )}
             />
-            <div className="relative w-11 h-6 bg-slate-600 rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
-            <span className="text-xs font-black uppercase tracking-wider">
-              {settings.globalEnabled ? 'Master ON' : 'Master OFF'}
-            </span>
-          </label>
-
-          <button
-            type="button"
-            onClick={fetchSettings}
-            className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Reload
           </button>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-3 bg-[#F97316] hover:bg-[#EA580C] disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Save Telegram Settings'}
-          </button>
+          {showControls && (
+            <>
+              <label className="flex items-center gap-3 bg-white/10 border border-white/15 px-4 py-2.5 rounded-2xl cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={settings.globalEnabled}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, globalEnabled: e.target.checked }))
+                  }
+                />
+                <div className="relative w-11 h-6 bg-slate-600 rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                <span className="text-xs font-black uppercase tracking-wider">
+                  {settings.globalEnabled ? 'Master ON' : 'Master OFF'}
+                </span>
+              </label>
+
+              <button
+                type="button"
+                onClick={fetchSettings}
+                className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Reload
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-3 bg-[#F97316] hover:bg-[#EA580C] disabled:opacity-50 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Telegram Settings'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Section 1: Multiple Bots Configuration */}
-      <div className="space-y-4">
+      {!showControls ? (
+        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-[2rem] p-8 sm:p-10 text-center space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200/70 dark:border-blue-800/60 flex items-center justify-center text-[#0B3D9E] dark:text-blue-300">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5 max-w-lg mx-auto">
+            <h3 className="font-display text-lg font-black text-slate-900 dark:text-white uppercase">
+              Telegram Settings Hidden (Protected)
+            </h3>
+            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
+              হটাৎ ভুলে চাপ পড়ে যেন টেলিগ্রাম সেটিংস বা টপিক পরিবর্তন না হয় সেজন্য সেটিংসগুলো হাইড রাখা হয়েছে। পরিবর্তন করতে চাইলে নিচের Show Settings বাটনে ক্লিক করুন।
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowControls(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#07266E] hover:bg-[#0B3D9E] dark:bg-[#F97316] dark:hover:bg-[#EA580C] text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-md transition-colors cursor-pointer"
+          >
+            <Eye className="w-4 h-4" />
+            <span>Show Settings</span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Section 1: Multiple Bots Configuration */}
+          <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-display text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
@@ -907,6 +996,8 @@ export function AdminTelegramControl() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

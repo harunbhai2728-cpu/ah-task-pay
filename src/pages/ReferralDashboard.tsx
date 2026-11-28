@@ -212,7 +212,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
   if (data?.tablesMissing) {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-8 text-white relative overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-8 text-white relative overflow-hidden shadow-xl shadow-blue-950/15 border border-blue-400/20">
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#F97316] opacity-15 rounded-full blur-3xl"></div>
           <div className="relative z-10 space-y-2">
             <h1 className="text-3xl font-black flex items-center gap-2 font-display">
@@ -224,9 +224,9 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-          <h2 className="text-lg font-black text-slate-900 dark:text-white">Migration Instructions</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
+        <div className="bg-white dark:bg-[#0A1638] p-6 rounded-[2rem] border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] space-y-4">
+          <h2 className="text-lg font-black text-[#071845] dark:text-white">Migration Instructions</h2>
+          <p className="text-sm text-slate-600 dark:text-blue-200/80 font-semibold leading-relaxed">
             Please copy the PostgreSQL migration script below and execute it in your **Supabase dashboard SQL Editor**:
           </p>
           
@@ -265,7 +265,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-7 sm:p-8 text-white relative overflow-hidden shadow-2xl">
+      <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-7 sm:p-8 text-white relative overflow-hidden shadow-xl shadow-blue-950/15 border border-blue-400/20">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-[#F97316] opacity-15 rounded-full blur-3xl"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2">
@@ -297,17 +297,17 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-6 transition-colors">
-          <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 font-display">
+        <div className="bg-white dark:bg-[#0A1638] p-6 rounded-[2rem] border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] space-y-6 transition-colors">
+          <h2 className="text-xl font-black text-[#071845] dark:text-white flex items-center gap-2 font-display">
             <Share2 className="w-6 h-6 text-[#0B3D9E] dark:text-[#FB923C]" /> Share Referral Link
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-2 bg-blue-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-blue-100 dark:border-slate-700">
+            <div className="flex items-center gap-2 bg-[#F2F6FE] dark:bg-[#050F2B] p-4 rounded-xl border border-[#DCE7FA] dark:border-[#1C3882]/60">
               <input
                 type="text"
                 readOnly
                 value={`${(data?.referralDomainUrl || 'https://ahtaskpay.onrender.com').replace(/\/+$/, '')}/register?ref=${data?.referralCode || ''}`}
-                className="bg-transparent border-none outline-none font-semibold text-[#07266E] dark:text-blue-300 w-full text-sm"
+                className="bg-transparent border-none outline-none font-semibold text-[#07266E] dark:text-blue-200 w-full text-sm"
               />
             </div>
             <div className="flex gap-2.5">
@@ -337,9 +337,9 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm p-6 space-y-6 flex flex-col justify-between transition-colors">
+        <div className="bg-white dark:bg-[#0A1638] rounded-[2rem] border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] p-6 space-y-6 flex flex-col justify-between transition-colors">
             <div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 mb-4 font-display">
+              <h2 className="text-xl font-black text-[#071845] dark:text-white flex items-center gap-2 mb-4 font-display">
                 <Users className="w-6 h-6 text-[#0B3D9E] dark:text-[#FB923C]" /> Your Referrals
               </h2>
               <div className="grid grid-cols-2 gap-4">
@@ -347,18 +347,18 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
                   <div className="text-3xl font-black text-emerald-700 dark:text-emerald-400 tabular-nums">{validCount}</div>
                   <div className="text-xs font-bold text-emerald-600 dark:text-emerald-300 uppercase tracking-wider">Valid</div>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800/70 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 text-center space-y-1">
-                  <div className="text-3xl font-black text-slate-800 dark:text-slate-100 tabular-nums">{data?.pendingCount || 0}</div>
-                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Tasks</div>
+                <div className="bg-[#F2F6FE] dark:bg-[#050F2B] rounded-2xl p-5 border border-[#DCE7FA] dark:border-[#1C3882]/60 text-center space-y-1">
+                  <div className="text-3xl font-black text-[#071845] dark:text-white tabular-nums">{data?.pendingCount || 0}</div>
+                  <div className="text-xs font-bold text-slate-500 dark:text-blue-200/70 uppercase tracking-wider">Pending Tasks</div>
                 </div>
               </div>
             </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden transition-colors">
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 font-display">
+      <div className="bg-white dark:bg-[#0A1638] rounded-[2rem] border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] overflow-hidden transition-colors">
+        <div className="px-6 py-4 bg-[#F2F6FE] dark:bg-[#06102B]/80 border-b border-[#D7E3F7] dark:border-[#1C3882]/55 flex items-center justify-between">
+          <h2 className="text-lg font-black text-[#071845] dark:text-white flex items-center gap-2 font-display">
             <Target className="w-5 h-5 text-[#F97316]" /> Milestones & Rewards
           </h2>
         </div>
@@ -368,15 +368,15 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
           <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Target 1: {data?.target1Referrals || 0} Valid Referrals</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Reward: {data?.target1Reward || 0} BDT added to your balance.</p>
+                <h3 className="text-lg font-bold text-[#071845] dark:text-white">Target 1: {data?.target1Referrals || 0} Valid Referrals</h3>
+                <p className="text-sm text-slate-500 dark:text-blue-200/70 font-medium">Reward: {data?.target1Reward || 0} BDT added to your balance.</p>
               </div>
               <div className="text-right tabular-nums">
                 <span className="text-2xl font-black text-[#0B3D9E] dark:text-blue-400">{campaignValidCount}</span>
-                <span className="text-slate-400 dark:text-slate-500 font-bold">/{data?.target1Referrals || 0}</span>
+                <span className="text-slate-400 dark:text-blue-200/50 font-bold">/{data?.target1Referrals || 0}</span>
               </div>
             </div>
-            <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-4 bg-[#EFF4FC] dark:bg-[#050F2B] border border-[#DCE7FA] dark:border-[#1C3882]/50 rounded-full overflow-hidden">
               <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min((campaignValidCount / Math.max(data?.target1Referrals || 1, 1)) * 100, 100)}%` }}
@@ -390,7 +390,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
                  data?.target1Claimed
                   ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 cursor-not-allowed border border-emerald-200 dark:border-emerald-900/50'
                   : campaignValidCount < (data?.target1Referrals || 0) || data?.isExpired
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                    ? 'bg-[#EFF4FC] dark:bg-[#050F2B] text-slate-400 dark:text-blue-200/40 border border-[#DCE7FA] dark:border-[#1C3882]/40 cursor-not-allowed'
                     : 'bg-[#07266E] hover:bg-[#0B3D9E] text-white shadow-lg'
                }`}
             >
@@ -398,21 +398,21 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
             </button>
           </div>
 
-          <hr className="border-slate-100 dark:border-slate-700/70" />
+          <hr className="border-[#E4ECFA] dark:border-[#1C3882]/45" />
 
           {/* Target 2 */}
           <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Target 2: {data?.target2Referrals || 0} Valid Referrals</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Reward: {data?.target2Reward || 0} BDT added to your balance.</p>
+                <h3 className="text-lg font-bold text-[#071845] dark:text-white">Target 2: {data?.target2Referrals || 0} Valid Referrals</h3>
+                <p className="text-sm text-slate-500 dark:text-blue-200/70 font-medium">Reward: {data?.target2Reward || 0} BDT added to your balance.</p>
               </div>
               <div className="text-right tabular-nums">
                 <span className="text-2xl font-black text-[#F97316]">{campaignValidCount}</span>
-                <span className="text-slate-400 dark:text-slate-500 font-bold">/{data?.target2Referrals || 0}</span>
+                <span className="text-slate-400 dark:text-blue-200/50 font-bold">/{data?.target2Referrals || 0}</span>
               </div>
             </div>
-            <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-4 bg-[#EFF4FC] dark:bg-[#050F2B] border border-[#DCE7FA] dark:border-[#1C3882]/50 rounded-full overflow-hidden">
                <motion.div 
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min((campaignValidCount / Math.max(data?.target2Referrals || 1, 1)) * 100, 100)}%` }}
@@ -426,7 +426,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
                  data?.target2Claimed
                   ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 cursor-not-allowed border border-emerald-200 dark:border-emerald-900/50'
                   : campaignValidCount < (data?.target2Referrals || 0) || data?.isExpired
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                    ? 'bg-[#EFF4FC] dark:bg-[#050F2B] text-slate-400 dark:text-blue-200/40 border border-[#DCE7FA] dark:border-[#1C3882]/40 cursor-not-allowed'
                     : 'bg-[#F97316] hover:bg-[#EA580C] text-white shadow-lg shadow-orange-500/20'
                }`}
             >
@@ -438,9 +438,9 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
       </div>
 
       {/* My Network Section */}
-      <div ref={networkSectionRef} className="bg-white dark:bg-[#1E293B] rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden transition-colors scroll-mt-6">
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 font-display">
+      <div ref={networkSectionRef} className="bg-white dark:bg-[#0A1638] rounded-[2rem] border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] overflow-hidden transition-colors scroll-mt-6">
+        <div className="px-6 py-4 bg-[#F2F6FE] dark:bg-[#06102B]/80 border-b border-[#D7E3F7] dark:border-[#1C3882]/55 flex items-center justify-between">
+          <h2 className="text-lg font-black text-[#071845] dark:text-white flex items-center gap-2 font-display">
             <Users className="w-5 h-5 text-[#0B3D9E] dark:text-[#FB923C]" /> My Network
           </h2>
           <span className="bg-blue-100 dark:bg-blue-950/60 text-[#0B3D9E] dark:text-blue-300 px-3 py-1 rounded-full text-xs font-black tabular-nums">
@@ -449,30 +449,30 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
         </div>
         <div className="p-6">
           {joinedUsers.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 dark:text-slate-500 font-bold">
+            <div className="text-center py-10 text-slate-500 dark:text-blue-200/70 font-bold">
               No one has registered using your referral code yet. Reach out to friends!
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-700 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  <tr className="border-b border-[#D7E3F7] dark:border-[#1C3882]/55 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-blue-200/60">
                     <th className="pb-3 text-left pl-2 w-12">#</th>
                     <th className="pb-3 text-left">Name</th>
                     <th className="pb-3 text-left">Join Date</th>
                     <th className="pb-3 text-right pr-2">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/70">
+                <tbody className="divide-y divide-[#E4ECFA] dark:divide-[#1C3882]/45">
                   {paginatedUsers.map((item: any, idx: number) => (
-                    <tr key={item.id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition text-sm">
-                      <td className="py-4 pl-2 font-bold text-slate-400 dark:text-slate-500 tabular-nums">
+                    <tr key={item.id || idx} className="hover:bg-[#F2F6FE] dark:hover:bg-[#102255]/50 transition text-sm">
+                      <td className="py-4 pl-2 font-bold text-slate-500 dark:text-blue-200/60 tabular-nums">
                         {(safePage - 1) * PAGE_SIZE + idx + 1}
                       </td>
-                      <td className="py-4 font-black text-slate-900 dark:text-white">
-                        {item.name} <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">(@{item.username})</span>
+                      <td className="py-4 font-black text-[#071845] dark:text-white">
+                        {item.name} <span className="text-xs text-slate-500 dark:text-blue-200/60 font-medium">(@{item.username})</span>
                       </td>
-                      <td className="py-4 text-slate-500 dark:text-slate-400 font-bold">
+                      <td className="py-4 text-slate-500 dark:text-blue-200/70 font-bold">
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-4 text-right pr-2">
@@ -490,7 +490,7 @@ ALTER TABLE public.referral_campaigns DISABLE ROW LEVEL SECURITY;`;
                                   <Clock className="w-3.5 h-3.5" /> Pending Job
                                 </span>
                                 {item.expiration && (
-                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Exp: {new Date(item.expiration).toLocaleDateString()}</span>
+                                    <span className="text-[10px] text-slate-500 dark:text-blue-200/60 font-bold uppercase mt-1">Exp: {new Date(item.expiration).toLocaleDateString()}</span>
                                 )}
                             </div>
                         )}

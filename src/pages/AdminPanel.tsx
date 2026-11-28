@@ -32,7 +32,14 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  Bot
+  Bot,
+  Globe,
+  Wifi,
+  Laptop,
+  Clock,
+  MapPin,
+  X,
+  Eye
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Transaction, UserProfile, Job, Submission, Ticket } from '../types';
@@ -132,9 +139,16 @@ export function AdminPanel() {
   const [hasPendingJobs, setHasPendingJobs] = useState(false);
   const [hasPendingAds, setHasPendingAds] = useState(false);
   const [hasPendingDeletions, setHasPendingDeletions] = useState(false);
+  const [hasPendingAccountChanges, setHasPendingAccountChanges] = useState(false);
+  const [accountChangeRequests, setAccountChangeRequests] = useState<any[]>([]);
 
   const [duplicateIPCounts, setDuplicateIPCounts] = useState<{ [key: string]: number }>({});
   const [activeIPCounts, setActiveIPCounts] = useState<{ [key: string]: number }>({});
+  const [userIpLogs, setUserIpLogs] = useState<Record<string, any>>({});
+  const [ipDetailsUserId, setIpDetailsUserId] = useState<string | null>(null);
+  const [ipDetailsData, setIpDetailsData] = useState<any | null>(null);
+  const [ipDetailsLoading, setIpDetailsLoading] = useState(false);
+  const [ipDetailsError, setIpDetailsError] = useState<string | null>(null);
 
   // Redeem Codes management states
   const [redeemCodes, setRedeemCodes] = useState<any[]>([]);
@@ -252,6 +266,42 @@ export function AdminPanel() {
       alert("Error: " + (e?.message || e));
     } finally { 
       setAdminActionLoading(false); 
+    }
+  };
+
+  const handleReviewAccountChangeRequest = async (requestId: string, action: 'approve' | 'reject') => {
+    let adminNote = '';
+    if (action === 'reject') {
+      const noteInput = window.prompt('Optional reason for rejecting this request:');
+      if (noteInput === null) return;
+      adminNote = noteInput;
+    }
+    setAdminActionLoading(true);
+    const loadingToast = toast.loading(action === 'approve' ? 'Approving change...' : 'Rejecting request...');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No admin session');
+      const res = await fetch('/api/admin/account-change-requests/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ requestId, action, adminNote }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to review request');
+      toast.success(
+        action === 'approve'
+          ? 'Change request approved and profile updated!'
+          : 'Change request rejected.',
+        { id: loadingToast },
+      );
+      await fetchAdminData(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to review request', { id: loadingToast });
+    } finally {
+      setAdminActionLoading(false);
     }
   };
 
@@ -436,6 +486,31 @@ export function AdminPanel() {
     return u?.displayName || 'Unknown User';
   };
 
+  const handleOpenIpDetails = async (userId: string) => {
+    if (!userId) return;
+    setIpDetailsUserId(userId);
+    setIpDetailsData(null);
+    setIpDetailsError(null);
+    setIpDetailsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('No active admin session found.');
+      const res = await fetch(`/api/admin/ip-details/${encodeURIComponent(userId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || 'Failed to load IP details');
+      }
+      setIpDetailsData(json);
+    } catch (err: any) {
+      setIpDetailsError(err?.message || 'Could not fetch IP details');
+    } finally {
+      setIpDetailsLoading(false);
+    }
+  };
+
   const { isAdmin: isSystemAdmin, refreshConfig } = useAuth();
 
   const fetchAdminData = async (silent = false, background = false, overrideTab?: string, overridePage?: number) => {
@@ -532,6 +607,11 @@ export function AdminPanel() {
         setHasPendingJobs(json.stats.hasPendingJobs);
         setHasPendingAds(json.stats.hasPendingAds);
         setHasPendingDeletions(json.stats.hasPendingDeletions);
+        setHasPendingAccountChanges(Boolean(json.stats.hasPendingAccountChanges));
+      }
+
+      if (Array.isArray(json.accountChangeRequests)) {
+        setAccountChangeRequests(json.accountChangeRequests);
       }
 
       if (json.duplicateIPCounts) {
@@ -539,6 +619,9 @@ export function AdminPanel() {
       }
       if (json.activeIPCounts) {
         setActiveIPCounts(json.activeIPCounts);
+      }
+      if (json.userIpLogs && typeof json.userIpLogs === 'object') {
+        setUserIpLogs(json.userIpLogs);
       }
 
       // Update the active tab's specific paginated list
@@ -1579,125 +1662,125 @@ export function AdminPanel() {
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      <header className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-6 sm:p-8 rounded-[2.5rem] border border-blue-900/60 shadow-xl shadow-blue-950/20 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden text-white">
+    <div className="space-y-6 sm:space-y-8 pb-12">
+      <header className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-5 sm:p-8 rounded-3xl sm:rounded-[2.5rem] border border-blue-900/60 shadow-xl shadow-blue-950/20 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 relative overflow-hidden text-white">
         <div className="absolute -top-12 -right-12 w-72 h-72 bg-[#F97316]/15 rounded-full blur-2xl pointer-events-none" />
-        <div className="flex flex-wrap items-center gap-5 relative z-10">
-          <div className="bg-[#F97316] p-4 rounded-3xl text-white shadow-xl shadow-orange-950/30">
-            <Shield className="w-8 h-8" />
+        <div className="flex flex-wrap items-center gap-3.5 sm:gap-5 relative z-10">
+          <div className="bg-[#F97316] p-3 sm:p-4 rounded-2xl sm:rounded-3xl text-white shadow-xl shadow-orange-950/30 shrink-0">
+            <Shield className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
           <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">System Authority</h1>
-            <p className="text-blue-200/80 font-bold text-xs tracking-widest uppercase">Master Control Hub</p>
+            <h1 className="font-display text-xl sm:text-3xl font-black text-white uppercase tracking-tight">System Authority</h1>
+            <p className="text-blue-200/80 font-bold text-[10px] sm:text-xs tracking-widest uppercase">Master Control Hub</p>
           </div>
           <div className="hidden sm:block ml-2 border-l border-white/15 pl-4 bg-white/95 dark:bg-slate-900/90 px-3 py-1.5 rounded-2xl">
             <BrandLogo size="sm" />
           </div>
         </div>
-        <div className="flex flex-wrap gap-3 sm:gap-4 relative z-10">
+        <div className="flex flex-wrap gap-2.5 sm:gap-4 relative z-10">
            <button 
              onClick={() => fetchAdminData(true)}
              disabled={isRefreshing}
-             className="bg-[#F97316] hover:bg-[#EA580C] text-white px-6 py-3 rounded-2xl shadow-lg flex items-center gap-3 transition-colors font-bold text-sm disabled:opacity-50 cursor-pointer"
+             className="bg-[#F97316] hover:bg-[#EA580C] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl shadow-lg flex items-center gap-2 sm:gap-3 transition-colors font-bold text-xs sm:text-sm disabled:opacity-50 cursor-pointer"
            >
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-refresh-cw ${isRefreshing ? 'animate-spin' : ''}`}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-refresh-cw ${isRefreshing ? 'animate-spin' : ''}`}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
              {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
            </button>
-           <div className="bg-white/10 border border-white/15 backdrop-blur-sm text-white px-6 py-3 rounded-2xl flex items-center gap-3">
-              <Users className="w-5 h-5 text-blue-200" />
+           <div className="bg-white/10 border border-white/15 backdrop-blur-sm text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl flex items-center gap-2.5 sm:gap-3">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200" />
               <div>
-                 <p className="text-[10px] font-black uppercase text-blue-200/80 tracking-wider">Live Accounts</p>
-                 <p className="font-display font-black text-xl tabular-nums">{totalUsers}</p>
+                 <p className="text-[9px] sm:text-[10px] font-black uppercase text-blue-200/80 tracking-wider">Live Accounts</p>
+                 <p className="font-display font-black text-lg sm:text-xl tabular-nums">{totalUsers}</p>
               </div>
            </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
-            <Users className="w-6 h-6" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Users</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{totalUsers}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
-            <Briefcase className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Jobs</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{totalJobs}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Total Users</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{totalUsers}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-6 h-6" />
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <Briefcase className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Tasks Done</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{completedJobsCount}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-2xl flex items-center justify-center shrink-0">
-            <Wallet className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Earning Balance</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalEarningBalance)}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Total Jobs</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{totalJobs}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-2xl flex items-center justify-center shrink-0">
-            <Wallet className="w-6 h-6" />
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Deposit Balance</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalDepositBalance)}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center shrink-0">
-            <Lock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Held Balance</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalHeld)}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Tasks Done</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{completedJobsCount}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center shrink-0">
-            <ArrowDownLeft className="w-6 h-6" />
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Deposit</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalDeposit)}</p>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center shrink-0">
-            <ArrowUpRight className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Total Withdraw</p>
-            <p className="font-display text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(totalWithdraw)}</p>
+          <div className="min-w-0">
+            <p className="text-[9px] sm:text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Earning Balance</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{formatCurrency(totalEarningBalance)}</p>
           </div>
         </div>
-        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-4 transition-colors">
-          <div className="w-12 h-12 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-2xl flex items-center justify-center shrink-0">
-            <AlertCircle className="w-6 h-6" />
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Pending Items</p>
-            <p className="font-display text-2xl font-black text-[#F97316] dark:text-[#FB923C] tabular-nums">{pendingTransactionsCount + pendingSubsCount}</p>
+          <div className="min-w-0">
+            <p className="text-[9px] sm:text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Deposit Balance</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{formatCurrency(totalDepositBalance)}</p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <Lock className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Held Balance</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{formatCurrency(totalHeld)}</p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <ArrowDownLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Total Deposit</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{formatCurrency(totalDeposit)}</p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Total Withdraw</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums truncate">{formatCurrency(totalWithdraw)}</p>
+          </div>
+        </div>
+        <div className="col-span-2 md:col-span-1 bg-white dark:bg-[#1E293B] p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex items-center gap-3 sm:gap-4 transition-colors min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-50 dark:bg-orange-950/50 text-[#F97316] dark:text-[#FB923C] rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0">
+            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider truncate">Pending Items</p>
+            <p className="font-display text-lg sm:text-2xl font-black text-[#F97316] dark:text-[#FB923C] tabular-nums truncate">{pendingTransactionsCount + pendingSubsCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="flex bg-white dark:bg-[#1E293B] p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-x-auto gap-2 transition-colors">
+      <div className="flex bg-white dark:bg-[#1E293B] p-1.5 sm:p-2 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-x-auto custom-scrollbar gap-1.5 sm:gap-2 transition-colors">
         {(['users', 'jobs', 'transactions', 'submissions', 'tickets', 'ads', 'redeem_codes', 'deletions', 'telegram', 'settings'] as const).map(tab => {
           let hasPending = false;
           if (tab === 'transactions') {
@@ -1711,7 +1794,11 @@ export function AdminPanel() {
           } else if (tab === 'ads') {
             hasPending = ads.some(a => a.status === 'pending');
           } else if (tab === 'deletions') {
-            hasPending = users.some(u => u.account_status === 'pending_deletion');
+            hasPending =
+              hasPendingDeletions ||
+              hasPendingAccountChanges ||
+              users.some(u => u.account_status === 'pending_deletion') ||
+              accountChangeRequests.some(r => r.status === 'pending');
           }
 
           return (
@@ -1719,11 +1806,11 @@ export function AdminPanel() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap relative cursor-pointer",
+                "flex-1 md:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all whitespace-nowrap relative cursor-pointer",
                 activeTab === tab ? "bg-[#07266E] dark:bg-[#F97316] text-white shadow-md" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
               )}
             >
-              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab === 'deletions' ? 'Restricted' : tab}</span>
+              <span>{tab === 'redeem_codes' ? 'Redeem Codes' : tab === 'deletions' ? 'Requests & Restricted' : tab}</span>
               {hasPending && (
                 <span className="w-2.5 h-2.5 bg-rose-500 border-2 border-white dark:border-[#1E293B] rounded-full animate-pulse shrink-0" />
               )}
@@ -1972,8 +2059,26 @@ export function AdminPanel() {
                             <p className="text-xs text-slate-400 dark:text-slate-400 font-bold" title={(u as any).username || 'nousername'}>
                               @{((u as any).username && (u as any).username.length > 14) ? `${(u as any).username.slice(0, 14)}...` : ((u as any).username || 'nousername')} • {(u as any).phone || u.email || 'No Phone'}
                             </p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
-                              IP: {u.last_ip_address || 'N/A'}
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-1.5">
+                              <span>IP: {u.last_ip_address || 'N/A'}</span>
+                              {(() => {
+                                const log = userIpLogs[u.uid || u.id];
+                                if (!log) return null;
+                                return (
+                                  <>
+                                    {log.registrationIp && (
+                                      <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold rounded">
+                                        Reg: {log.registrationIp}
+                                      </span>
+                                    )}
+                                    {log.lastLoginIp && log.lastLoginIp !== log.registrationIp && (
+                                      <span className="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-[#0B3D9E] dark:text-blue-300 text-[10px] font-bold rounded">
+                                        Login: {log.lastLoginIp}
+                                      </span>
+                                    )}
+                                  </>
+                                );
+                              })()}
                               {(() => {
                                 const isActive = !u.isBlocked && u.account_status !== 'deleted';
                                 const count = isActive ? (activeIPCounts[u.last_ip_address!] || 0) : (duplicateIPCounts[u.last_ip_address!] || 0);
@@ -1983,7 +2088,15 @@ export function AdminPanel() {
                                   </span>
                                 ) : null;
                               })()}
-                            </p>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenIpDetails(u.uid || u.id)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#07266E]/10 hover:bg-[#07266E] text-[#07266E] hover:text-white dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white text-[10px] font-black uppercase tracking-wider rounded transition-colors cursor-pointer"
+                              >
+                                <Globe className="w-3 h-3" />
+                                IP Details
+                              </button>
+                            </div>
                             {u.warning && (
                                <div className="mt-2 flex items-center justify-between bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/50 px-3 py-2 rounded-lg text-[#F97316] dark:text-[#FB923C] transition-colors">
                                   <div className="flex items-center gap-1">
@@ -2216,11 +2329,19 @@ export function AdminPanel() {
                     </div>
                   )}
 
-                  {sub.screenshots && sub.screenshots.length > 0 && (
+                  {sub.imageDeleted ? (
+                    <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-dashed border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400">
+                      Proof image automatically deleted from database (24h after review).
+                    </div>
+                  ) : sub.screenshots && sub.screenshots.length > 0 && (
                     <div className="flex gap-4 overflow-x-auto pb-2">
-                       {sub.screenshots.map((s, idx) => (
-                         <img key={idx} src={s} className="h-48 w-auto rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm transition-colors" alt="proof" />
-                       ))}
+                       {sub.screenshots.map((s, idx) => {
+                         const isSafe = typeof s === 'string' && (s.startsWith('data:image') || s.startsWith('https://') || s.startsWith('http://'));
+                         if (!isSafe) return null;
+                         return (
+                           <img key={idx} src={s} className="h-48 w-auto rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm transition-colors" alt="proof" />
+                         );
+                       })}
                     </div>
                   )}
 
@@ -2580,9 +2701,110 @@ export function AdminPanel() {
 
         {activeTab === 'deletions' && (
           <div className="p-6 md:p-8 space-y-8">
-            <div className="flex items-center gap-3 mb-6 transition-colors">
+            <div className="flex items-center gap-3 mb-2 transition-colors">
               <AlertTriangle className="w-8 h-8 text-rose-600 dark:text-rose-400" />
-              <h2 className="font-display text-2xl font-black text-slate-900 dark:text-white uppercase">Restricted Accounts</h2>
+              <h2 className="font-display text-2xl font-black text-slate-900 dark:text-white uppercase">Account Requests & Restricted</h2>
+            </div>
+
+            {/* Account Info Change Requests (Email, Phone, Username) */}
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-200 dark:border-slate-700/80 p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">
+                <h3 className="font-display text-lg font-black text-[#0B3D9E] dark:text-blue-400 uppercase">
+                  Account Info Change Requests (Email / Phone / Username)
+                </h3>
+                <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-100 dark:bg-blue-950/60 text-[#0B3D9E] dark:text-blue-300">
+                  {accountChangeRequests.filter(r => r.status === 'pending').length} Pending
+                </span>
+              </div>
+
+              {accountChangeRequests.length === 0 ? (
+                <p className="text-slate-400 text-sm font-medium">No email, phone, or username change requests yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[420px] overflow-y-auto pr-1">
+                  {accountChangeRequests.map((reqItem) => {
+                    const currentVal =
+                      reqItem.type === 'email'
+                        ? reqItem.currentEmail
+                        : reqItem.type === 'phone'
+                          ? reqItem.currentPhone
+                          : reqItem.currentUsername;
+                    return (
+                      <div
+                        key={reqItem.id}
+                        className="p-4 bg-white dark:bg-[#1E293B] rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase bg-blue-100 dark:bg-blue-950/60 text-[#0B3D9E] dark:text-blue-300">
+                                {reqItem.type} change
+                              </span>
+                              <span className="text-xs font-black text-slate-500 dark:text-slate-400">
+                                #{reqItem.userSerial || reqItem.userId?.slice(0, 8)}
+                              </span>
+                            </div>
+                            <p className="font-bold text-slate-900 dark:text-white mt-1">
+                              {reqItem.displayName || 'User'}
+                            </p>
+                          </div>
+                          <span
+                            className={cn(
+                              "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase shrink-0",
+                              reqItem.status === 'approved'
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                                : reqItem.status === 'rejected'
+                                  ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400"
+                                  : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
+                            )}
+                          >
+                            {reqItem.status}
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 text-xs space-y-1">
+                          <p className="text-slate-500 dark:text-slate-400">
+                            <span className="font-bold">Current:</span> {currentVal || 'N/A'}
+                          </p>
+                          <p className="text-slate-900 dark:text-white font-bold break-all">
+                            <span className="text-[#0B3D9E] dark:text-blue-400">Requested New:</span> {reqItem.newValue}
+                          </p>
+                          {reqItem.reason && (
+                            <p className="text-slate-600 dark:text-slate-300 italic pt-1">
+                              "{reqItem.reason}"
+                            </p>
+                          )}
+                          {reqItem.adminNote && (
+                            <p className="text-rose-600 dark:text-rose-400 font-semibold pt-1">
+                              Admin Note: {reqItem.adminNote}
+                            </p>
+                          )}
+                        </div>
+
+                        {reqItem.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleReviewAccountChangeRequest(reqItem.id, 'reject')}
+                              disabled={adminActionLoading}
+                              className="flex-1 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs hover:bg-slate-300 dark:hover:bg-slate-600 cursor-pointer disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReviewAccountChangeRequest(reqItem.id, 'approve')}
+                              disabled={adminActionLoading}
+                              className="flex-1 py-2 bg-[#07266E] hover:bg-[#0B3D9E] text-white rounded-xl font-bold text-xs cursor-pointer disabled:opacity-50"
+                            >
+                              Approve & Update
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -2629,6 +2851,14 @@ export function AdminPanel() {
                                <div>
                                   <p className="font-bold text-slate-900 dark:text-white">{u.displayName}</p>
                                   <p className="text-xs text-slate-500 font-mono">UID: {u.uid}</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenIpDetails(u.uid || u.id)}
+                                    className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-[#07266E]/10 hover:bg-[#07266E] text-[#07266E] hover:text-white dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white text-[10px] font-black uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                  >
+                                    <Globe className="w-3 h-3" />
+                                    IP Details ({u.last_ip_address || 'N/A'})
+                                  </button>
                                </div>
                                <span className="px-2 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-bold">Pending</span>
                              </div>
@@ -2669,8 +2899,13 @@ export function AdminPanel() {
                                   <p className="font-bold text-slate-900 dark:text-white">{u.displayName}</p>
                                   <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">{u.email} • {u.phoneNumber || u.phone || 'No Phone'}</p>
                                   <p className="text-xs text-slate-500 font-mono mb-1">UID: {u.uid}</p>
-                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                    IP: {u.last_ip_address || 'N/A'}
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-1.5 mt-1">
+                                    <span>IP: {u.last_ip_address || 'N/A'}</span>
+                                    {userIpLogs[u.uid || u.id]?.registrationIp && (
+                                      <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded">
+                                        Reg: {userIpLogs[u.uid || u.id].registrationIp}
+                                      </span>
+                                    )}
                                     {(() => {
                                       const count = duplicateIPCounts[u.last_ip_address!] || 0;
                                       return u.last_ip_address && u.last_ip_address !== 'N/A' && count > 1 ? (
@@ -2679,7 +2914,15 @@ export function AdminPanel() {
                                         </span>
                                       ) : null;
                                     })()}
-                                  </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenIpDetails(u.uid || u.id)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#07266E]/10 hover:bg-[#07266E] text-[#07266E] hover:text-white dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-600 dark:hover:text-white text-[10px] font-black uppercase tracking-wider rounded transition-colors cursor-pointer"
+                                    >
+                                      <Globe className="w-3 h-3" />
+                                      IP Details
+                                    </button>
+                                  </div>
                                </div>
                                <span className="px-2 py-1 bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 rounded-lg text-xs font-bold">
                                  {u.isBlocked ? 'Blocked' : 'Deleted'}
@@ -3623,7 +3866,17 @@ export function AdminPanel() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Last Known IP (আইপি অ্যাড্রেস)</label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Last Known IP (আইপি অ্যাড্রেস)</label>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenIpDetails(editingUser.uid || editingUser.id)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#07266E] hover:bg-[#0B3D9E] text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3 h-3" />
+                    IP Details
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={editingUser.last_ip_address || 'Not Recorded Yet'}
@@ -3631,6 +3884,13 @@ export function AdminPanel() {
                   readOnly
                   className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm outline-none text-slate-500 dark:text-slate-400 opacity-80 cursor-not-allowed transition-colors"
                 />
+                {userIpLogs[editingUser.uid || editingUser.id] && (
+                  <div className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 pt-1">
+                    <span>Reg IP: {userIpLogs[editingUser.uid || editingUser.id].registrationIp || 'N/A'}</span>
+                    <span>•</span>
+                    <span>Login IP: {userIpLogs[editingUser.uid || editingUser.id].lastLoginIp || 'N/A'}</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1.5 p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-800/60 transition-colors">
@@ -3785,6 +4045,238 @@ export function AdminPanel() {
               >
                 Reject Proof
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* IP Details Modal */}
+      {ipDetailsUserId && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[110] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#0F172A] border border-slate-200 dark:border-[#1E3A8A]/70 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-8">
+            <div className="bg-gradient-to-r from-[#07266E] to-[#0B3D9E] px-6 py-5 flex items-center justify-between text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-display text-lg font-black uppercase tracking-tight">IP Details & Security Log</h2>
+                  <p className="text-xs text-blue-100 font-semibold">
+                    {ipDetailsData?.profile ? (
+                      <>
+                        {ipDetailsData.profile.displayName || ipDetailsData.profile.username || 'User'} • #{ipDetailsData.profile.serialNumber || ipDetailsUserId.slice(0, 5).toUpperCase()}
+                      </>
+                    ) : (
+                      `UID: ${ipDetailsUserId}`
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIpDetailsUserId(null);
+                  setIpDetailsData(null);
+                  setIpDetailsError(null);
+                }}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                aria-label="Close IP Details"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[75vh] overflow-y-auto space-y-5">
+              {ipDetailsLoading ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-3">
+                  <span className="w-8 h-8 border-4 border-[#0B3D9E] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Loading IP Intelligence...</p>
+                </div>
+              ) : ipDetailsError ? (
+                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-sm font-bold">
+                  {ipDetailsError}
+                </div>
+              ) : ipDetailsData ? (
+                <>
+                  {/* Reg IP & Login IP Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registration IP</span>
+                        {ipDetailsData.ipLog?.registrationMeta?.isVpn && (
+                          <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase">VPN / Proxy</span>
+                        )}
+                      </div>
+                      <p className="font-mono font-black text-base text-[#07266E] dark:text-blue-400 break-all">
+                        {ipDetailsData.ipLog?.registrationIp || 'Not Recorded'}
+                      </p>
+                      {ipDetailsData.ipLog?.registrationMeta && (
+                        <div className="text-xs text-slate-600 dark:text-slate-300 space-y-0.5">
+                          {(ipDetailsData.ipLog.registrationMeta.city || ipDetailsData.ipLog.registrationMeta.country) && (
+                            <p className="flex items-center gap-1.5 font-semibold">
+                              <MapPin className="w-3.5 h-3.5 text-[#0B3D9E] dark:text-blue-400 shrink-0" />
+                              {[ipDetailsData.ipLog.registrationMeta.city, ipDetailsData.ipLog.registrationMeta.regionName, ipDetailsData.ipLog.registrationMeta.country].filter(Boolean).join(', ')}
+                            </p>
+                          )}
+                          {ipDetailsData.ipLog.registrationMeta.isp && (
+                            <p className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                              <Wifi className="w-3.5 h-3.5 shrink-0" />
+                              {ipDetailsData.ipLog.registrationMeta.isp}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {ipDetailsData.ipLog?.registrationAt && (
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(ipDetailsData.ipLog.registrationAt), 'dd MMM yyyy, hh:mm a')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-[#0B3D9E]/15 border border-blue-200 dark:border-[#1E3A8A]/70 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#0B3D9E] dark:text-blue-400">Last Login IP</span>
+                        {(ipDetailsData.ipLog?.lastLoginMeta?.isVpn || ipDetailsData.liveGeo?.isVpn) && (
+                          <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase">VPN / Proxy</span>
+                        )}
+                      </div>
+                      <p className="font-mono font-black text-base text-[#07266E] dark:text-white break-all">
+                        {ipDetailsData.ipLog?.lastLoginIp || ipDetailsData.profile?.last_ip_address || 'Not Recorded'}
+                      </p>
+                      {(() => {
+                        const meta = ipDetailsData.ipLog?.lastLoginMeta?.country
+                          ? ipDetailsData.ipLog.lastLoginMeta
+                          : ipDetailsData.liveGeo;
+                        if (!meta) return null;
+                        return (
+                          <div className="text-xs text-slate-600 dark:text-slate-300 space-y-0.5">
+                            {(meta.city || meta.country) && (
+                              <p className="flex items-center gap-1.5 font-semibold">
+                                <MapPin className="w-3.5 h-3.5 text-[#0B3D9E] dark:text-blue-400 shrink-0" />
+                                {[meta.city, meta.regionName, meta.country].filter(Boolean).join(', ')}
+                              </p>
+                            )}
+                            {meta.isp && (
+                              <p className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                <Wifi className="w-3.5 h-3.5 shrink-0" />
+                                {meta.isp}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      {ipDetailsData.ipLog?.lastLoginAt && (
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(ipDetailsData.ipLog.lastLoginAt), 'dd MMM yyyy, hh:mm a')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Last Known Profile IP & Device Fingerprint */}
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Last Known Profile IP</p>
+                      <p className="font-mono text-sm font-bold text-slate-900 dark:text-white break-all">
+                        {ipDetailsData.profile?.last_ip_address || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+                        <Laptop className="w-3 h-3" /> Device Fingerprint
+                      </p>
+                      <p className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 break-all">
+                        {ipDetailsData.profile?.device_fingerprint || 'Not Recorded'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Matched Accounts */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      Matched Accounts on Same IP ({ipDetailsData.matchedAccounts?.length || 0})
+                    </h4>
+                    {!ipDetailsData.matchedAccounts || ipDetailsData.matchedAccounts.length === 0 ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                        এই আইপি-তে অন্য কোনো একাউন্ট পাওয়া যায়নি। (No other accounts matched on these IPs.)
+                      </p>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {ipDetailsData.matchedAccounts.map((m: any) => (
+                          <div key={m.id} className="flex items-center justify-between p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 text-xs">
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-white">
+                                {m.displayName || m.username || 'User'}{' '}
+                                <span className="text-[#0B3D9E] dark:text-blue-400">#{m.serialNumber || String(m.id).slice(0, 5).toUpperCase()}</span>
+                              </p>
+                              <p className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                                {m.email} • IP: {m.last_ip_address}
+                              </p>
+                            </div>
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                              m.isBlocked || m.account_status === 'deleted'
+                                ? "bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400"
+                                : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
+                            )}>
+                              {m.isBlocked ? 'Blocked' : m.account_status === 'deleted' ? 'Deleted' : 'Active'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent IP Activity Log */}
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                      Recent IP History ({ipDetailsData.ipLog?.recentIps?.length || 0})
+                    </h4>
+                    {!ipDetailsData.ipLog?.recentIps || ipDetailsData.ipLog.recentIps.length === 0 ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                        এখনও কোনো লগইন বা রেজিস্ট্রেশন আইপি হিস্ট্রি রেকর্ড হয়নি।
+                      </p>
+                    ) : (
+                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        {ipDetailsData.ipLog.recentIps.map((entry: any, idx: number) => (
+                          <div key={`${entry.ip}-${entry.timestamp}-${idx}`} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                            <div className="space-y-0.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded text-[10px] font-black uppercase",
+                                  entry.event === 'registration'
+                                    ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
+                                    : entry.event === 'login'
+                                      ? "bg-blue-100 dark:bg-blue-950 text-[#0B3D9E] dark:text-blue-400"
+                                      : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                )}>
+                                  {entry.event}
+                                </span>
+                                <span className="font-mono font-bold text-slate-900 dark:text-white">{entry.ip}</span>
+                                {entry.isVpn && (
+                                  <span className="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 text-[9px] font-black uppercase">VPN</span>
+                                )}
+                              </div>
+                              {(entry.city || entry.country || entry.isp) && (
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  {[entry.city, entry.regionName, entry.country].filter(Boolean).join(', ')}
+                                  {entry.isp ? ` • ${entry.isp}` : ''}
+                                </p>
+                              )}
+                            </div>
+                            {entry.timestamp && (
+                              <span className="text-[11px] text-slate-400 font-semibold shrink-0">
+                                {format(new Date(entry.timestamp), 'dd MMM, hh:mm a')}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

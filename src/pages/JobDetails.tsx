@@ -11,7 +11,10 @@ import {
   Zap,
   Send,
   Lock,
-  MessageCircle
+  MessageCircle,
+  Maximize2,
+  X,
+  MapPin
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,8 +35,16 @@ export function JobDetails() {
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<string | null>(null);
+  const [showFullThumbnail, setShowFullThumbnail] = useState(false);
 
-  const isPoster = job && user && job.posterId === user.id;
+  const isPoster = Boolean(job && user && (job.posterId === user.id || job.author_id === user.id));
+  const safeThumbnail =
+    job?.thumbnail &&
+    (job.thumbnail.startsWith('https://') ||
+      job.thumbnail.startsWith('http://') ||
+      job.thumbnail.startsWith('data:image/'))
+      ? job.thumbnail
+      : '';
   
   const [proofText, setProofText] = useState('');
   const [pinCode, setPinCode] = useState('');
@@ -94,6 +105,10 @@ export function JobDetails() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!job || !user) return;
+    if (isPoster) {
+      setSubmitError("You cannot submit proof for your own posted job.");
+      return;
+    }
 
     if (job.screenshotCount > 0 && screenshotUrls.filter(Boolean).length < job.screenshotCount) {
       setSubmitError(`Please upload at least ${job.screenshotCount} screenshots.`);
@@ -175,44 +190,60 @@ export function JobDetails() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-12">
-      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold hover:text-[#0B3D9E] dark:hover:text-white transition-colors">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-12">
+      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#0A1638] border border-[#D7E3F7] dark:border-[#1C3882]/60 rounded-xl text-[#07266E] dark:text-blue-100 font-bold hover:border-[#0B3D9E] dark:hover:text-white transition-colors shadow-sm cursor-pointer">
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
-      <div className="bg-white dark:bg-[#1E293B] p-6 sm:p-10 rounded-[2.5rem] border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-8 transition-colors">
-        {job.thumbnail && (
-            <div className="-mx-6 sm:-mx-10 -mt-6 sm:-mt-10 mb-8 h-64 overflow-hidden rounded-t-[2.5rem] border-b border-slate-200 dark:border-slate-700">
-               <img src={job.thumbnail} alt={job.title} className="w-full h-full object-cover" />
-            </div>
+      <div className="bg-white dark:bg-[#0A1638] p-5 sm:p-10 rounded-3xl sm:rounded-[2.5rem] border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] space-y-6 sm:space-y-8 transition-colors">
+        {safeThumbnail && (
+            <button
+              type="button"
+              onClick={() => setShowFullThumbnail(true)}
+              className="group relative block w-[calc(100%+2.5rem)] sm:w-[calc(100%+5rem)] -mx-5 sm:-mx-10 -mt-5 sm:-mt-10 mb-6 sm:mb-8 h-52 sm:h-64 overflow-hidden rounded-t-3xl sm:rounded-t-[2.5rem] border-b border-[#D7E3F7] dark:border-[#1C3882]/60 cursor-zoom-in text-left"
+            >
+               <img src={safeThumbnail} alt={job.title} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+               <span className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#041645]/85 text-white text-xs font-bold backdrop-blur-sm border border-white/20 shadow-lg">
+                 <Maximize2 className="w-3.5 h-3.5" />
+                 <span>Click to view full thumbnail</span>
+               </span>
+            </button>
         )}
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-          <div className="space-y-3">
+          <div className="space-y-3 min-w-0">
              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">Active Job</span>
+                <span className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest">Active Job</span>
+                <span className="bg-[#EFF4FC] dark:bg-[#0E2460] text-[#07266E] dark:text-blue-200 border border-[#CFE0FB] dark:border-blue-500/30 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> {!job.targetCountry || job.targetCountry === 'ALL' ? 'Global' : job.targetCountry}
+                </span>
+                {job.mainCategory && (
+                  <span className="bg-[#F3F7FE] dark:bg-[#050F2B] text-[#071845] dark:text-blue-100 border border-[#DCE7FA] dark:border-[#1C3882]/60 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider">
+                    {job.mainCategory}{job.subCategory ? ` · ${job.subCategory}` : ''}
+                  </span>
+                )}
                 {job.autoApprove && (
-                   <span className="bg-orange-100 dark:bg-orange-950/60 text-[#EA580C] dark:text-[#FB923C] px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1">
+                   <span className="bg-orange-100 dark:bg-orange-950/60 text-[#EA580C] dark:text-[#FB923C] px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest flex items-center gap-1">
                       <Zap className="w-3 h-3 saturate-150" /> Instant Payment
                    </span>
                 )}
-                <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">
+                <span className="bg-[#F3F7FE] dark:bg-[#050F2B] text-slate-600 dark:text-blue-200 border border-[#DCE7FA] dark:border-[#1C3882]/60 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest tabular-nums">
                   ID: #{job.id.split('-')[0].toUpperCase()}
                 </span>
              </div>
-             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase font-display">{job.title}</h1>
+             <h1 className="text-2xl sm:text-4xl font-black text-[#071845] dark:text-white tracking-tight leading-tight uppercase font-display break-words">{job.title}</h1>
           </div>
-          <div className="sm:text-right shrink-0 bg-blue-50 dark:bg-blue-950/40 px-5 py-3 rounded-2xl border border-blue-100 dark:border-blue-900/40">
-             <p className="text-3xl sm:text-4xl font-black text-[#0B3D9E] dark:text-[#FB923C] leading-none tabular-nums">{formatCurrency(job.pricePerWork)}</p>
-             <p className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1.5">Reward/Task</p>
+          <div className="sm:text-right shrink-0 bg-gradient-to-br from-[#041645] to-[#0B3D9E] px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border border-blue-400/25 shadow-lg shadow-blue-950/15">
+             <p className="text-2xl sm:text-4xl font-black text-white leading-none tabular-nums">{formatCurrency(job.pricePerWork)}</p>
+             <p className="text-[10px] sm:text-[11px] font-black text-[#FB923C] uppercase tracking-widest mt-1.5">Reward/Task</p>
           </div>
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-lg border-b border-slate-100 dark:border-slate-700 pb-2">
+          <div className="flex items-center gap-2 text-[#071845] dark:text-white font-bold text-lg border-b border-[#E3ECFA] dark:border-[#1C3882]/50 pb-2">
              <Info className="w-5 h-5 text-[#0B3D9E] dark:text-[#FB923C]" />
              Instructions
           </div>
-          <div className="text-slate-700 dark:text-slate-200 font-medium leading-relaxed whitespace-pre-wrap text-base sm:text-lg bg-slate-50 dark:bg-slate-800/70 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700">
+          <div className="text-[#071845] dark:text-blue-100 font-medium leading-relaxed whitespace-pre-wrap text-base sm:text-lg bg-[#F2F6FE] dark:bg-[#050F2B] p-6 rounded-3xl border border-[#DCE7FA] dark:border-[#1C3882]/60">
             {job.description}
           </div>
         </div>
@@ -253,6 +284,40 @@ export function JobDetails() {
                   ? "Instant payment released to your wallet! Redirecting..." 
                   : "Your proof has been submitted and is pending review by the poster.")}
             </p>
+          </motion.div>
+        ) : isPoster ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-8 sm:p-10 rounded-[2.5rem] text-white text-center space-y-5 shadow-2xl border border-white/10"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center mx-auto">
+              <Lock className="w-8 h-8 text-[#FB923C]" />
+            </div>
+            <div className="space-y-2 max-w-lg mx-auto">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight font-display">
+                You Posted This Job
+              </h2>
+              <p className="text-sm sm:text-base text-blue-100/90 font-medium">
+                You can view all details of your posted job here, but you cannot submit work on your own job.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/manage-jobs')}
+                className="px-6 py-3.5 bg-[#F97316] hover:bg-[#EA580C] text-white rounded-2xl font-black text-sm uppercase tracking-wider shadow-lg shadow-orange-500/25 transition-all"
+              >
+                Manage My Jobs
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/browse-jobs')}
+                className="px-6 py-3.5 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold text-sm border border-white/15 transition-all"
+              >
+                Browse Other Jobs
+              </button>
+            </div>
           </motion.div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] p-6 sm:p-10 rounded-[2.5rem] text-white space-y-8 shadow-2xl border border-white/10">
@@ -357,15 +422,46 @@ export function JobDetails() {
           </form>
         )}
       </AnimatePresence>
+
+      {/* Full Thumbnail Lightbox Modal */}
+      <AnimatePresence>
+        {showFullThumbnail && safeThumbnail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowFullThumbnail(false)}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <button
+              type="button"
+              onClick={() => setShowFullThumbnail(false)}
+              className="fixed top-4 right-4 z-50 w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center border border-white/25 transition-colors"
+              aria-label="Close full thumbnail"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              src={safeThumbnail}
+              alt={job.title}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-[95vw] max-h-[90vh] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/15"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 function InfoBadge({ label, value }: { label: string, value: string }) {
   return (
-    <div className="p-4 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200/80 dark:border-slate-700 transition-colors">
-       <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{label}</p>
-       <p className="text-lg font-bold text-slate-900 dark:text-white tracking-tight tabular-nums">{value}</p>
+    <div className="p-4 bg-[#F2F6FE] dark:bg-[#050F2B] rounded-2xl border border-[#DCE7FA] dark:border-[#1C3882]/60 transition-colors">
+       <p className="text-[10px] font-black text-slate-500 dark:text-blue-200/60 uppercase tracking-widest mb-1">{label}</p>
+       <p className="text-lg font-bold text-[#071845] dark:text-white tracking-tight tabular-nums">{value}</p>
     </div>
   );
 }

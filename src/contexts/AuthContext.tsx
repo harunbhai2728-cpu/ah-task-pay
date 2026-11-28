@@ -139,6 +139,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
 
+        if (!data.last_ip_address) {
+            try {
+                const sessionData = await supabase.auth.getSession();
+                const token = sessionData?.data?.session?.access_token;
+                if (token) {
+                  fetch('/api/security/record-ip', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                     body: JSON.stringify({ event: 'session' })
+                  }).catch(() => {});
+                }
+            } catch {}
+        }
+
         // Mapping to match your frontend types
         setProfile({ uid: data.id, ...data });
         setIsAdmin(data.role === 'admin' || isMasterEmail);

@@ -3,6 +3,7 @@ export type UserRole = 'user' | 'admin';
 export interface AppNotification {
   id: string;
   message: string;
+  type?: 'approved' | 'rejected' | 'info' | 'warning';
   createdAt: string;
   isRead: boolean;
 }
@@ -62,6 +63,12 @@ export interface Job {
   textProofInstruction?: string;
   screenshotProofInstructions?: string[];
   screenshotProofInstruction?: string; // legacy
+  category?: string;
+  mainCategory?: string;
+  subCategory?: string;
+  targetCountry?: string;
+  durationDays?: number;
+  expiresAt?: string;
 }
 
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
@@ -81,6 +88,7 @@ export interface Submission {
   submittedAt: any;
   reviewedAt?: any;
   reward: number;
+  imageDeleted?: boolean;
 }
 
 export type TransactionType = 'deposit' | 'withdrawal' | 'payment' | 'refund' | 'bonus';

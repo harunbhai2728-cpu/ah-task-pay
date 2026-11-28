@@ -69,7 +69,7 @@ export function SubmittedJobs() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-6 sm:p-8 text-white shadow-xl flex items-center gap-4">
+      <div className="bg-gradient-to-br from-[#041645] via-[#07266E] to-[#0B3D9E] rounded-[2rem] p-6 sm:p-8 text-white border border-blue-400/20 shadow-xl shadow-blue-950/15 flex items-center gap-4">
         <div className="bg-white/10 border border-white/15 p-3.5 rounded-2xl text-[#FB923C]">
           <ShieldCheck className="w-8 h-8" />
         </div>
@@ -84,13 +84,13 @@ export function SubmittedJobs() {
           <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#0B3D9E] dark:border-[#F97316]"></div>
         </div>
       ) : submissions.length === 0 ? (
-        <div className="bg-white dark:bg-[#1E293B] rounded-[2.5rem] p-16 sm:p-20 text-center border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-4 transition-colors">
-          <div className="bg-slate-100 dark:bg-slate-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
-             <Clock className="w-10 h-10 text-slate-400 dark:text-slate-500" />
+        <div className="bg-white dark:bg-[#0A1638] rounded-[2.5rem] p-16 sm:p-20 text-center border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] space-y-4 transition-colors">
+          <div className="bg-[#EFF4FC] dark:bg-[#050F2B] border border-[#DCE7FA] dark:border-[#1C3882]/60 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+             <Clock className="w-10 h-10 text-[#0B3D9E] dark:text-blue-300" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">No submissions yet</h3>
-            <p className="text-slate-500 dark:text-slate-400">Go find some jobs and start earning!</p>
+            <h3 className="text-xl font-bold text-[#071845] dark:text-white">No submissions yet</h3>
+            <p className="text-slate-500 dark:text-blue-200/70">Go find some jobs and start earning!</p>
           </div>
         </div>
       ) : (
@@ -99,10 +99,10 @@ export function SubmittedJobs() {
             <motion.div
               layout
               key={sub.id}
-              className="bg-white dark:bg-[#1E293B] p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-[#0B3D9E] dark:hover:border-[#F97316] transition-colors"
+              className="bg-white dark:bg-[#0A1638] p-6 rounded-[2rem] border border-[#D7E3F7] dark:border-[#1C3882]/55 shadow-sm shadow-blue-950/[0.04] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-[#0B3D9E] dark:hover:border-[#F97316] transition-colors"
             >
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">{sub.jobTitle || 'Job Submission'}</h3>
+                <h3 className="text-lg font-bold text-[#071845] dark:text-white uppercase tracking-tight">{sub.jobTitle || 'Job Submission'}</h3>
                 <div className="flex flex-wrap gap-2">
                   <span className={cn(
                     "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
@@ -115,10 +115,10 @@ export function SubmittedJobs() {
                     {sub.status === 'rejected' && <XCircle className="w-3 h-3" />}
                     {sub.status}
                   </span>
-                  <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">
+                  <span className="px-3 py-1 bg-[#EFF4FC] dark:bg-[#050F2B] border border-[#DCE7FA] dark:border-[#1C3882]/60 rounded-full text-[10px] font-black uppercase tracking-widest text-[#071845] dark:text-blue-200">
                     ID: #{sub.jobId.split('-')[0].toUpperCase()}
                   </span>
-                  <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">
+                  <span className="px-3 py-1 bg-[#EFF4FC] dark:bg-[#050F2B] border border-[#DCE7FA] dark:border-[#1C3882]/60 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-blue-200/80">
                     {format(sub.submittedAt ? new Date(sub.submittedAt as any) : new Date(), 'MMM dd, h:mm a')}
                   </span>
                 </div>
@@ -141,21 +141,21 @@ export function SubmittedJobs() {
                     );
                   }
                   return (
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-2">
+                    <div className="text-[11px] text-slate-500 dark:text-blue-200/70 font-bold mt-2">
                        ⏳ Auto-approves in {Math.max(0, Math.ceil(7 - daysPassed))} days if not reviewed
                     </div>
                   );
                 })()}
               </div>
 
-              <div className="text-left md:text-right flex flex-col items-start md:items-end gap-2 shrink-0">
+              <div className="text-left md:text-right flex flex-col items-start md:items-end gap-2 shrink-0 bg-[#F2F6FE] dark:bg-[#050F2B] border border-[#DCE7FA] dark:border-[#1C3882]/60 px-4 py-3 rounded-2xl">
                 <p className="text-xl font-black text-[#0B3D9E] dark:text-[#FB923C] tabular-nums">{formatCurrency(sub.reward)}</p>
                 <div className="flex gap-2">
                    {sub.screenshots && sub.screenshots.length > 0 && (
-                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{sub.screenshots.length} Screens</span>
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-blue-200/70">{sub.screenshots.length} Screens</span>
                    )}
                    {sub.proofText && (
-                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Text Proof</span>
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-blue-200/70">Text Proof</span>
                    )}
                 </div>
               </div>

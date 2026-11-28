@@ -132,9 +132,13 @@ async function startServer() {
     "withdraw",
     "deposit",
     "registration",
+    "login",
     "profile_update",
+    "account_deletion",
     "support",
     "job_post",
+    "job_edit",
+    "job_delete_request",
     "ad_post",
     "balance_transfer",
     "redeem_code",
@@ -172,15 +176,23 @@ async function startServer() {
     deposit:
       "💰 <b>New Deposit Request</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Amount:</b> {amount} BDT\n<b>Method:</b> {method}\n<b>Phone:</b> {phone}\n<b>TrxID:</b> {trxId}",
     registration:
-      "🎉 <b>New Account Registration</b>\n\n<b>Name:</b> {user}\n<b>Email:</b> {email}\n<b>Phone:</b> {phone}\n<b>Details:</b> {details}",
+      "🎉 <b>New Account Registration</b>\n\n<b>Name:</b> {user} (ID: {serial})\n<b>Email:</b> {email}\n<b>Phone:</b> {phone}\n<b>Reg IP:</b> <code>{ip}</code>\n<b>Details:</b> {details}",
+    login:
+      "🔐 <b>User Account Login</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Email:</b> {email}\n<b>Login IP:</b> <code>{ip}</code>\n<b>Details:</b> {details}",
     profile_update:
-      "👤 <b>Account Info Updated</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Email:</b> {email}\n<b>Updated Details:</b> {details}",
+      "👤 <b>Account Info Change / Request</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Email:</b> {email}\n<b>IP:</b> <code>{ip}</code>\n<b>Details:</b> {details}",
+    account_deletion:
+      "🗑️ <b>Account Deletion Request / Update</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Email:</b> {email}\n<b>IP:</b> <code>{ip}</code>\n<b>Status:</b> {status}\n<b>Reason / Details:</b> {details}",
     support:
       "🎫 <b>Support Message</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Subject:</b> {subject}\n<b>Sender:</b> {sender}\n<b>Status:</b> {status}\n<b>Message:</b> {message}",
     job_post:
       "💼 <b>New Job Posted</b>\n\n<b>Poster:</b> {user} (ID: {serial})\n<b>Title:</b> {jobTitle}\n<b>Budget:</b> {amount} BDT\n<b>Details:</b> {details}",
+    job_edit:
+      "✏️ <b>Job Updated / Edited</b>\n\n<b>Poster:</b> {user} (ID: {serial})\n<b>Job:</b> {jobTitle} (ID: {jobId})\n<b>Details:</b> {details}",
+    job_delete_request:
+      "🚫 <b>Job Delete / Cancel Request</b>\n\n<b>Poster:</b> {user} (ID: {serial})\n<b>Job:</b> {jobTitle} (ID: {jobId})\n<b>Status:</b> {status}\n<b>Details:</b> {details}",
     ad_post:
-      "📢 <b>New Advertisement Request</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Price:</b> {amount} BDT\n<b>Details:</b> {details}",
+      "📢 <b>Advertisement Request</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Price:</b> {amount} BDT\n<b>Details:</b> {details}",
     balance_transfer:
       "🔄 <b>Wallet Balance Transfer</b>\n\n<b>User:</b> {user} (ID: {serial})\n<b>Amount:</b> {amount} BDT (Net: {netAmount} BDT)\n<b>Details:</b> {details}",
     redeem_code:
@@ -317,6 +329,7 @@ async function startServer() {
       status: escapeTelegramHtml(payload.status ?? "pending"),
       details: escapeTelegramHtml(payload.details ?? ""),
       code: escapeTelegramHtml(payload.code ?? "N/A"),
+      ip: escapeTelegramHtml(payload.ip ?? "N/A"),
       time: escapeTelegramHtml(
         payload.time ?? new Date().toLocaleString("en-GB", { timeZone: "Asia/Dhaka" }),
       ),
@@ -465,11 +478,203 @@ async function startServer() {
     try {
       const { data } = await supabase
         .from("profiles")
-        .select("id, displayName, username, email, phone, serialNumber")
+        .select("id, displayName, username, email, phone, serialNumber, last_ip_address")
         .eq("id", userId)
         .maybeSingle();
       return data;
     } catch {
+      return null;
+    }
+  };
+
+  const pushInAppNotification = async (
+    userId: string | undefined | null,
+    message: string,
+    type: "approved" | "rejected" | "info" = "info",
+  ) => {
+    const cleanUid = String(userId || "").trim();
+    const cleanMsg = String(message || "").trim();
+    if (!cleanUid || !cleanMsg) return;
+    try {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("notifications")
+        .eq("id", cleanUid)
+        .maybeSingle();
+      if (!prof) return;
+      const existingNotifs = Array.isArray(prof.notifications)
+        ? [...prof.notifications]
+        : [];
+      existingNotifs.unshift({
+        id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        message: cleanMsg,
+        type,
+        createdAt: new Date().toISOString(),
+        isRead: false,
+      });
+      await supabase
+        .from("profiles")
+        .update({ notifications: existingNotifs.slice(0, 50) })
+        .eq("id", cleanUid);
+    } catch (err) {
+      console.error("pushInAppNotification error:", err);
+    }
+  };
+
+  const extractClientIp = (req: express.Request, overrideIp?: unknown): string => {
+    if (typeof overrideIp === "string" && overrideIp.trim() && overrideIp.trim() !== "N/A") {
+      return overrideIp.trim().slice(0, 64);
+    }
+    const raw = req.headers["x-forwarded-for"] || req.ip || "";
+    const first = Array.isArray(raw) ? raw[0] : String(raw).split(",")[0];
+    const clean = (first || "").trim().replace(/^::ffff:/, "");
+    if (!clean || clean === "::1") return "127.0.0.1";
+    return clean.slice(0, 64);
+  };
+
+  const loadUserIpLogs = async (): Promise<Record<string, any>> => {
+    const store = getDataStore();
+    if (store.userIpLogs && typeof store.userIpLogs === "object") {
+      return store.userIpLogs;
+    }
+    try {
+      const { data: row } = await supabase
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_key", "user_ip_logs")
+        .maybeSingle();
+      if (row?.setting_value) {
+        const parsed = JSON.parse(row.setting_value);
+        if (parsed && typeof parsed === "object") {
+          store.userIpLogs = parsed;
+          saveDataStore(store);
+          return parsed;
+        }
+      }
+    } catch {}
+    return {};
+  };
+
+  const saveUserIpLogs = async (logs: Record<string, any>) => {
+    const store = getDataStore();
+    store.userIpLogs = logs;
+    saveDataStore(store);
+    await syncSetting("user_ip_logs", JSON.stringify(logs));
+  };
+
+  const lookupIpGeoInfo = async (ip: string) => {
+    if (!ip || ip === "127.0.0.1" || ip === "::1" || ip.startsWith("192.168.") || ip.startsWith("10.")) {
+      return { country: "Local / Private", city: "Localhost", regionName: "", isp: "Local Network", isVpn: false };
+    }
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 3500);
+      const r = await fetch(
+        `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city,isp,proxy,hosting,query`,
+        { signal: controller.signal },
+      );
+      clearTimeout(t);
+      const j: any = await r.json().catch(() => null);
+      if (j && j.status === "success") {
+        return {
+          country: j.country || "Unknown",
+          city: j.city || "",
+          regionName: j.regionName || "",
+          isp: j.isp || "Unknown ISP",
+          isVpn: j.proxy === true || j.hosting === true,
+        };
+      }
+    } catch {}
+    return { country: "", city: "", regionName: "", isp: "", isVpn: false };
+  };
+
+  const recordUserIpEvent = async (
+    userId: string,
+    eventType: "registration" | "login" | "session",
+    ip: string,
+    fingerprint?: string,
+    userAgent?: string,
+  ) => {
+    if (!userId || !ip) return null;
+    try {
+      const logs = await loadUserIpLogs();
+      const existing = logs[userId] || {
+        registrationIp: null,
+        registrationAt: null,
+        registrationMeta: null,
+        lastLoginIp: null,
+        lastLoginAt: null,
+        lastLoginMeta: null,
+        recentIps: [],
+      };
+
+      const geo = await lookupIpGeoInfo(ip);
+      const nowIso = new Date().toISOString();
+      const meta = {
+        country: geo.country || "",
+        city: geo.city || "",
+        regionName: geo.regionName || "",
+        isp: geo.isp || "",
+        isVpn: Boolean(geo.isVpn),
+      };
+
+      if (eventType === "registration") {
+        if (!existing.registrationIp) {
+          existing.registrationIp = ip;
+          existing.registrationAt = nowIso;
+          existing.registrationMeta = meta;
+        }
+        if (!existing.lastLoginIp) {
+          existing.lastLoginIp = ip;
+          existing.lastLoginAt = nowIso;
+          existing.lastLoginMeta = meta;
+        }
+      } else if (eventType === "login") {
+        existing.lastLoginIp = ip;
+        existing.lastLoginAt = nowIso;
+        existing.lastLoginMeta = meta;
+        if (!existing.registrationIp) {
+          existing.registrationIp = ip;
+          existing.registrationAt = nowIso;
+          existing.registrationMeta = meta;
+        }
+      } else {
+        // session backfill
+        if (!existing.lastLoginIp) {
+          existing.lastLoginIp = ip;
+          existing.lastLoginAt = nowIso;
+          existing.lastLoginMeta = meta;
+        }
+        if (!existing.registrationIp) {
+          existing.registrationIp = ip;
+          existing.registrationAt = nowIso;
+          existing.registrationMeta = meta;
+        }
+      }
+
+      if (eventType !== "session" || (existing.recentIps || []).length === 0) {
+        const entry = {
+          event: eventType,
+          ip,
+          ...meta,
+          userAgent: userAgent ? String(userAgent).slice(0, 140) : "",
+          timestamp: nowIso,
+        };
+        existing.recentIps = [entry, ...(Array.isArray(existing.recentIps) ? existing.recentIps : [])].slice(0, 12);
+      }
+
+      logs[userId] = existing;
+      await saveUserIpLogs(logs);
+
+      const profileUpdate: Record<string, unknown> = { last_ip_address: ip };
+      if (fingerprint && fingerprint.trim()) {
+        profileUpdate.device_fingerprint = fingerprint.trim().slice(0, 120);
+      }
+      await supabase.from("profiles").update(profileUpdate).eq("id", userId);
+
+      return { existing, geo, meta };
+    } catch (err) {
+      console.error("recordUserIpEvent error:", err);
       return null;
     }
   };
@@ -583,6 +788,38 @@ async function startServer() {
           amount: item.grandTotal ?? item.totalBudget ?? 0,
           details: `Reward: ${item.pricePerWork ?? 0} BDT x ${item.maxWorkers ?? 1} workers`,
         });
+      } else if (table === "jobs" && method === "update") {
+        const nextStatus = String(item.status || "").toLowerCase();
+        if (nextStatus === "delete_requested" || nextStatus === "deleted") {
+          const jobId = dbEq && dbEq[0] === "id" && dbEq[1] ? String(dbEq[1]) : item.id || "N/A";
+          let jobTitle = item.title || "Micro Job";
+          let posterId = user?.id;
+          let extraDetails = `Status changed to ${nextStatus}`;
+          if (jobId && jobId !== "N/A") {
+            const { data: jobRow } = await supabase
+              .from("jobs")
+              .select("title, author_id, reward, slots")
+              .eq("id", jobId)
+              .maybeSingle();
+            if (jobRow) {
+              jobTitle = jobRow.title || jobTitle;
+              posterId = jobRow.author_id || posterId;
+              extraDetails =
+                nextStatus === "delete_requested"
+                  ? `User requested job deletion (Reward: ${jobRow.reward ?? 0} BDT x ${jobRow.slots ?? 1} slots)`
+                  : `Job cancelled / deleted (Reward: ${jobRow.reward ?? 0} BDT x ${jobRow.slots ?? 1} slots)`;
+            }
+          }
+          const actor = await lookupProfileForTelegram(posterId || user?.id);
+          await dispatchTelegramEvent("job_delete_request", {
+            user: actor?.displayName || user?.email || "User",
+            serial: actor?.serialNumber || posterId || "N/A",
+            jobTitle,
+            jobId,
+            status: nextStatus,
+            details: extraDetails,
+          });
+        }
       } else if (table === "advertisements" && method === "insert") {
         const actor = await lookupProfileForTelegram(item.userId || user?.id);
         await dispatchTelegramEvent("ad_post", {
@@ -591,25 +828,43 @@ async function startServer() {
           amount: item.price ?? 0,
           details: `Duration: ${item.durationDays ?? 1} days | Link: ${item.link || "N/A"}`,
         });
+      } else if (table === "advertisements" && method === "update") {
+        if (String(item.status || "").toLowerCase() === "pending") {
+          const actor = await lookupProfileForTelegram(item.userId || user?.id);
+          await dispatchTelegramEvent("ad_post", {
+            user: actor?.displayName || user?.email || "User",
+            serial: item.userSerial || actor?.serialNumber || user?.id || "N/A",
+            amount: item.price ?? 0,
+            details: `Ad Renewal Request | Duration: ${item.durationDays ?? 1} days | TrxID: ${item.transactionId || "N/A"}`,
+          });
+        }
       } else if (table === "profiles" && method === "update") {
+        const targetId =
+          dbEq && dbEq[0] === "id" && dbEq[1] ? String(dbEq[1]) : user?.id;
+        const actor = await lookupProfileForTelegram(targetId);
+
+        if (item.account_status === "pending_deletion" || item.account_status === "deleted") {
+          await dispatchTelegramEvent("account_deletion", {
+            user: actor?.displayName || item.displayName || user?.email || "User",
+            serial: actor?.serialNumber || targetId || "N/A",
+            email: actor?.email || item.email || user?.email || "N/A",
+            ip: actor?.last_ip_address || "N/A",
+            status: item.account_status,
+            details: item.deletion_reason || (item.account_status === "pending_deletion" ? "User requested account deletion" : "Account deleted"),
+          });
+        }
+
         const changedFields: string[] = [];
         if (item.displayName !== undefined) changedFields.push(`Name: ${item.displayName}`);
         if (item.username !== undefined) changedFields.push(`Username: ${item.username}`);
         if (item.phone !== undefined) changedFields.push(`Phone: ${item.phone}`);
         if (item.email !== undefined) changedFields.push(`Email: ${item.email}`);
-        if (item.account_status === "pending_deletion") {
-          changedFields.push(
-            `Account Deletion Requested (${item.deletion_reason || "No reason"})`,
-          );
-        }
         if (changedFields.length > 0) {
-          const targetId =
-            dbEq && dbEq[0] === "id" && dbEq[1] ? String(dbEq[1]) : user?.id;
-          const actor = await lookupProfileForTelegram(targetId);
           await dispatchTelegramEvent("profile_update", {
             user: actor?.displayName || item.displayName || user?.email || "User",
             serial: actor?.serialNumber || targetId || "N/A",
             email: actor?.email || item.email || user?.email || "N/A",
+            ip: actor?.last_ip_address || "N/A",
             details: changedFields.join(", "),
           });
         }
@@ -655,7 +910,7 @@ async function startServer() {
         
         // Re-hydrate store from system_settings
         try {
-           const { data: extSnap } = await supabase.from("system_settings").select("setting_key, setting_value").in('setting_key', ['campaign_start_date', 'referral_domain_url', 'custom_banner_presets', 'telegram_settings', 'landing_stats_config']);
+           const { data: extSnap } = await supabase.from("system_settings").select("setting_key, setting_value").in('setting_key', ['campaign_start_date', 'referral_domain_url', 'custom_banner_presets', 'telegram_settings', 'landing_stats_config', 'account_change_requests', 'user_ip_logs']);
             if (extSnap && extSnap.length > 0) {
               const store = getDataStore();
               let changed = false;
@@ -687,6 +942,24 @@ async function startServer() {
                       const nextTg = normalizeTelegramSettings(JSON.parse(s.setting_value));
                       if (JSON.stringify(store.telegramSettings || {}) !== JSON.stringify(nextTg)) {
                         store.telegramSettings = nextTg;
+                        changed = true;
+                      }
+                    } catch(e){}
+                 }
+                 if (s.setting_key === 'account_change_requests') {
+                    try {
+                      const nextReqs = JSON.parse(s.setting_value);
+                      if (Array.isArray(nextReqs) && JSON.stringify(store.accountChangeRequests || []) !== JSON.stringify(nextReqs)) {
+                        store.accountChangeRequests = nextReqs;
+                        changed = true;
+                      }
+                    } catch(e){}
+                 }
+                 if (s.setting_key === 'user_ip_logs') {
+                    try {
+                      const nextLogs = JSON.parse(s.setting_value);
+                      if (nextLogs && typeof nextLogs === 'object' && JSON.stringify(store.userIpLogs || {}) !== JSON.stringify(nextLogs)) {
+                        store.userIpLogs = nextLogs;
                         changed = true;
                       }
                     } catch(e){}
@@ -1037,54 +1310,109 @@ async function startServer() {
       res.status(500).json({ error: "Failed to fetch leaderboard" });
     }
   });
-  // Smart Optimization: Auto-delete images from database 24 hours after approve/reject to save database bandwidth
+  // Smart Optimization: Auto-delete proof images from database 24 hours after approve/reject
+  const IMAGE_RETENTION_MS = 24 * 60 * 60 * 1000;
+  let isCleaningUpImages = false;
+  let lastImageCleanupAt = 0;
+  const cleanupExpiredSubmissionImages = async (force = false): Promise<number> => {
+    if (isCleaningUpImages) return 0;
+    if (!force && Date.now() - lastImageCleanupAt < 5 * 60 * 1000) return 0;
+
+    isCleaningUpImages = true;
+    let cleanedCount = 0;
+    try {
+      const cutoffMs = Date.now() - IMAGE_RETENTION_MS;
+      const PAGE = 100;
+      let from = 0;
+
+      while (true) {
+        const { data: submissions, error } = await supabase
+          .from("submissions")
+          .select("id, status, proof, screenshots, updated_at, created_at")
+          .in("status", ["approved", "rejected"])
+          .order("created_at", { ascending: true })
+          .range(from, from + PAGE - 1);
+
+        if (error) throw error;
+        if (!submissions || submissions.length === 0) break;
+
+        for (const sub of submissions) {
+          let proofObj: any = {};
+          try {
+            if (typeof sub.proof === "string" && sub.proof.trim().startsWith("{")) {
+              proofObj = JSON.parse(sub.proof);
+            } else if (sub.proof && typeof sub.proof === "object") {
+              proofObj = { ...sub.proof };
+            } else if (typeof sub.proof === "string" && sub.proof.trim()) {
+              proofObj = { proofText: sub.proof };
+            }
+          } catch (e) {
+            proofObj = { proofText: typeof sub.proof === "string" ? sub.proof : "" };
+          }
+
+          const hasStoredScreenshots =
+            (Array.isArray(proofObj.screenshots) &&
+              proofObj.screenshots.some((x: any) => x && x !== "deleted")) ||
+            (Array.isArray(sub.screenshots) &&
+              sub.screenshots.some((x: any) => x && x !== "deleted"));
+
+          if (proofObj.image_deleted && !hasStoredScreenshots) continue;
+
+          const reviewTimeStr =
+            proofObj.reviewedAt || sub.updated_at || sub.created_at;
+          const reviewTimeMs = reviewTimeStr ? Date.parse(reviewTimeStr) : NaN;
+          if (Number.isNaN(reviewTimeMs) || reviewTimeMs > cutoffMs) continue;
+
+          proofObj.image_deleted = true;
+          proofObj.image_deleted_at = new Date().toISOString();
+          proofObj.screenshots = [];
+
+          const updatePayload: any = {
+            proof: JSON.stringify(proofObj),
+          };
+          if (Array.isArray(sub.screenshots)) {
+            updatePayload.screenshots = [];
+          }
+
+          const { error: updErr } = await supabase
+            .from("submissions")
+            .update(updatePayload)
+            .eq("id", sub.id);
+
+          if (!updErr) {
+            cleanedCount++;
+          }
+        }
+
+        if (submissions.length < PAGE) break;
+        from += PAGE;
+      }
+
+      lastImageCleanupAt = Date.now();
+    } catch (err) {
+      console.error("cleanupExpiredSubmissionImages error:", err);
+    } finally {
+      isCleaningUpImages = false;
+    }
+    return cleanedCount;
+  };
+
   app.get("/api/clear-db-images", async (req, res) => {
     try {
-      // Query the database for jobs where: status IN ('approved', 'rejected') AND updated_at < NOW() - INTERVAL '24 hours'
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
-      const { data: submissions, error } = await supabase
-        .from('submissions')
-        .select('id, screenshots, proof')
-        .in('status', ['approved', 'rejected'])
-        .lt('updated_at', yesterday);
-        
-      if (error) throw error;
-      
-      let cleanedCount = 0;
-      
-      for (const sub of submissions || []) {
-        let proofObj: any = {};
-        try {
-          if (typeof sub.proof === 'string') {
-            proofObj = JSON.parse(sub.proof);
-          } else if (typeof sub.proof === 'object') {
-            proofObj = sub.proof;
-          }
-        } catch (e) {
-          proofObj = { proofText: sub.proof };
-        }
-        
-        // Skip if already marked as deleted
-        if (proofObj.image_deleted) continue;
-        
-        proofObj.image_deleted = true;
-        
-        // Clear massive Base64 strings from Database to save space!
-        // We replace with "deleted" to naturally trigger a broken image icon in the UI.
-        proofObj.screenshots = ['deleted'];
-
-        await supabase.from('submissions').update({
-          screenshots: ['deleted'],
-          proof: JSON.stringify(proofObj)
-        }).eq('id', sub.id);
-        
-        cleanedCount++;
-      }
-      
+      const cleanedCount = await cleanupExpiredSubmissionImages(req.query.force === "1");
       return res.json({ success: true, cleanedCount });
     } catch (err: any) {
       console.error("Clear DB images error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/cleanup-images", async (req, res) => {
+    try {
+      const cleanedCount = await cleanupExpiredSubmissionImages(false);
+      return res.json({ success: true, cleanedCount });
+    } catch (err: any) {
+      console.error("Cleanup images error:", err);
       return res.status(500).json({ error: err.message });
     }
   });
@@ -1179,6 +1507,11 @@ async function startServer() {
       let memFilter: ((item: any) => boolean) | null = null;
       const rawPayloadSnapshot =
         args && args[0] ? JSON.parse(JSON.stringify(args[0])) : null;
+      const pendingUserNotifications: Array<{
+        userId: string;
+        message: string;
+        type?: "approved" | "rejected" | "info";
+      }> = [];
 
       // Security & Idempotency Lock
       const isWrite = method && method !== "select";
@@ -1473,6 +1806,34 @@ async function startServer() {
           args[0] = Array.isArray(args[0])
             ? args[0].map(normalizeAdForBackend)
             : normalizeAdForBackend(args[0]);
+        if (method === "update" && args?.[0] && dbEq && dbEq[0] === "id" && dbEq[1]) {
+          const nextAdStatus = String(args[0].status || "").toLowerCase();
+          if (nextAdStatus === "approved" || nextAdStatus === "rejected") {
+            try {
+              const { data: existingAd } = await supabase
+                .from("advertisements")
+                .select("user_id, title, price, status")
+                .eq("id", dbEq[1])
+                .maybeSingle();
+              if (existingAd && existingAd.user_id && existingAd.status !== nextAdStatus) {
+                const adTitle = existingAd.title || "Advertisement";
+                if (nextAdStatus === "approved") {
+                  pendingUserNotifications.push({
+                    userId: existingAd.user_id,
+                    type: "approved",
+                    message: `আপনার বিজ্ঞাপন "${adTitle}" এপ্রুভ করা হয়েছে এবং এখন লাইভ চলছে।`,
+                  });
+                } else {
+                  pendingUserNotifications.push({
+                    userId: existingAd.user_id,
+                    type: "rejected",
+                    message: `আপনার বিজ্ঞাপন "${adTitle}" রিজেক্ট করা হয়েছে এবং ৳${Number(existingAd.price || 0).toFixed(2)} আপনার ডিপোজিট ব্যালেন্সে ফেরত দেওয়া হয়েছে।`,
+                  });
+                }
+              }
+            } catch {}
+          }
+        }
         if ((method === "update" || method === "upsert") && args?.[0])
           args[0] = normalizeAdForBackend(args[0]);
         if (dbEq && dbEq[0] === "userId") dbEq[0] = "user_id";
@@ -1512,6 +1873,34 @@ async function startServer() {
           args[0] = Array.isArray(args[0])
             ? args[0].map(normalizeTicketForBackend)
             : normalizeTicketForBackend(args[0]);
+        if (method === "update" && args?.[0] && isAdmin && dbEq && dbEq[0] === "id" && dbEq[1]) {
+          try {
+            const { data: existingTicket } = await supabase
+              .from("tickets")
+              .select("user_id, subject, status")
+              .eq("id", dbEq[1])
+              .maybeSingle();
+            if (existingTicket && existingTicket.user_id && existingTicket.user_id !== user?.id) {
+              const subj = existingTicket.subject || "Support Ticket";
+              const nextStatus = String(args[0].status || "").toLowerCase();
+              const repliesArr = Array.isArray(args[0].replies) ? args[0].replies : null;
+              const latestReply = repliesArr && repliesArr.length > 0 ? repliesArr[repliesArr.length - 1] : null;
+              if (nextStatus === "resolved" && existingTicket.status !== "resolved") {
+                pendingUserNotifications.push({
+                  userId: existingTicket.user_id,
+                  type: "approved",
+                  message: `আপনার সাপোর্ট টিকেট "${subj}" সমাধান (Resolved) করা হয়েছে।`,
+                });
+              } else if (latestReply?.sender === "admin" || args[0].adminReply || args[0].admin_reply) {
+                pendingUserNotifications.push({
+                  userId: existingTicket.user_id,
+                  type: "info",
+                  message: `আপনার সাপোর্ট টিকেট "${subj}"-এ এডমিন নতুন উত্তর দিয়েছেন।`,
+                });
+              }
+            }
+          } catch {}
+        }
         if ((method === "update" || method === "upsert") && args?.[0])
           args[0] = normalizeTicketForBackend(args[0]);
         if (dbEq && dbEq[0] === "userId") dbEq[0] = "user_id";
@@ -1608,7 +1997,7 @@ async function startServer() {
               const txId = dbEq[1];
               const { data: existingTx } = await (supabase as any)
                 .from("transactions")
-                .select("payment_details")
+                .select("user_id, type, amount, status, payment_method, payment_details")
                 .eq("id", txId)
                 .single();
               if (existingTx) {
@@ -1617,6 +2006,47 @@ async function startServer() {
                   ...existingDetails,
                   ...(updatedFields.payment_details || {}),
                 };
+
+                const nextTxStatus = String(updatedFields.status || "").toLowerCase();
+                if (
+                  existingTx.status === "pending" &&
+                  (nextTxStatus === "completed" || nextTxStatus === "rejected") &&
+                  existingTx.user_id
+                ) {
+                  const rawTxType = String(existingTx.type || "").toLowerCase();
+                  const txAmount = Number(existingTx.amount || 0).toFixed(2);
+                  const txMethod = existingTx.payment_method || existingDetails.method || "";
+                  const methodLabel = txMethod ? ` (${txMethod})` : "";
+                  if (rawTxType === "withdraw" || rawTxType === "withdrawal") {
+                    if (nextTxStatus === "completed") {
+                      pendingUserNotifications.push({
+                        userId: existingTx.user_id,
+                        type: "approved",
+                        message: `আপনার ৳${txAmount} উইথড্র রিকোয়েস্ট${methodLabel} এপ্রুভ করা হয়েছে এবং পেমেন্ট পাঠানো হয়েছে।`,
+                      });
+                    } else {
+                      pendingUserNotifications.push({
+                        userId: existingTx.user_id,
+                        type: "rejected",
+                        message: `আপনার ৳${txAmount} উইথড্র রিকোয়েস্ট${methodLabel} রিজেক্ট করা হয়েছে এবং টাকা আপনার আর্নিং ব্যালেন্সে ফেরত দেওয়া হয়েছে।`,
+                      });
+                    }
+                  } else if (rawTxType === "deposit") {
+                    if (nextTxStatus === "completed") {
+                      pendingUserNotifications.push({
+                        userId: existingTx.user_id,
+                        type: "approved",
+                        message: `আপনার ৳${txAmount} ডিপোজিট রিকোয়েস্ট${methodLabel} এপ্রুভ করা হয়েছে এবং ডিপোজিট ব্যালেন্সে যোগ হয়েছে।`,
+                      });
+                    } else {
+                      pendingUserNotifications.push({
+                        userId: existingTx.user_id,
+                        type: "rejected",
+                        message: `আপনার ৳${txAmount} ডিপোজিট রিকোয়েস্ট${methodLabel} রিজেক্ট করা হয়েছে।`,
+                      });
+                    }
+                  }
+                }
               }
             } catch (e) {
               console.error(
@@ -1796,6 +2226,11 @@ async function startServer() {
             categoryData.grandTotal = Number(j.grandTotal);
           if (j.status !== undefined) categoryData.status = j.status;
           if (j.category !== undefined) categoryData.category = j.category;
+          if (j.mainCategory !== undefined) categoryData.mainCategory = j.mainCategory;
+          if (j.subCategory !== undefined) categoryData.subCategory = j.subCategory;
+          if (j.targetCountry !== undefined) categoryData.targetCountry = j.targetCountry;
+          if (j.durationDays !== undefined) categoryData.durationDays = Number(j.durationDays);
+          if (j.expiresAt !== undefined) categoryData.expiresAt = j.expiresAt;
 
           if (Object.keys(categoryData).length > 0 || isInsert) {
             normalized.category = JSON.stringify(categoryData);
@@ -1811,6 +2246,16 @@ async function startServer() {
               jobItem.pricePerWork || jobItem.reward || 0,
             );
             const maxWorkers = Number(jobItem.maxWorkers || jobItem.slots || 1);
+            if (
+              !Number.isFinite(pricePerWork) ||
+              pricePerWork < 1 ||
+              !Number.isFinite(maxWorkers) ||
+              maxWorkers < 1
+            ) {
+              return res.status(400).json({
+                error: "Invalid price per worker or worker count.",
+              });
+            }
             const totalBudget = pricePerWork * maxWorkers;
 
             let feePercent = 10;
@@ -1901,11 +2346,30 @@ async function startServer() {
               } catch (catErr) {}
 
               const oldStatus = jobCategory.status || existingJobRow.status;
+              const jobTitle = existingJobRow.title || "Micro Job";
+              const jobPosterId = jobCategory.posterId || existingJobRow.author_id;
 
-              // Transition to 'open' (Approved)
+              // Transition to 'open' (Approved from pending OR Delete Request Rejected)
               if (updatedJob.status === "open" && oldStatus === "pending") {
                 jobCategory.status = "open";
                 updatedJob.category = JSON.stringify(jobCategory);
+                if (jobPosterId) {
+                  pendingUserNotifications.push({
+                    userId: jobPosterId,
+                    type: "approved",
+                    message: `আপনার পোস্ট করা জব "${jobTitle}" এপ্রুভ ও পাবলিশ করা হয়েছে।`,
+                  });
+                }
+              } else if (updatedJob.status === "open" && oldStatus === "delete_requested") {
+                jobCategory.status = "open";
+                updatedJob.category = JSON.stringify(jobCategory);
+                if (jobPosterId) {
+                  pendingUserNotifications.push({
+                    userId: jobPosterId,
+                    type: "rejected",
+                    message: `আপনার "${jobTitle}" জব ডিলিট রিকোয়েস্টটি রিজেক্ট করা হয়েছে এবং জবটি পুনরায় চালু রয়েছে।`,
+                  });
+                }
               }
               // Transition to 'deleted' or 'rejected' from pending (Reject)
               else if (
@@ -1914,8 +2378,7 @@ async function startServer() {
                 oldStatus === "pending"
               ) {
                 // Refund poster
-                const posterId =
-                  jobCategory.posterId || existingJobRow.author_id;
+                const posterId = jobPosterId;
                 const totalBudget = Number(
                   jobCategory.totalBudget ||
                     Number(existingJobRow.reward) *
@@ -1946,14 +2409,20 @@ async function startServer() {
                 jobCategory.status = "rejected";
                 updatedJob.status = "deleted"; // Keep in DB as deleted
                 updatedJob.category = JSON.stringify(jobCategory);
+                if (posterId) {
+                  pendingUserNotifications.push({
+                    userId: posterId,
+                    type: "rejected",
+                    message: `আপনার পোস্ট করা জব "${jobTitle}" রিজেক্ট করা হয়েছে এবং ৳${grandTotal.toFixed(2)} আপনার ডিপোজিট ব্যালেন্সে ফেরত দেওয়া হয়েছে।`,
+                  });
+                }
               }
               // Transition to 'deleted' from active 'open' (Cancel/Delete)
               else if (
                 updatedJob.status === "deleted" &&
                 (oldStatus === "open" || oldStatus === "delete_requested")
               ) {
-                const posterId =
-                  jobCategory.posterId || existingJobRow.author_id;
+                const posterId = jobPosterId;
                 const maxWorkers = Number(
                   existingJobRow.slots || jobCategory.maxWorkers || 1,
                 );
@@ -1992,6 +2461,19 @@ async function startServer() {
                 }
                 jobCategory.status = "deleted";
                 updatedJob.category = JSON.stringify(jobCategory);
+                if (posterId && oldStatus === "delete_requested") {
+                  pendingUserNotifications.push({
+                    userId: posterId,
+                    type: "approved",
+                    message: `আপনার "${jobTitle}" জব ডিলিট রিকোয়েস্ট এপ্রুভ করা হয়েছে${refundAmount > 0 ? ` এবং অবশিষ্ট ৳${refundAmount.toFixed(2)} ফেরত দেওয়া হয়েছে` : ""}।`,
+                  });
+                } else if (posterId && isAdmin && posterId !== user?.id) {
+                  pendingUserNotifications.push({
+                    userId: posterId,
+                    type: "info",
+                    message: `আপনার "${jobTitle}" জবটি এডমিন কর্তৃক বাতিল করা হয়েছে${refundAmount > 0 ? ` এবং অবশিষ্ট ৳${refundAmount.toFixed(2)} ফেরত দেওয়া হয়েছে` : ""}।`,
+                  });
+                }
               }
             }
           }
@@ -2169,6 +2651,13 @@ async function startServer() {
               }
             } catch (e) {}
 
+            const jobPosterId = extra.posterId || jobData.author_id;
+            if (jobPosterId && jobPosterId === workerId) {
+              return res
+                .status(403)
+                .json({ error: "You cannot submit proof for your own posted job." });
+            }
+
             const status = extra.status || jobData.status || "open";
             if (status !== "open") {
               return res
@@ -2278,6 +2767,11 @@ async function startServer() {
                     })
                     .eq("id", posterId);
                 }
+                pendingUserNotifications.push({
+                  userId: workerId,
+                  type: "approved",
+                  message: `আপনার "${jobData.title || "Micro Job"}" কাজটি অটো-এপ্রুভ হয়েছে এবং ৳${reward.toFixed(2)} আপনার আর্নিং ব্যালেন্সে যোগ হয়েছে।`,
+                });
               } else {
                 await supabase
                   .from("profiles")
@@ -2484,6 +2978,26 @@ async function startServer() {
                   updatedSub.proof = JSON.stringify(subProofExtra);
                   delete updatedSub.rejectionReason;
                   delete updatedSub.reject_reason;
+
+                  if (submission.worker_id) {
+                    const subJobTitle = jobData.title || subProofExtra.jobTitle || "Micro Job";
+                    if (updatedSub.status === "approved") {
+                      pendingUserNotifications.push({
+                        userId: submission.worker_id,
+                        type: "approved",
+                        message: `আপনার "${subJobTitle}" কাজের প্রুফ এপ্রুভ হয়েছে এবং ৳${reward.toFixed(2)} আপনার আর্নিং ব্যালেন্সে যোগ হয়েছে।`,
+                      });
+                    } else if (updatedSub.status === "rejected") {
+                      const reasonText = subProofExtra.rejectionReason
+                        ? ` কারণ: ${subProofExtra.rejectionReason}`
+                        : "";
+                      pendingUserNotifications.push({
+                        userId: submission.worker_id,
+                        type: "rejected",
+                        message: `আপনার "${subJobTitle}" কাজের প্রুফ রিজেক্ট করা হয়েছে।${reasonText}`,
+                      });
+                    }
+                  }
                 }
               }
             }
@@ -2573,6 +3087,32 @@ async function startServer() {
       }
 
       if (table === "profiles" && args && args[0]) {
+        if (
+          method === "update" &&
+          isAdmin &&
+          args[0].account_status === "active" &&
+          dbEq &&
+          dbEq[0] === "id" &&
+          dbEq[1] &&
+          dbEq[1] !== user?.id
+        ) {
+          try {
+            const targetUserId = String(dbEq[1]);
+            const { data: prevProf } = await supabase
+              .from("profiles")
+              .select("account_status")
+              .eq("id", targetUserId)
+              .maybeSingle();
+            if (prevProf?.account_status === "pending_deletion") {
+              pendingUserNotifications.push({
+                userId: targetUserId,
+                type: "rejected",
+                message:
+                  "আপনার একাউন্ট ডিলিট রিকোয়েস্টটি রিজেক্ট করা হয়েছে এবং আপনার একাউন্ট সচল রাখা হয়েছে।",
+              });
+            }
+          } catch {}
+        }
         const pItems = Array.isArray(args[0]) ? args[0] : [args[0]];
         for (const pItem of pItems) {
           if (pItem && typeof pItem === "object") {
@@ -2624,6 +3164,14 @@ async function startServer() {
 
       const { data, error } = await queryBuilder;
       if (error) return res.status(400).json({ error: error.message });
+
+      if (pendingUserNotifications.length > 0) {
+        await Promise.allSettled(
+          pendingUserNotifications.map((n) =>
+            pushInAppNotification(n.userId, n.message, n.type || "info"),
+          ),
+        );
+      }
 
       // Map backend-to-frontend transaction types to keep the frontend completely happy
       let modifiedData = data;
@@ -2775,6 +3323,11 @@ async function startServer() {
             serviceCharge: extra.serviceCharge || 0,
             grandTotal: extra.grandTotal || 0,
             category: extra.category || j.category || "",
+            mainCategory: extra.mainCategory || "",
+            subCategory: extra.subCategory || "",
+            targetCountry: extra.targetCountry || "ALL",
+            durationDays: extra.durationDays || 7,
+            expiresAt: extra.expiresAt || null,
           };
         };
 
@@ -2800,6 +3353,18 @@ async function startServer() {
             extra = { proofText: s.proof };
           }
 
+          const rawScreenshots = Array.isArray(extra.screenshots)
+            ? extra.screenshots
+            : Array.isArray(s.screenshots)
+              ? s.screenshots
+              : [];
+          const hasDeletedMarker =
+            Boolean(extra.image_deleted) ||
+            rawScreenshots.some((x: any) => x === "deleted");
+          const cleanScreenshots = hasDeletedMarker
+            ? []
+            : rawScreenshots.filter((x: any) => typeof x === "string" && x && x !== "deleted");
+
           return {
             ...s,
             jobId: s.job_id || extra.jobId,
@@ -2808,7 +3373,8 @@ async function startServer() {
               extra.proofText !== undefined && extra.proofText !== null
                 ? extra.proofText
                 : s.proof || "",
-            screenshots: extra.screenshots || [],
+            screenshots: cleanScreenshots,
+            imageDeleted: hasDeletedMarker,
             rejectionReason: extra.rejectionReason || "",
             workerName: extra.workerName || "Worker",
             workerSerial: extra.workerSerial || null,
@@ -3776,12 +4342,25 @@ async function startServer() {
             extra = { proofText: s.proof };
           }
 
+          const rawScreenshots = Array.isArray(extra.screenshots)
+            ? extra.screenshots
+            : Array.isArray(s.screenshots)
+              ? s.screenshots
+              : [];
+          const hasDeletedMarker =
+            Boolean(extra.image_deleted) ||
+            rawScreenshots.some((x: any) => x === "deleted");
+          const cleanScreenshots = hasDeletedMarker
+            ? []
+            : rawScreenshots.filter((x: any) => typeof x === "string" && x && x !== "deleted");
+
           return {
             ...s,
             jobId: s.job_id || extra.jobId,
             workerId: s.worker_id || extra.worker_id,
             proofText: extra.proofText !== undefined && extra.proofText !== null ? extra.proofText : s.proof || "",
-            screenshots: extra.screenshots || [],
+            screenshots: cleanScreenshots,
+            imageDeleted: hasDeletedMarker,
             rejectionReason: extra.rejectionReason || "",
             workerName: s.profiles?.username || extra.workerName || "Worker",
             workerSerial: s.profiles?.serialNumber || extra.workerSerial || null,
@@ -3987,6 +4566,32 @@ async function startServer() {
         }
       });
 
+      let accountChangeRequests: any[] = Array.isArray(store.accountChangeRequests)
+        ? store.accountChangeRequests
+        : [];
+      if (!Array.isArray(store.accountChangeRequests)) {
+        try {
+          const { data: acrRow } = await supabase
+            .from("system_settings")
+            .select("setting_value")
+            .eq("setting_key", "account_change_requests")
+            .maybeSingle();
+          if (acrRow?.setting_value) {
+            const parsed = JSON.parse(acrRow.setting_value);
+            if (Array.isArray(parsed)) {
+              accountChangeRequests = parsed;
+              store.accountChangeRequests = parsed;
+              saveDataStore(store);
+            }
+          }
+        } catch {}
+      }
+      const hasPendingAccountChanges = accountChangeRequests.some(
+        (r: any) => r.status === "pending",
+      );
+
+      const userIpLogs = await loadUserIpLogs();
+
       res.json({
         config: safeConfig,
         stats: {
@@ -4004,6 +4609,7 @@ async function startServer() {
           hasPendingJobs,
           hasPendingAds,
           hasPendingDeletions,
+          hasPendingAccountChanges,
         },
         activeTab: tab,
         page,
@@ -4012,6 +4618,8 @@ async function startServer() {
         duplicateIPCounts,
         activeIPCounts,
         data: mappedData,
+        userIpLogs: tab === "users" || tab === "deletions" ? userIpLogs : undefined,
+        accountChangeRequests: tab === "deletions" ? accountChangeRequests : undefined,
         supabaseServiceRoleReady: isServiceRoleKeyReady,
       });
 
@@ -5039,6 +5647,15 @@ async function startServer() {
         return res.status(500).json({ error: "Failed to update job" });
       }
 
+      const actor = await lookupProfileForTelegram(user.id);
+      void dispatchTelegramEvent("job_edit", {
+        user: actor?.displayName || "Poster",
+        serial: actor?.serialNumber || user.id,
+        jobTitle: title,
+        jobId,
+        details: `Reward: ${oldPrice} -> ${newPrice} BDT | Slots: ${oldWorkers} -> ${newWorkers}${extraGrandTotal > 0 ? ` | Added Budget: ${extraGrandTotal.toFixed(2)} BDT` : ""}`,
+      });
+
       res.status(200).json({ status: "success" });
     } catch (err: any) {
       console.error(err);
@@ -5127,6 +5744,116 @@ async function startServer() {
       let ip = req.headers["x-forwarded-for"] || req.ip;
       if (typeof ip === "string") ip = ip.split(",")[0].trim();
       res.json({ ip, vpn: false, ok: false });
+    }
+  });
+
+  app.post("/api/security/record-ip", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      const token = authHeader.replace(/^Bearer /i, "").trim();
+      const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+      const authUser = authData?.user;
+      if (authErr || !authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { event, ip: bodyIp, fingerprint } = req.body || {};
+      const eventType: "registration" | "login" | "session" =
+        event === "registration" ? "registration" : event === "login" ? "login" : "session";
+      const clientIp = extractClientIp(req, bodyIp);
+      const userAgent = req.headers["user-agent"] || "";
+
+      const recorded = await recordUserIpEvent(
+        authUser.id,
+        eventType,
+        clientIp,
+        typeof fingerprint === "string" ? fingerprint : undefined,
+        typeof userAgent === "string" ? userAgent : "",
+      );
+
+      if (eventType === "login") {
+        const actor = await lookupProfileForTelegram(authUser.id);
+        const geo = recorded?.geo;
+        const locStr = [geo?.city, geo?.country].filter(Boolean).join(", ");
+        const detailsParts = [];
+        if (locStr) detailsParts.push(`Location: ${locStr}`);
+        if (geo?.isp) detailsParts.push(`ISP: ${geo.isp}`);
+        if (geo?.isVpn) detailsParts.push(`VPN/Proxy Detected`);
+
+        void dispatchTelegramEvent("login", {
+          user: actor?.displayName || authUser.email || "User",
+          serial: actor?.serialNumber || authUser.id,
+          email: actor?.email || authUser.email || "N/A",
+          ip: clientIp,
+          details: detailsParts.length > 0 ? detailsParts.join(" | ") : "Standard account login",
+        });
+      }
+
+      return res.json({ success: true, ip: clientIp });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/admin/ip-details/:userId", async (req, res) => {
+    try {
+      const adminUser = await verifyStrictAdmin(req);
+      if (!adminUser) {
+        return res.status(403).json({ error: "Admin authorization required" });
+      }
+      const targetUserId = String(req.params.userId || "").trim();
+      if (!targetUserId) {
+        return res.status(400).json({ error: "Missing userId" });
+      }
+
+      const { data: targetProfile, error: profErr } = await supabase
+        .from("profiles")
+        .select("id, displayName, username, email, phone, serialNumber, last_ip_address, device_fingerprint, account_status, isBlocked, createdAt")
+        .eq("id", targetUserId)
+        .maybeSingle();
+
+      if (profErr || !targetProfile) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const logs = await loadUserIpLogs();
+      const userIpLog = logs[targetUserId] || null;
+
+      const ipsToMatch = new Set<string>();
+      if (targetProfile.last_ip_address && targetProfile.last_ip_address !== "N/A") {
+        ipsToMatch.add(targetProfile.last_ip_address);
+      }
+      if (userIpLog?.registrationIp) ipsToMatch.add(userIpLog.registrationIp);
+      if (userIpLog?.lastLoginIp) ipsToMatch.add(userIpLog.lastLoginIp);
+
+      let matchedAccounts: any[] = [];
+      if (ipsToMatch.size > 0) {
+        const ipList = Array.from(ipsToMatch);
+        const { data: matches } = await supabase
+          .from("profiles")
+          .select("id, displayName, username, email, serialNumber, last_ip_address, isBlocked, account_status")
+          .in("last_ip_address", ipList)
+          .neq("id", targetUserId)
+          .limit(25);
+        if (matches) {
+          matchedAccounts = matches;
+        }
+      }
+
+      let liveGeo = null;
+      if (targetProfile.last_ip_address && !userIpLog?.lastLoginMeta?.country) {
+        liveGeo = await lookupIpGeoInfo(targetProfile.last_ip_address);
+      }
+
+      return res.json({
+        profile: targetProfile,
+        ipLog: userIpLog,
+        liveGeo,
+        matchedAccounts,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
     }
   });
 
@@ -5269,6 +5996,24 @@ async function startServer() {
         }
         notifiedRegistrations.add(regUserId);
 
+        const regIp = extractClientIp(req, payload.ip);
+        const userAgent = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
+        const regRec = await recordUserIpEvent(
+          regUserId,
+          "registration",
+          regIp,
+          typeof payload.fingerprint === "string" ? payload.fingerprint : undefined,
+          userAgent,
+        );
+        const locStr = [regRec?.geo?.city, regRec?.geo?.country].filter(Boolean).join(", ");
+        const extraDetails = [
+          `Username: ${profileRow?.username || payload.username || "N/A"}`,
+          payload.referredBy ? `Referred By: ${payload.referredBy}` : "",
+          locStr ? `Location: ${locStr}` : "",
+        ]
+          .filter(Boolean)
+          .join(" | ");
+
         void dispatchTelegramEvent("registration", {
           user:
             profileRow?.displayName ||
@@ -5277,9 +6022,8 @@ async function startServer() {
           serial: profileRow?.serialNumber || regUserId,
           email: profileRow?.email || verifiedEmail || "N/A",
           phone: profileRow?.phone || verifiedPhone || "N/A",
-          details: payload.referredBy
-            ? `Username: ${profileRow?.username || payload.username || "N/A"} | Referred By: ${payload.referredBy}`
-            : `Username: ${profileRow?.username || payload.username || "N/A"}`,
+          ip: regIp,
+          details: extraDetails,
         });
 
         return res.json({ success: true });
@@ -5319,6 +6063,360 @@ async function startServer() {
       }
 
       return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Account Info Change Requests (Email, Phone Number, Username)
+  const loadAccountChangeRequests = async (): Promise<any[]> => {
+    const store = getDataStore();
+    if (Array.isArray(store.accountChangeRequests)) {
+      return store.accountChangeRequests;
+    }
+    try {
+      const { data: row } = await supabase
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_key", "account_change_requests")
+        .maybeSingle();
+      if (row?.setting_value) {
+        const parsed = JSON.parse(row.setting_value);
+        if (Array.isArray(parsed)) {
+          store.accountChangeRequests = parsed;
+          saveDataStore(store);
+          return parsed;
+        }
+      }
+    } catch {}
+    return [];
+  };
+
+  const saveAccountChangeRequests = async (requests: any[]) => {
+    const trimmed = requests.slice(0, 1000);
+    const store = getDataStore();
+    store.accountChangeRequests = trimmed;
+    saveDataStore(store);
+    await syncSetting("account_change_requests", JSON.stringify(trimmed));
+  };
+
+  app.get("/api/account/change-requests", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      const token = authHeader.replace(/^Bearer /i, "").trim();
+      const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+      const authUser = authData?.user;
+      if (authErr || !authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const all = await loadAccountChangeRequests();
+      const mine = all
+        .filter((r: any) => r.userId === authUser.id)
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+        );
+      return res.json({ requests: mine });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/account/change-request", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+      const token = authHeader.replace(/^Bearer /i, "").trim();
+      const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+      const authUser = authData?.user;
+      if (authErr || !authUser) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { type, newValue, reason } = req.body || {};
+      if (!["email", "phone", "username"].includes(type)) {
+        return res.status(400).json({ error: "Invalid request type" });
+      }
+
+      const rawVal = typeof newValue === "string" ? newValue.trim() : "";
+      const cleanReason = typeof reason === "string" ? reason.trim().slice(0, 500) : "";
+
+      if (!rawVal) {
+        return res.status(400).json({ error: "Please enter a new value" });
+      }
+      if (!cleanReason) {
+        return res.status(400).json({ error: "Please provide a reason for this change" });
+      }
+
+      const { data: profileRow, error: profileErr } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authUser.id)
+        .single();
+      if (profileErr || !profileRow) {
+        return res.status(404).json({ error: "User profile not found" });
+      }
+
+      let normalizedVal = rawVal;
+      if (type === "email") {
+        normalizedVal = rawVal.toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedVal)) {
+          return res.status(400).json({ error: "Please enter a valid email address" });
+        }
+        if ((profileRow.email || authUser.email || "").toLowerCase() === normalizedVal) {
+          return res.status(400).json({ error: "New email must be different from your current email" });
+        }
+        const { data: existingEmail } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("email", normalizedVal)
+          .neq("id", authUser.id)
+          .limit(1);
+        if (existingEmail && existingEmail.length > 0) {
+          return res.status(400).json({ error: "This email address is already registered to another account" });
+        }
+      } else if (type === "phone") {
+        normalizedVal = rawVal.replace(/\s+/g, "");
+        if (!/^[+0-9-]{6,20}$/.test(normalizedVal)) {
+          return res.status(400).json({ error: "Please enter a valid phone number" });
+        }
+        if ((profileRow.phone || "").replace(/\s+/g, "") === normalizedVal) {
+          return res.status(400).json({ error: "New phone number must be different from your current number" });
+        }
+        const { data: existingPhone } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("phone", normalizedVal)
+          .neq("id", authUser.id)
+          .limit(1);
+        if (existingPhone && existingPhone.length > 0) {
+          return res.status(400).json({ error: "This phone number is already registered to another account" });
+        }
+      } else if (type === "username") {
+        normalizedVal = rawVal.replace(/^@+/, "");
+        if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(normalizedVal)) {
+          return res.status(400).json({
+            error: "Username must be 3-30 characters (letters, numbers, _, ., - only, no spaces)",
+          });
+        }
+        if ((profileRow.username || "").toLowerCase() === normalizedVal.toLowerCase()) {
+          return res.status(400).json({ error: "New username must be different from your current username" });
+        }
+        const { data: existingUsername } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("username", normalizedVal)
+          .neq("id", authUser.id)
+          .limit(1);
+        if (existingUsername && existingUsername.length > 0) {
+          return res.status(400).json({ error: "This username is already taken" });
+        }
+      }
+
+      const allRequests = await loadAccountChangeRequests();
+      const hasPendingSame = allRequests.some(
+        (r: any) => r.userId === authUser.id && r.type === type && r.status === "pending",
+      );
+      if (hasPendingSame) {
+        return res.status(400).json({
+          error: `You already have a pending ${type} change request. Please wait for admin review.`,
+        });
+      }
+
+      const newRequest = {
+        id: `acr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        userId: authUser.id,
+        userSerial: profileRow.serialNumber || null,
+        displayName: profileRow.displayName || profileRow.name || authUser.email || "User",
+        currentEmail: profileRow.email || authUser.email || "",
+        currentPhone: profileRow.phone || "",
+        currentUsername: profileRow.username || "",
+        type,
+        newValue: normalizedVal,
+        reason: cleanReason,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      };
+
+      const nextList = [newRequest, ...allRequests];
+      await saveAccountChangeRequests(nextList);
+
+      const typeLabel =
+        type === "email"
+          ? "Email Change Request"
+          : type === "phone"
+            ? "Phone Number Change Request"
+            : "Username Change Request";
+      const oldValue =
+        type === "email"
+          ? newRequest.currentEmail
+          : type === "phone"
+            ? newRequest.currentPhone
+            : newRequest.currentUsername;
+
+      void dispatchTelegramEvent("profile_update", {
+        user: newRequest.displayName,
+        serial: newRequest.userSerial || authUser.id,
+        email: newRequest.currentEmail || "N/A",
+        ip: extractClientIp(req),
+        details: `${typeLabel}: ${oldValue || "N/A"} -> ${newRequest.newValue} | Reason: ${cleanReason}`,
+      });
+
+      return res.json({ success: true, request: newRequest });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/account-change-requests/review", async (req, res) => {
+    try {
+      const adminUser = await verifyStrictAdmin(req);
+      if (!adminUser) {
+        return res.status(403).json({ error: "Admin authorization required" });
+      }
+
+      const { requestId, action, adminNote } = req.body || {};
+      if (!requestId || !["approve", "reject"].includes(action)) {
+        return res.status(400).json({ error: "Invalid requestId or action" });
+      }
+
+      const allRequests = await loadAccountChangeRequests();
+      const idx = allRequests.findIndex((r: any) => r.id === requestId);
+      if (idx === -1) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+      const reqItem = allRequests[idx];
+      if (reqItem.status !== "pending") {
+        return res.status(400).json({ error: "This request has already been reviewed" });
+      }
+
+      const cleanNote = typeof adminNote === "string" ? adminNote.trim().slice(0, 300) : "";
+
+      if (action === "approve") {
+        const { data: targetProfile, error: profErr } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", reqItem.userId)
+          .single();
+        if (profErr || !targetProfile) {
+          return res.status(404).json({ error: "Target user profile not found" });
+        }
+
+        if (reqItem.type === "email") {
+          const isServiceKeyMissing =
+            !process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (isServiceKeyMissing) {
+            return res.status(400).json({
+              error: "SUPABASE_SERVICE_ROLE_KEY is required to update user login email.",
+            });
+          }
+          const { error: authErr } = await supabase.auth.admin.updateUserById(reqItem.userId, {
+            email: reqItem.newValue,
+            email_confirm: true,
+          });
+          if (authErr) {
+            return res.status(400).json({ error: `Failed to update Auth email: ${authErr.message}` });
+          }
+          const { error: dbErr } = await supabase
+            .from("profiles")
+            .update({ email: reqItem.newValue })
+            .eq("id", reqItem.userId);
+          if (dbErr) {
+            return res.status(400).json({ error: `Failed to update profile email: ${dbErr.message}` });
+          }
+        } else if (reqItem.type === "phone") {
+          const { error: dbErr } = await supabase
+            .from("profiles")
+            .update({ phone: reqItem.newValue })
+            .eq("id", reqItem.userId);
+          if (dbErr) {
+            return res.status(400).json({ error: `Failed to update phone number: ${dbErr.message}` });
+          }
+        } else if (reqItem.type === "username") {
+          const { error: dbErr } = await supabase
+            .from("profiles")
+            .update({ username: reqItem.newValue })
+            .eq("id", reqItem.userId);
+          if (dbErr) {
+            return res.status(400).json({ error: `Failed to update username: ${dbErr.message}` });
+          }
+          try {
+            const { data: existingAuth } = await supabase.auth.admin.getUserById(reqItem.userId);
+            await supabase.auth.admin.updateUserById(reqItem.userId, {
+              user_metadata: {
+                ...(existingAuth?.user?.user_metadata || {}),
+                username: reqItem.newValue,
+              },
+            });
+          } catch {}
+        }
+
+        const typeLabelMap: Record<string, string> = {
+          email: "ইমেইল",
+          phone: "ফোন নম্বর",
+          username: "ইউজারনেম",
+        };
+        const typeLabel = typeLabelMap[reqItem.type] || reqItem.type;
+
+        // Send in-app notification
+        await pushInAppNotification(
+          reqItem.userId,
+          `আপনার ${typeLabel} পরিবর্তনের আবেদন (${reqItem.newValue}) এপ্রুভ ও আপডেট করা হয়েছে।`,
+          "approved",
+        );
+
+        void dispatchTelegramEvent("profile_update", {
+          user: targetProfile.displayName || reqItem.displayName || "User",
+          serial: targetProfile.serialNumber || reqItem.userSerial || reqItem.userId,
+          email: reqItem.type === "email" ? reqItem.newValue : targetProfile.email || "N/A",
+          ip: targetProfile.last_ip_address || "N/A",
+          details: `Admin approved ${reqItem.type} change -> ${reqItem.newValue}`,
+        });
+      } else {
+        // Reject: notify user
+        try {
+          const typeLabelMap: Record<string, string> = {
+            email: "ইমেইল",
+            phone: "ফোন নম্বর",
+            username: "ইউজারনেম",
+          };
+          const typeLabel = typeLabelMap[reqItem.type] || reqItem.type;
+          await pushInAppNotification(
+            reqItem.userId,
+            `আপনার ${typeLabel} পরিবর্তনের আবেদন (${reqItem.newValue}) রিজেক্ট করা হয়েছে।${cleanNote ? ` কারণ: ${cleanNote}` : ""}`,
+            "rejected",
+          );
+
+          const { data: targetProfile } = await supabase
+            .from("profiles")
+            .select("displayName, email, serialNumber, last_ip_address")
+            .eq("id", reqItem.userId)
+            .maybeSingle();
+          if (targetProfile) {
+            void dispatchTelegramEvent("profile_update", {
+              user: targetProfile.displayName || reqItem.displayName || "User",
+              serial: targetProfile.serialNumber || reqItem.userSerial || reqItem.userId,
+              email: targetProfile.email || "N/A",
+              ip: targetProfile.last_ip_address || "N/A",
+              details: `Admin rejected ${reqItem.type} change (${reqItem.newValue})${cleanNote ? ` | Note: ${cleanNote}` : ""}`,
+            });
+          }
+        } catch {}
+      }
+
+      const updatedItem = {
+        ...reqItem,
+        status: action === "approve" ? "approved" : "rejected",
+        adminNote: cleanNote || undefined,
+        reviewedAt: new Date().toISOString(),
+      };
+      const nextList = [...allRequests];
+      nextList[idx] = updatedItem;
+      await saveAccountChangeRequests(nextList);
+
+      return res.json({ success: true, request: updatedItem });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
@@ -5383,7 +6481,18 @@ async function startServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
 
-    // Background task to expire old referrals
+    // Run expired proof-image cleanup shortly after startup, then hourly
+    setTimeout(() => {
+      cleanupExpiredSubmissionImages()
+        .then((count) => {
+          if (count > 0) {
+            console.log(`Auto-deleted proof images for ${count} reviewed submissions (24h retention).`);
+          }
+        })
+        .catch(console.error);
+    }, 15000);
+
+    // Background task to expire old referrals and clean up 24h-old reviewed proof images
     setInterval(
       async () => {
         try {
@@ -5397,6 +6506,15 @@ async function startServer() {
           if (error) console.error("Error expiring referrals:", error);
         } catch (err) {
           console.error("Interval error expiring referrals:", err);
+        }
+
+        try {
+          const count = await cleanupExpiredSubmissionImages();
+          if (count > 0) {
+            console.log(`Hourly cleanup: deleted proof images for ${count} reviewed submissions.`);
+          }
+        } catch (err) {
+          console.error("Interval error cleaning up images:", err);
         }
       },
       1000 * 60 * 60,

@@ -262,8 +262,8 @@ export function LandingPage() {
         </div>
 
         {/* 3-Zone Top Navigation Bar */}
-        <header className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-          <div className="flex items-center justify-between gap-6 lg:gap-8">
+        <header className="relative z-30 max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-5">
+          <div className="flex items-center justify-between gap-2 sm:gap-6 lg:gap-8">
             {/* Zone 1: Brand Mark */}
             <a
               href="#hero"
@@ -273,7 +273,8 @@ export function LandingPage() {
               }}
               className="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 rounded-xl"
             >
-              <BrandLogo size="md" />
+              <span className="sm:hidden inline-flex"><BrandLogo size="sm" /></span>
+              <span className="hidden sm:inline-flex"><BrandLogo size="md" /></span>
             </a>
 
             {/* Zone 2: Single-Line Navigation Links */}
@@ -319,27 +320,27 @@ export function LandingPage() {
             </nav>
 
             {/* Zone 3: Theme Toggle + Auth Actions + Mobile Toggle */}
-            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={toggleTheme}
                 aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="w-10 h-10 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
 
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-white/35 bg-white/10 hover:bg-white/20 text-white font-semibold text-[1.25rem] sm:text-[1.4rem] whitespace-nowrap shrink-0 transition-colors"
+                className="inline-flex items-center justify-center px-2.5 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-white/35 bg-white/10 hover:bg-white/20 text-white font-semibold text-[1.15rem] sm:text-[1.4rem] whitespace-nowrap shrink-0 transition-colors"
               >
                 Login
               </Link>
 
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-[1.25rem] sm:text-[1.4rem] shadow-md shadow-orange-950/30 whitespace-nowrap shrink-0 transition-all"
+                className="inline-flex items-center justify-center px-2.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-[1.15rem] sm:text-[1.4rem] shadow-md shadow-orange-950/30 whitespace-nowrap shrink-0 transition-all"
               >
                 Register
               </Link>
@@ -349,7 +350,7 @@ export function LandingPage() {
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
                 aria-label="Toggle navigation menu"
                 aria-expanded={mobileMenuOpen}
-                className="md:hidden w-10 h-10 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                className="md:hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -397,9 +398,9 @@ export function LandingPage() {
         </header>
 
         {/* Hero Content & Admin-Configured Login Banner Slot */}
-        <section className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 sm:pt-10 sm:pb-28 lg:pb-32">
-          <div className="max-w-4xl mx-auto text-center space-y-6">
-            <h1 className="font-display font-extrabold text-[3.3rem] sm:text-[4.4rem] lg:text-[5.2rem] leading-[1.12] tracking-tight text-white [text-wrap:balance]">
+        <section className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 sm:pt-10 sm:pb-28 lg:pb-32">
+          <div className="max-w-4xl mx-auto text-center space-y-5 sm:space-y-6">
+            <h1 className="font-display font-extrabold text-[2.85rem] sm:text-[4.4rem] lg:text-[5.2rem] leading-[1.12] tracking-tight text-white [text-wrap:balance]">
               {systemConfig?.loginTitle ? (
                 <span dangerouslySetInnerHTML={{ __html: systemConfig.loginTitle }} />
               ) : (
@@ -410,24 +411,24 @@ export function LandingPage() {
               )}
             </h1>
 
-            <p className="text-[1.55rem] sm:text-[1.8rem] text-blue-100/90 leading-relaxed max-w-2xl mx-auto">
+            <p className="text-[1.45rem] sm:text-[1.8rem] text-blue-100/90 leading-relaxed max-w-2xl mx-auto">
               Earn Bangladeshi Taka (৳) through simple verified tasks, anytime and anywhere — or
               promote your business with real human engagement.
             </p>
 
             {/* Hero CTAs */}
-            <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 pt-2">
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-full bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-[1.5rem] shadow-xl shadow-orange-950/35 hover:-translate-y-0.5 transition-all whitespace-nowrap shrink-0"
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-7 py-3 sm:py-3.5 rounded-full bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-[1.35rem] sm:text-[1.5rem] shadow-xl shadow-orange-950/35 hover:-translate-y-0.5 transition-all whitespace-nowrap shrink-0"
               >
                 <span>Get Started Free</span>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </Link>
 
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full border border-white/40 bg-white/10 hover:bg-white/20 text-white font-bold text-[1.5rem] transition-all whitespace-nowrap shrink-0"
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-7 py-3 sm:py-3.5 rounded-full border border-white/40 bg-white/10 hover:bg-white/20 text-white font-bold text-[1.35rem] sm:text-[1.5rem] transition-all whitespace-nowrap shrink-0"
               >
                 <span>Login</span>
               </Link>
@@ -435,9 +436,9 @@ export function LandingPage() {
               <button
                 type="button"
                 onClick={() => scrollToSection('how-it-works')}
-                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white font-semibold text-[1.5rem] transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full border border-white/30 bg-white/5 hover:bg-white/15 text-white font-semibold text-[1.35rem] sm:text-[1.5rem] transition-all whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <PlayCircle className="w-5 h-5 text-[#FB923C]" />
+                <PlayCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#FB923C]" />
                 <span>How it Works</span>
               </button>
             </div>

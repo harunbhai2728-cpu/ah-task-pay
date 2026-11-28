@@ -94,12 +94,27 @@ export function AuthPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }
            throw new Error('Please enter a valid email address.');
         }
 
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: actualEmail,
           password
         });
         
         if (signInError) throw signInError;
+
+        if (signInData?.session?.access_token) {
+          fetch('/api/security/record-ip', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${signInData.session.access_token}`,
+            },
+            body: JSON.stringify({
+              event: 'login',
+              ip: ipAddress || undefined,
+              fingerprint: visitorId || undefined,
+            }),
+          }).catch(() => {});
+        }
       } else {
         if (actualEmail.length < 5 || !actualEmail.includes('@') || !actualEmail.includes('.')) {
           throw new Error('Please enter a valid email address');
@@ -151,6 +166,8 @@ export function AuthPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }
             phone: cleanPhone,
             email: actualEmail,
             photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`,
+            last_ip_address: ipAddress || null,
+            device_fingerprint: visitorId || null,
             account_status: 'active',
             earningBalance: 0,
             depositBalance: 0,
@@ -181,6 +198,8 @@ export function AuthPage({ defaultIsLogin = true }: { defaultIsLogin?: boolean }
               userId: data.user!.id,
               user: cleanName,
               username: cleanUsername,
+              ip: ipAddress || undefined,
+              fingerprint: visitorId || undefined,
               referredBy: referredBy || undefined,
             });
           });

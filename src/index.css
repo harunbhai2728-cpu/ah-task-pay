@@ -22,6 +22,7 @@
   html {
     font-size: 55%; /* Significant scaling down to increase visual density / DPI */
     scroll-behavior: smooth;
+    overflow-x: clip;
   }
   @media (min-width: 640px) {
     html {
@@ -33,9 +34,16 @@
       font-size: 65%;
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
   body {
-    @apply bg-[#F8FAFC] dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 antialiased transition-colors duration-300;
+    @apply bg-[#EFF4FC] dark:bg-[#040C24] text-[#071845] dark:text-slate-100 antialiased transition-colors duration-300;
     font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -44,7 +52,7 @@
     font-family: 'Plus Jakarta Sans', 'DM Sans', system-ui, sans-serif;
   }
   .bg-dots {
-    background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+    background-image: radial-gradient(#cbd8f2 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
@@ -55,17 +63,17 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: rgba(11, 61, 158, 0.25);
     border-radius: 10px;
   }
   .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #334155;
+    background: rgba(59, 130, 246, 0.35);
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: rgba(11, 61, 158, 0.45);
   }
   .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+    background: rgba(59, 130, 246, 0.55);
   }
 }
 

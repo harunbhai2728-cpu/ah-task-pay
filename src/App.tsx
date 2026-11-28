@@ -35,15 +35,15 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
   const { user, profile, loading, isAdmin, error } = useAuth();
   
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] transition-colors">
+    <div className="min-h-screen flex items-center justify-center bg-[#EFF4FC] dark:bg-[#040C24] transition-colors">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0B3D9E] dark:border-[#F97316]"></div>
     </div>
   );
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] p-6 transition-colors">
-        <div className="bg-white dark:bg-[#1E293B] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-6 max-w-md border border-red-200 dark:border-red-900/40">
+      <div className="min-h-screen flex items-center justify-center bg-[#EFF4FC] dark:bg-[#040C24] p-6 transition-colors">
+        <div className="bg-white dark:bg-[#0A1638] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-6 max-w-md border border-red-200 dark:border-red-900/40">
           <div className="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-500/20">
              <LogOut className="w-10 h-10" />
           </div>
@@ -69,8 +69,8 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
     const heading = isByAdmin ? 'Your account has been deleted by Admin' : 'Your account has been deleted by You';
     
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] p-6 transition-colors">
-        <div className="bg-white dark:bg-[#1E293B] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-5 max-w-md border border-red-200 dark:border-red-900/40">
+      <div className="min-h-screen flex items-center justify-center bg-[#EFF4FC] dark:bg-[#040C24] p-6 transition-colors">
+        <div className="bg-white dark:bg-[#0A1638] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-5 max-w-md border border-red-200 dark:border-red-900/40">
            <div className="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-500/20">
               <LogOut className="w-10 h-10" />
            </div>
@@ -130,8 +130,8 @@ function PrivateRoute({ children, requiredAdmin }: { children: React.ReactNode, 
   
   if (profile?.isBlocked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-[#0B1120] p-6 transition-colors">
-        <div className="bg-white dark:bg-[#1E293B] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-5 max-w-md border border-red-200 dark:border-red-900/40">
+      <div className="min-h-screen flex items-center justify-center bg-[#EFF4FC] dark:bg-[#040C24] p-6 transition-colors">
+        <div className="bg-white dark:bg-[#0A1638] p-10 rounded-[2.5rem] shadow-2xl text-center space-y-5 max-w-md border border-red-200 dark:border-red-900/40">
            <div className="bg-red-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-white shadow-lg shadow-red-500/20">
               <LogOut className="w-10 h-10" />
            </div>

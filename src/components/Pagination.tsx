@@ -76,15 +76,15 @@ export function Pagination({
       className={cn(
         'flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors',
         variant === 'card'
-          ? 'bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700/80 rounded-[2rem] p-4 sm:p-5 shadow-sm'
-          : 'px-6 py-4 border-t border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/30',
+          ? 'bg-white dark:bg-[#0A1638] border border-[#D7E3F7] dark:border-[#1C3882]/55 rounded-[2rem] p-4 sm:p-5 shadow-sm shadow-blue-950/[0.04]'
+          : 'px-6 py-4 border-t border-[#D7E3F7] dark:border-[#1C3882]/55 bg-[#F2F6FE] dark:bg-[#06102B]/80',
         className
       )}
     >
-      <div className="text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums text-center sm:text-left">
-        Showing <span className="font-black text-slate-900 dark:text-white">{startItem}</span> to{' '}
-        <span className="font-black text-slate-900 dark:text-white">{endItem}</span> of{' '}
-        <span className="font-black text-slate-900 dark:text-white">{totalItems}</span> {itemLabel}
+      <div className="text-xs font-bold text-slate-500 dark:text-blue-200/70 tabular-nums text-center sm:text-left">
+        Showing <span className="font-black text-[#071845] dark:text-white">{startItem}</span> to{' '}
+        <span className="font-black text-[#071845] dark:text-white">{endItem}</span> of{' '}
+        <span className="font-black text-[#071845] dark:text-white">{totalItems}</span> {itemLabel}
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
@@ -93,7 +93,7 @@ export function Pagination({
           onClick={() => handleSelectPage(safePage - 1)}
           disabled={safePage === 1}
           aria-label="Previous page"
-          className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-[#0B3D9E] dark:hover:border-[#F97316] disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-1 cursor-pointer"
+          className="px-3.5 py-2 bg-[#F4F7FE] dark:bg-[#050F2B] border border-[#CEDDF6] dark:border-[#1E3B8A]/65 text-[#07266E] dark:text-blue-100 font-bold text-xs rounded-xl shadow-sm hover:bg-blue-50 dark:hover:bg-[#0D2159] hover:border-[#0B3D9E] dark:hover:border-[#FB923C] disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-1 cursor-pointer"
         >
           <ChevronLeft className="w-4 h-4" />
           <span className="hidden xs:inline sm:inline">Previous</span>
@@ -106,7 +106,7 @@ export function Pagination({
               return (
                 <span
                   key={item}
-                  className="px-2 py-1 text-xs font-black text-slate-400 dark:text-slate-500 select-none"
+                  className="px-2 py-1 text-xs font-black text-slate-400 dark:text-blue-300/50 select-none"
                 >
                   ...
                 </span>
@@ -123,8 +123,8 @@ export function Pagination({
                 className={cn(
                   'min-w-[36px] h-9 px-2.5 rounded-xl font-black text-xs transition-all tabular-nums cursor-pointer flex items-center justify-center',
                   isActive
-                    ? 'bg-gradient-to-r from-[#07266E] to-[#0B3D9E] dark:from-[#F97316] dark:to-[#EA580C] text-white shadow-md shadow-blue-900/20 dark:shadow-orange-500/20'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700 hover:border-[#0B3D9E] dark:hover:border-[#F97316]'
+                    ? 'bg-gradient-to-r from-[#041645] via-[#07266E] to-[#0B3D9E] dark:from-[#F97316] dark:to-[#EA580C] text-white shadow-md shadow-blue-900/25 dark:shadow-orange-500/20'
+                    : 'bg-[#F4F7FE] dark:bg-[#050F2B] text-[#07266E] dark:text-blue-100 border border-[#CEDDF6] dark:border-[#1E3B8A]/65 hover:bg-blue-50 dark:hover:bg-[#0D2159] hover:border-[#0B3D9E] dark:hover:border-[#FB923C]'
                 )}
               >
                 {item}
@@ -134,7 +134,7 @@ export function Pagination({
         </div>
 
         {/* Mobile compact indicator */}
-        <div className="sm:hidden text-xs font-black text-slate-600 dark:text-slate-300 px-2.5 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 tabular-nums">
+        <div className="sm:hidden text-xs font-black text-[#07266E] dark:text-blue-100 px-2.5 py-2 bg-[#F4F7FE] dark:bg-[#050F2B] rounded-xl border border-[#CEDDF6] dark:border-[#1E3B8A]/65 tabular-nums">
           Page {safePage} / {totalPages}
         </div>
 
@@ -143,7 +143,7 @@ export function Pagination({
           onClick={() => handleSelectPage(safePage + 1)}
           disabled={safePage >= totalPages}
           aria-label="Next page"
-          className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl shadow-sm hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-[#0B3D9E] dark:hover:border-[#F97316] disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-1 cursor-pointer"
+          className="px-3.5 py-2 bg-[#F4F7FE] dark:bg-[#050F2B] border border-[#CEDDF6] dark:border-[#1E3B8A]/65 text-[#07266E] dark:text-blue-100 font-bold text-xs rounded-xl shadow-sm hover:bg-blue-50 dark:hover:bg-[#0D2159] hover:border-[#0B3D9E] dark:hover:border-[#FB923C] disabled:opacity-40 disabled:pointer-events-none transition-all flex items-center gap-1 cursor-pointer"
         >
           <span className="hidden xs:inline sm:inline">Next</span>
           <ChevronRight className="w-4 h-4" />
